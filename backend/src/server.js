@@ -9,8 +9,8 @@ const passport = require('./config/passport');
 const errorHandler = require('./middleware/errorHandler');
 
 // Validate required environment variables
-const requiredEnvVars = ['JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const REQUIRED_ENV_VARS = ['JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'];
+const missingEnvVars = REQUIRED_ENV_VARS.filter(varName => !process.env[varName]?.trim());
 
 if (missingEnvVars.length > 0) {
   console.error('\n❌ ERROR: Missing required environment variables:');
