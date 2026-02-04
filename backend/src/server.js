@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,6 +7,20 @@ const compression = require('compression');
 const morgan = require('morgan');
 const passport = require('./config/passport');
 const errorHandler = require('./middleware/errorHandler');
+
+// Validate required environment variables
+const requiredEnvVars = ['JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('\n❌ ERROR: Missing required environment variables:');
+  missingEnvVars.forEach(varName => {
+    console.error(`   - ${varName}`);
+  });
+  console.error('\n📝 Please create a .env file in the root directory based on .env.example');
+  console.error('   Example: cp .env.example .env\n');
+  process.exit(1);
+}
 
 const app = express();
 
