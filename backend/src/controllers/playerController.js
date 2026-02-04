@@ -3,21 +3,21 @@ const studScoreService = require('../services/studScoreService');
 
 const getPlayers = async (req, res) => {
   try {
-    const { teamId } = req.params;
+    const { dynastyId } = req.params;
 
-    // Verify team belongs to user
-    const teamCheck = await db.query(
-      'SELECT * FROM teams WHERE id = $1 AND user_id = $2',
-      [teamId, req.user.id]
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
     );
 
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
     }
 
     const result = await db.query(
-      'SELECT * FROM players WHERE team_id = $1 ORDER BY position, overall_rating DESC',
-      [teamId]
+      'SELECT * FROM players WHERE dynasty_id = $1 ORDER BY position, overall_rating DESC',
+      [dynastyId]
     );
 
     // Calculate stud scores for each player
@@ -37,38 +37,32 @@ const getPlayers = async (req, res) => {
 
 const createPlayer = async (req, res) => {
   try {
-    const { teamId } = req.params;
+    const { dynastyId } = req.params;
     
-    // Verify team belongs to user
-    const teamCheck = await db.query(
-      'SELECT * FROM teams WHERE id = $1 AND user_id = $2',
-      [teamId, req.user.id]
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
     );
 
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
     }
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      speed, strength, awareness, agility, acceleration, stamina, injury,
-      throw_power, throw_accuracy, carrying, catching, route_running,
-      blocking, tackling, coverage, kick_power, kick_accuracy
+      attributes, dealbreakers
     } = req.body;
 
     const result = await db.query(
       `INSERT INTO players (
-        team_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        speed, strength, awareness, agility, acceleration, stamina, injury,
-        throw_power, throw_accuracy, carrying, catching, route_running,
-        blocking, tackling, coverage, kick_power, kick_accuracy
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+        dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
+        attributes, dealbreakers
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
-        teamId, first_name, last_name, position, jersey_number, year, overall_rating,
-        speed, strength, awareness, agility, acceleration, stamina, injury,
-        throw_power, throw_accuracy, carrying, catching, route_running,
-        blocking, tackling, coverage, kick_power, kick_accuracy
+        dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
+        JSON.stringify(attributes || {}), dealbreakers || []
       ]
     );
 
@@ -84,16 +78,16 @@ const createPlayer = async (req, res) => {
 
 const updatePlayer = async (req, res) => {
   try {
-    const { teamId, playerId } = req.params;
+    const { dynastyId, playerId } = req.params;
 
-    // Verify team belongs to user
-    const teamCheck = await db.query(
-      'SELECT * FROM teams WHERE id = $1 AND user_id = $2',
-      [teamId, req.user.id]
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
     );
 
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
     }
 
     const fields = [];
@@ -101,10 +95,7 @@ const updatePlayer = async (req, res) => {
     let paramCount = 1;
 
     const allowedFields = [
-      'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating',
-      'speed', 'strength', 'awareness', 'agility', 'acceleration', 'stamina', 'injury',
-      'throw_power', 'throw_accuracy', 'carrying', 'catching', 'route_running',
-      'blocking', 'tackling', 'coverage', 'kick_power', 'kick_accuracy'
+      'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating'
     ];
 
     for (const field of allowedFields) {
@@ -115,15 +106,29 @@ const updatePlayer = async (req, res) => {
       }
     }
 
+    // Handle JSONB attributes
+    if (req.body.attributes !== undefined) {
+      fields.push(`attributes = $${paramCount}`);
+      values.push(JSON.stringify(req.body.attributes));
+      paramCount++;
+    }
+
+    // Handle array dealbreakers
+    if (req.body.dealbreakers !== undefined) {
+      fields.push(`dealbreakers = $${paramCount}`);
+      values.push(req.body.dealbreakers);
+      paramCount++;
+    }
+
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
 
-    values.push(playerId, teamId);
+    values.push(playerId, dynastyId);
 
     const result = await db.query(
       `UPDATE players SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $${paramCount} AND team_id = $${paramCount + 1} RETURNING *`,
+       WHERE id = $${paramCount} AND dynasty_id = $${paramCount + 1} RETURNING *`,
       values
     );
 
@@ -143,21 +148,21 @@ const updatePlayer = async (req, res) => {
 
 const deletePlayer = async (req, res) => {
   try {
-    const { teamId, playerId } = req.params;
+    const { dynastyId, playerId } = req.params;
 
-    // Verify team belongs to user
-    const teamCheck = await db.query(
-      'SELECT * FROM teams WHERE id = $1 AND user_id = $2',
-      [teamId, req.user.id]
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
     );
 
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
     }
 
     const result = await db.query(
-      'DELETE FROM players WHERE id = $1 AND team_id = $2 RETURNING *',
-      [playerId, teamId]
+      'DELETE FROM players WHERE id = $1 AND dynasty_id = $2 RETURNING *',
+      [playerId, dynastyId]
     );
 
     if (result.rows.length === 0) {
