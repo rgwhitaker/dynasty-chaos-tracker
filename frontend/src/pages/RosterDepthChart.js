@@ -308,7 +308,7 @@ const RosterDepthChart = () => {
                       Overall
                     </Typography>
                     <Typography variant="h4" color="primary">
-                      {selectedPlayer.overall_rating || '-'}
+                      {selectedPlayer.overall_rating ?? '-'}
                     </Typography>
                   </Grid>
                   {selectedPlayer.stud_score && (
@@ -326,7 +326,7 @@ const RosterDepthChart = () => {
                       Height
                     </Typography>
                     <Typography variant="h6">
-                      {selectedPlayer.height || '-'}
+                      {selectedPlayer.height ?? '-'}
                     </Typography>
                   </Grid>
                   <Grid item xs={3}>
@@ -334,7 +334,7 @@ const RosterDepthChart = () => {
                       Weight
                     </Typography>
                     <Typography variant="h6">
-                      {selectedPlayer.weight || '-'}
+                      {selectedPlayer.weight ?? '-'}
                     </Typography>
                   </Grid>
                 </Grid>
