@@ -1,135 +1,94 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
+  Grid,
+  Card,
+  CardContent,
   Typography,
-  TextField,
   Button,
   Box,
-  Paper,
-  Grid,
-  Alert,
+  CircularProgress,
 } from '@mui/material';
-import { createDynasty } from '../store/slices/dynastySlice';
+import { Add as AddIcon } from '@mui/icons-material';
+import { getDynasties } from '../store/slices/dynastySlice';
 
 const DynastyList = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [formData, setFormData] = useState({
-    team_name: '',
-    school: '',
-    conference: '',
-    season_year: new Date().getFullYear(),
-  });
-  const [error, setError] = useState(null);
+  const { dynasties, isLoading } = useSelector((state) => state.dynasty);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-    // Clear error when user starts typing
-    if (error) setError(null);
-  };
+  useEffect(() => {
+    dispatch(getDynasties());
+  }, [dispatch]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError(null);
-    try {
-      const result = await dispatch(createDynasty(formData)).unwrap();
-      // Navigate to the newly created dynasty's roster management page
-      navigate(`/dynasties/${result.id}/roster`);
-    } catch (error) {
-      const errorMessage = error?.message || 'Failed to create dynasty. Please try again.';
-      setError(errorMessage);
-      console.error('Failed to create dynasty:', error);
-    }
-  };
-
-  const handleCancel = () => {
-    navigate('/dashboard');
-  };
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Container maxWidth="md">
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Create New Dynasty
+    <Container maxWidth="lg">
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1">
+          My Dynasties
         </Typography>
-        <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Team Name"
-                  name="team_name"
-                  value={formData.team_name}
-                  onChange={handleChange}
-                  required
-                  helperText="e.g., Crimson Tide, Buckeyes, Wolverines"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="School"
-                  name="school"
-                  value={formData.school}
-                  onChange={handleChange}
-                  required
-                  helperText="e.g., Alabama, Ohio State, Michigan"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Conference"
-                  name="conference"
-                  value={formData.conference}
-                  onChange={handleChange}
-                  helperText="e.g., SEC, Big Ten, ACC (optional)"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Season Year"
-                  name="season_year"
-                  type="number"
-                  value={formData.season_year}
-                  onChange={handleChange}
-                  required
-                  helperText="Starting season year"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/dynasties/new')}
+        >
+          Create Dynasty
+        </Button>
+      </Box>
+
+      <Grid container spacing={3}>
+        {dynasties.map((dynasty) => (
+          <Grid item xs={12} sm={6} md={4} key={dynasty.id}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {dynasty.team_name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {dynasty.school}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {dynasty.conference}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Season: {dynasty.season_year || 'N/A'}
+                </Typography>
+                <Box sx={{ mt: 2 }}>
                   <Button
+                    size="small"
                     variant="outlined"
-                    onClick={handleCancel}
+                    onClick={() => navigate(`/dynasties/${dynasty.id}/roster`)}
                   >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                  >
-                    Create Dynasty
+                    View Roster
                   </Button>
                 </Box>
-              </Grid>
-            </Grid>
-          </form>
-        </Paper>
-      </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+
+        {dynasties.length === 0 && (
+          <Grid item xs={12}>
+            <Card>
+              <CardContent>
+                <Typography variant="body1" align="center">
+                  No dynasties yet. Create your first dynasty to get started!
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
     </Container>
   );
 };

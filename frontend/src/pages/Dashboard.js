@@ -40,7 +40,7 @@ const Dashboard = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/dynasties')}
+          onClick={() => navigate('/dynasties/new')}
         >
           Create Dynasty
         </Button>
