@@ -47,7 +47,7 @@ const DynastyList = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {dynasties.map((dynasty) => (
+        {dynasties && dynasties.map((dynasty) => (
           <Grid item xs={12} sm={6} md={4} key={dynasty.id}>
             <Card>
               <CardContent>
@@ -77,7 +77,7 @@ const DynastyList = () => {
           </Grid>
         ))}
 
-        {dynasties.length === 0 && (
+        {(!dynasties || dynasties.length === 0) && (
           <Grid item xs={12}>
             <Card>
               <CardContent>
