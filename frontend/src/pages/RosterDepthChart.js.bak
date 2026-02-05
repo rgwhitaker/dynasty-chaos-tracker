@@ -16,10 +16,8 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  Divider,
   Alert,
-  ToggleButtonGroup,
-  ToggleButton,
-  Paper,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -43,24 +41,29 @@ const ATTRIBUTE_CATEGORIES = {
   'Special Teams': ['RET', 'KPW', 'KAC', 'LSP'],
 };
 
-// Position groups by unit
-const POSITION_GROUPS = {
-  offense: {
-    'WR': { positions: ['WR'], label: 'Wide Receivers', order: 1 },
-    'OL': { positions: ['OT', 'OG', 'C', 'OL'], label: 'Offensive Line', order: 2 },
-    'QB': { positions: ['QB'], label: 'Quarterback', order: 3 },
-    'RB': { positions: ['RB', 'FB'], label: 'Running Backs', order: 4 },
-    'TE': { positions: ['TE'], label: 'Tight Ends', order: 5 },
-  },
-  defense: {
-    'DL': { positions: ['DE', 'DT', 'DL'], label: 'Defensive Line', order: 1 },
-    'LB': { positions: ['MLB', 'OLB', 'LB'], label: 'Linebackers', order: 2 },
-    'DB': { positions: ['CB', 'S', 'SS', 'FS'], label: 'Defensive Backs', order: 3 },
-  },
-  specialTeams: {
-    'K': { positions: ['K'], label: 'Kicker', order: 1 },
-    'P': { positions: ['P'], label: 'Punter', order: 2 },
-  },
+// Key attributes to display on player cards based on position
+const KEY_ATTRIBUTES_BY_POSITION = {
+  'QB': ['SPD', 'AWR', 'THP', 'SAC', 'MAC', 'DAC'],
+  'RB': ['SPD', 'ACC', 'CAR', 'BCV', 'BTK', 'CTH'],
+  'FB': ['SPD', 'STR', 'CAR', 'RBK', 'PBK', 'CTH'],
+  'WR': ['SPD', 'ACC', 'CTH', 'CIT', 'SRR', 'DRR'],
+  'TE': ['SPD', 'CTH', 'CIT', 'RBK', 'PBK', 'SRR'],
+  'OL': ['STR', 'AWR', 'PBK', 'PBP', 'RBK', 'RBP'],
+  'C': ['STR', 'AWR', 'PBK', 'PBP', 'RBK', 'RBP'],
+  'OG': ['STR', 'AWR', 'PBK', 'PBP', 'RBK', 'RBP'],
+  'OT': ['STR', 'AWR', 'PBK', 'PBF', 'RBK', 'RBP'],
+  'DL': ['STR', 'SPD', 'ACC', 'TAK', 'POW', 'BSH'],
+  'DE': ['SPD', 'ACC', 'TAK', 'POW', 'FMV', 'PUR'],
+  'DT': ['STR', 'TAK', 'POW', 'BSH', 'PMV', 'PUR'],
+  'LB': ['SPD', 'ACC', 'TAK', 'PUR', 'MCV', 'ZCV'],
+  'MLB': ['SPD', 'TAK', 'PUR', 'PRC', 'ZCV', 'BSH'],
+  'OLB': ['SPD', 'ACC', 'TAK', 'PUR', 'MCV', 'FMV'],
+  'CB': ['SPD', 'ACC', 'MCV', 'ZCV', 'PRS', 'CTH'],
+  'S': ['SPD', 'ACC', 'TAK', 'MCV', 'ZCV', 'PUR'],
+  'SS': ['SPD', 'TAK', 'MCV', 'ZCV', 'PUR', 'PRS'],
+  'FS': ['SPD', 'ACC', 'MCV', 'ZCV', 'CTH', 'PUR'],
+  'K': ['KPW', 'KAC', 'AWR'],
+  'P': ['KPW', 'KAC', 'AWR'],
 };
 
 const RosterDepthChart = () => {
@@ -75,17 +78,17 @@ const RosterDepthChart = () => {
   const [deletingPlayer, setDeletingPlayer] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
-  const [unit, setUnit] = useState('offense');
 
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
   }, [dispatch, dynastyId]);
 
-  const handleUnitChange = (event, newUnit) => {
-    if (newUnit !== null) {
-      setUnit(newUnit);
-    }
-  };
+  // Sort players by Stud Score (fallback to Overall)
+  const sortedPlayers = [...(players || [])].sort((a, b) => {
+    const scoreA = a.stud_score ?? a.overall_rating ?? 0;
+    const scoreB = b.stud_score ?? b.overall_rating ?? 0;
+    return scoreB - scoreA;
+  });
 
   const handlePlayerClick = (player) => {
     setSelectedPlayer(player);
@@ -141,6 +144,14 @@ const RosterDepthChart = () => {
     setDeleteError(null);
   };
 
+  const getKeyAttributes = (player) => {
+    const attributes = KEY_ATTRIBUTES_BY_POSITION[player.position] || [];
+    return attributes.map(attr => ({
+      name: attr,
+      value: player.attributes?.[attr] || '-'
+    }));
+  };
+
   const getDevTraitColor = (trait) => {
     switch (trait) {
       case 'Elite':
@@ -154,115 +165,6 @@ const RosterDepthChart = () => {
     }
   };
 
-  // Group players by position for the current unit
-  const groupedPlayers = React.useMemo(() => {
-    const groups = POSITION_GROUPS[unit];
-    const result = {};
-
-    Object.entries(groups).forEach(([groupKey, groupInfo]) => {
-      const groupPlayers = (players || []).filter(p => 
-        groupInfo.positions.includes(p.position)
-      );
-      
-      // Sort by stud_score or overall_rating
-      groupPlayers.sort((a, b) => {
-        const scoreA = a.stud_score ?? a.overall_rating ?? 0;
-        const scoreB = b.stud_score ?? b.overall_rating ?? 0;
-        return scoreB - scoreA;
-      });
-
-      result[groupKey] = {
-        ...groupInfo,
-        players: groupPlayers,
-      };
-    });
-
-    return result;
-  }, [players, unit]);
-
-  // Render a compact player card
-  const renderPlayerCard = (player) => {
-    if (!player) return null;
-
-    return (
-      <Card 
-        key={player.id}
-        onClick={() => handlePlayerClick(player)}
-        sx={{ 
-          cursor: 'pointer',
-          minWidth: 140,
-          maxWidth: 180,
-          '&:hover': { 
-            boxShadow: 4,
-            transform: 'translateY(-2px)',
-            transition: 'all 0.2s'
-          },
-          transition: 'all 0.2s',
-        }}
-      >
-        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="body2" fontWeight="bold" noWrap>
-                {player.first_name} {player.last_name}
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
-                <Chip label={`#${player.jersey_number}`} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
-                <Chip label={player.position} size="small" color="primary" sx={{ height: 18, fontSize: '0.7rem' }} />
-                <Chip label={player.year} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
-              </Box>
-            </Box>
-            <Box sx={{ textAlign: 'right', ml: 1 }}>
-              <Typography variant="h6" color="primary" lineHeight={1}>
-                {player.stud_score ?? player.overall_rating ?? '-'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" lineHeight={1}>
-                {player.stud_score != null ? 'STUD' : 'OVR'}
-              </Typography>
-            </Box>
-          </Box>
-
-          {player.dev_trait && (
-            <Chip 
-              label={player.dev_trait} 
-              size="small" 
-              color={getDevTraitColor(player.dev_trait)}
-              sx={{ height: 18, fontSize: '0.65rem', fontWeight: 'bold', mt: 0.5 }}
-            />
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Render position group section
-  const renderPositionGroup = (groupKey, groupData) => {
-    const { label, players: groupPlayers } = groupData;
-
-    if (groupPlayers.length === 0) return null;
-
-    return (
-      <Box key={groupKey} sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          borderBottom: 2, 
-          borderColor: 'primary.main',
-          pb: 0.5,
-          mb: 2
-        }}>
-          {label}
-        </Typography>
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1.5, 
-          flexWrap: 'wrap',
-          alignItems: 'flex-start'
-        }}>
-          {groupPlayers.map(player => renderPlayerCard(player))}
-        </Box>
-      </Box>
-    );
-  };
-
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -271,11 +173,9 @@ const RosterDepthChart = () => {
     );
   }
 
-  const hasPlayers = players && players.length > 0;
-
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+    <Container maxWidth="lg">
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Typography variant="h4" component="h1">
           Roster Depth Chart
         </Typography>
@@ -288,29 +188,7 @@ const RosterDepthChart = () => {
         </Button>
       </Box>
 
-      {hasPlayers && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-          <ToggleButtonGroup
-            value={unit}
-            exclusive
-            onChange={handleUnitChange}
-            aria-label="unit selection"
-            color="primary"
-          >
-            <ToggleButton value="offense">
-              Offense
-            </ToggleButton>
-            <ToggleButton value="defense">
-              Defense
-            </ToggleButton>
-            <ToggleButton value="specialTeams">
-              Special Teams
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-      )}
-
-      {!hasPlayers ? (
+      {sortedPlayers.length === 0 ? (
         <Card>
           <CardContent>
             <Typography variant="body1" align="center">
@@ -319,11 +197,72 @@ const RosterDepthChart = () => {
           </CardContent>
         </Card>
       ) : (
-        <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.default' }}>
-          {Object.entries(groupedPlayers)
-            .sort(([, a], [, b]) => a.order - b.order)
-            .map(([groupKey, groupData]) => renderPositionGroup(groupKey, groupData))}
-        </Paper>
+        <Grid container spacing={2}>
+          {sortedPlayers.map((player) => (
+            <Grid item xs={12} sm={6} md={4} key={player.id}>
+              <Card 
+                sx={{ 
+                  cursor: 'pointer',
+                  '&:hover': { 
+                    boxShadow: 6,
+                    transform: 'translateY(-2px)',
+                    transition: 'all 0.2s'
+                  }
+                }}
+                onClick={() => handlePlayerClick(player)}
+              >
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Box>
+                      <Typography variant="h6" component="div">
+                        {player.first_name} {player.last_name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                        <Chip label={`#${player.jersey_number}`} size="small" />
+                        <Chip label={player.position} size="small" color="primary" />
+                        <Chip label={player.year} size="small" />
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <Typography variant="h4" color="primary">
+                        {player.stud_score ?? player.overall_rating}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {player.stud_score ? 'STUD' : 'OVR'}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {player.dev_trait && (
+                    <Box sx={{ mb: 1 }}>
+                      <Chip 
+                        label={player.dev_trait} 
+                        size="small" 
+                        color={getDevTraitColor(player.dev_trait)}
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    </Box>
+                  )}
+
+                  <Divider sx={{ my: 1 }} />
+
+                  <Grid container spacing={1}>
+                    {getKeyAttributes(player).map(({ name, value }) => (
+                      <Grid item xs={4} key={name}>
+                        <Typography variant="caption" color="text.secondary">
+                          {name}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold">
+                          {value}
+                        </Typography>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
       {/* Player Detail Dialog */}
