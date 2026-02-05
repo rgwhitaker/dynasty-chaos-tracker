@@ -19,7 +19,6 @@ import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   SportsFootball as SportsFootballIcon,
-  People as PeopleIcon,
   Settings as SettingsIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material';
