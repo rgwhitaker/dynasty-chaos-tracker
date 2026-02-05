@@ -117,8 +117,12 @@ The frontend will run on port 3000 with hot-reload and proxy API requests to por
 # Create database
 createdb dynasty_tracker
 
-# Run migrations
+# Run initial schema
 psql -d dynasty_tracker -f backend/database/init.sql
+
+# Migrations are automatically applied when the backend starts
+# Or run them manually:
+psql -d dynasty_tracker -f backend/database/migrations/add_player_physical_attributes.sql
 ```
 
 ## Production Deployment
@@ -149,8 +153,12 @@ docker push your-registry/dynasty-frontend:latest
 3. **Database Migration:**
 
 ```bash
-# On production database
+# On production database - run initial schema
 psql $DATABASE_URL -f backend/database/init.sql
+
+# Migrations are automatically applied when the backend starts
+# The backend will run any pending migrations from backend/database/migrations/
+# Check logs to verify migrations were applied successfully
 ```
 
 ### Environment-Specific Configuration
