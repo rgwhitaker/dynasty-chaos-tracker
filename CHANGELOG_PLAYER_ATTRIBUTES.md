@@ -12,7 +12,7 @@ Updated the Dynasty Chaos Tracker to support all 55 player ratings from College 
 
 #### New Files:
 - `backend/src/constants/playerAttributes.js` - Centralized constants for all player attributes
-- `backend/database/migrations/add_player_physical_attributes.sql` - Migration script for existing databases
+- `backend/database/migrations/20240101_0000_add_player_physical_attributes.sql` - Migration script for existing databases
 
 #### Modified Files:
 - `backend/database/init.sql` - Added height, weight, dev_trait columns to players and recruits tables
@@ -161,7 +161,7 @@ The migration system will:
 **Manual (If needed):**
 Run the migration script manually:
 ```bash
-psql -U dynasty_user -d dynasty_tracker -f backend/database/migrations/add_player_physical_attributes.sql
+psql -U dynasty_user -d dynasty_tracker -f backend/database/migrations/20240101_0000_add_player_physical_attributes.sql
 ```
 
 ## Backward Compatibility

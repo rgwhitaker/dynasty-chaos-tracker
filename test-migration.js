@@ -6,13 +6,26 @@
  * This script tests:
  * 1. Database migration system automatically applies pending migrations
  * 2. Player update with height, weight, and dev_trait columns works correctly
+ * 
+ * Usage:
+ *   Requires DATABASE_URL environment variable or individual database env vars:
+ *   - POSTGRES_USER
+ *   - POSTGRES_PASSWORD
+ *   - POSTGRES_DB
  */
 
 const { Pool } = require('pg');
 
+// Require environment variables to be set
+if (!process.env.DATABASE_URL && (!process.env.POSTGRES_USER || !process.env.POSTGRES_PASSWORD || !process.env.POSTGRES_DB)) {
+  console.error('Error: Database configuration not found.');
+  console.error('Please set DATABASE_URL or POSTGRES_USER, POSTGRES_PASSWORD, and POSTGRES_DB environment variables.');
+  process.exit(1);
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 
-    `postgresql://${process.env.POSTGRES_USER || 'dynasty_user'}:${process.env.POSTGRES_PASSWORD || 'dynasty_pass'}@localhost:5432/${process.env.POSTGRES_DB || 'dynasty_tracker'}`,
+    `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@localhost:5432/${process.env.POSTGRES_DB}`,
 });
 
 async function test() {

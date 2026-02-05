@@ -130,7 +130,11 @@ To verify the fix:
 
 Current migrations in `backend/database/migrations/`:
 
-- **add_player_physical_attributes.sql** - Adds height, weight, and dev_trait columns to players and recruits tables
+- **20240101_0000_add_player_physical_attributes.sql** - Adds height, weight, and dev_trait columns to players and recruits tables
+
+### Naming Convention
+
+Migrations use the format `YYYYMMDD_HHMM_description.sql` to ensure chronological execution order.
 
 ## Creating New Migrations
 

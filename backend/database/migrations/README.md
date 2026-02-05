@@ -7,26 +7,29 @@ This directory contains database migration files that are automatically applied 
 1. When the backend server starts, it checks for pending migrations in this directory
 2. It tracks which migrations have been applied in the `migrations` table
 3. Any new `.sql` files are automatically executed in alphabetical order
-4. Migration status is logged to the console
+4. Each migration runs within a transaction - if it fails, all changes are rolled back
+5. Migration status is logged to the console
 
 ## Migration Files
 
-Migrations are executed in alphabetical order. Use a naming convention like:
+**Naming Convention**: Migrations are executed in alphabetical order. Use this naming format:
 
 ```
-YYYY_MM_DD_description.sql
+YYYYMMDD_HHMM_description.sql
 ```
 
-or
+Examples:
+```
+20240101_1200_add_player_physical_attributes.sql
+20240115_0900_add_injury_tracking.sql
+20240201_1430_add_indexes_for_performance.sql
+```
 
-```
-001_description.sql
-002_another_migration.sql
-```
+This ensures migrations run in chronological order regardless of when they were created.
 
 ### Current Migrations
 
-- `add_player_physical_attributes.sql` - Adds height, weight, and dev_trait columns to players and recruits tables
+- `20240101_0000_add_player_physical_attributes.sql` - Adds height, weight, and dev_trait columns to players and recruits tables
 
 ## Creating New Migrations
 

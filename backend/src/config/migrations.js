@@ -63,20 +63,29 @@ class MigrationRunner {
     const filePath = path.join(this.migrationsDir, filename);
     const sql = fs.readFileSync(filePath, 'utf8');
 
+    // Start transaction
+    const client = await db.pool.connect();
+    
     try {
+      await client.query('BEGIN');
+      
       // Run the migration SQL
-      await db.query(sql);
+      await client.query(sql);
       
       // Record that this migration has been applied
-      await db.query(
+      await client.query(
         'INSERT INTO migrations (name) VALUES ($1)',
         [filename]
       );
 
+      await client.query('COMMIT');
       console.log(`✓ Applied migration: ${filename}`);
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error(`✗ Error applying migration ${filename}:`, error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
