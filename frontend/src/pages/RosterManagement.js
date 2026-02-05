@@ -28,14 +28,7 @@ import {
 } from '@mui/icons-material';
 import { getPlayers } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
-
-const POSITIONS = [
-  'QB', 'RB', 'FB', 'WR', 'TE', 'OL', 'C', 'OG', 'OT',
-  'DL', 'DE', 'DT', 'LB', 'MLB', 'OLB', 'CB', 'S', 'SS', 'FS',
-  'K', 'P'
-];
-
-const YEARS = ['FR', 'SO', 'JR', 'SR', 'GRAD'];
+import { POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
 
 const RosterManagement = () => {
   const { id: dynastyId } = useParams();
@@ -55,6 +48,9 @@ const RosterManagement = () => {
     jersey_number: '',
     year: '',
     overall_rating: '',
+    height: '',
+    weight: '',
+    dev_trait: '',
   });
   const [manualError, setManualError] = useState(null);
   const [manualSuccess, setManualSuccess] = useState(null);
@@ -126,6 +122,7 @@ const RosterManagement = () => {
         ...manualFormData,
         jersey_number: manualFormData.jersey_number ? parseInt(manualFormData.jersey_number) : null,
         overall_rating: manualFormData.overall_rating ? parseInt(manualFormData.overall_rating) : null,
+        weight: manualFormData.weight ? parseInt(manualFormData.weight) : null,
       };
 
       await playerService.createPlayer(dynastyId, playerData);
@@ -137,6 +134,9 @@ const RosterManagement = () => {
         jersey_number: '',
         year: '',
         overall_rating: '',
+        height: '',
+        weight: '',
+        dev_trait: '',
       });
       // Refresh the player list immediately since manual entry is synchronous
       dispatch(getPlayers(dynastyId));
@@ -355,6 +355,45 @@ const RosterManagement = () => {
                       helperText="Overall rating (40-99)"
                     />
                   </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="Height"
+                      name="height"
+                      value={manualFormData.height}
+                      onChange={handleManualChange}
+                      placeholder='6\'2"'
+                      helperText='e.g., 6\'2"'
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      label="Weight"
+                      name="weight"
+                      type="number"
+                      value={manualFormData.weight}
+                      onChange={handleManualChange}
+                      inputProps={{ min: 150, max: 400 }}
+                      helperText="Weight in pounds"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      select
+                      label="Dev Trait"
+                      name="dev_trait"
+                      value={manualFormData.dev_trait}
+                      onChange={handleManualChange}
+                    >
+                      {DEV_TRAITS.map((trait) => (
+                        <MenuItem key={trait} value={trait}>
+                          {trait}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button
@@ -368,6 +407,9 @@ const RosterManagement = () => {
                             jersey_number: '',
                             year: '',
                             overall_rating: '',
+                            height: '',
+                            weight: '',
+                            dev_trait: '',
                           });
                           setManualError(null);
                           setManualSuccess(null);
@@ -424,6 +466,21 @@ const RosterManagement = () => {
                       <Typography variant="body2" color="text.secondary">
                         Overall: {player.overall_rating || 'N/A'}
                       </Typography>
+                      {player.height && (
+                        <Typography variant="body2" color="text.secondary">
+                          Height: {player.height}
+                        </Typography>
+                      )}
+                      {player.weight && (
+                        <Typography variant="body2" color="text.secondary">
+                          Weight: {player.weight} lbs
+                        </Typography>
+                      )}
+                      {player.dev_trait && (
+                        <Typography variant="body2" color="text.secondary">
+                          Dev Trait: {player.dev_trait}
+                        </Typography>
+                      )}
                     </CardContent>
                   </Card>
                 </Grid>

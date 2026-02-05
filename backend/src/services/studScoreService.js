@@ -1,89 +1,92 @@
 const db = require('../config/database');
-const studScoreService = require('./studScoreService');
+const { PLAYER_RATINGS } = require('../constants/playerAttributes');
 
-// Default attribute weights by position
+// Default attribute weights by position (using CFB26 attribute abbreviations)
 const DEFAULT_WEIGHTS = {
   QB: {
-    throw_power: 1.5,
-    throw_accuracy_short: 2.0,
-    throw_accuracy_mid: 2.0,
-    throw_accuracy_deep: 1.8,
-    throw_on_run: 1.3,
-    awareness: 1.5,
-    speed: 0.8,
-    agility: 0.7
+    THP: 1.5,    // Throw Power
+    SAC: 2.0,    // Short Accuracy
+    MAC: 2.0,    // Medium Accuracy
+    DAC: 1.8,    // Deep Accuracy
+    TUP: 1.3,    // Throw Under Pressure
+    AWR: 1.5,    // Awareness
+    SPD: 0.8,    // Speed
+    AGI: 0.7     // Agility
   },
   RB: {
-    speed: 1.8,
-    acceleration: 1.5,
-    agility: 1.4,
-    carrying: 1.3,
-    break_tackle: 1.5,
-    catching: 0.9,
-    awareness: 1.0
+    SPD: 1.8,    // Speed
+    ACC: 1.5,    // Acceleration
+    AGI: 1.4,    // Agility
+    CAR: 1.3,    // Carrying
+    BTK: 1.5,    // Break Tackle
+    CTH: 0.9,    // Catching
+    AWR: 1.0     // Awareness
   },
   WR: {
-    speed: 1.7,
-    acceleration: 1.3,
-    catching: 1.8,
-    spectacular_catch: 1.2,
-    route_running: 1.5,
-    release: 1.3,
-    catching_in_traffic: 1.4,
-    awareness: 1.0
+    SPD: 1.7,    // Speed
+    ACC: 1.3,    // Acceleration
+    CTH: 1.8,    // Catching
+    SPC: 1.2,    // Spectacular Catch
+    SRR: 1.5,    // Short Route Running
+    MRR: 1.5,    // Medium Route Running
+    DRR: 1.5,    // Deep Route Running
+    RLS: 1.3,    // Release
+    CIT: 1.4,    // Catch in Traffic
+    AWR: 1.0     // Awareness
   },
   TE: {
-    catching: 1.6,
-    route_running: 1.2,
-    blocking: 1.4,
-    speed: 1.0,
-    strength: 1.3,
-    awareness: 1.1
+    CTH: 1.6,    // Catching
+    SRR: 1.2,    // Short Route Running
+    RBK: 1.4,    // Run Block
+    SPD: 1.0,    // Speed
+    STR: 1.3,    // Strength
+    AWR: 1.1     // Awareness
   },
   OL: {
-    strength: 1.8,
-    pass_blocking: 1.7,
-    run_blocking: 1.7,
-    awareness: 1.5,
-    agility: 0.8
+    STR: 1.8,    // Strength
+    PBK: 1.7,    // Pass Block
+    RBK: 1.7,    // Run Block
+    AWR: 1.5,    // Awareness
+    AGI: 0.8     // Agility
   },
   DL: {
-    power_moves: 1.6,
-    finesse_moves: 1.6,
-    block_shedding: 1.7,
-    strength: 1.5,
-    pursuit: 1.3,
-    tackle: 1.4,
-    awareness: 1.2
+    PMV: 1.6,    // Power Moves
+    FMV: 1.6,    // Finesse Moves
+    BSH: 1.7,    // Block Shedding
+    STR: 1.5,    // Strength
+    PUR: 1.3,    // Pursuit
+    TAK: 1.4,    // Tackle
+    AWR: 1.2     // Awareness
   },
   LB: {
-    tackle: 1.7,
-    pursuit: 1.5,
-    play_recognition: 1.6,
-    coverage: 1.3,
-    block_shedding: 1.4,
-    speed: 1.2,
-    awareness: 1.5
+    TAK: 1.7,    // Tackle
+    PUR: 1.5,    // Pursuit
+    PRC: 1.6,    // Play Recognition
+    MCV: 1.3,    // Man Coverage
+    ZCV: 1.3,    // Zone Coverage
+    BSH: 1.4,    // Block Shedding
+    SPD: 1.2,    // Speed
+    AWR: 1.5     // Awareness
   },
   DB: {
-    man_coverage: 1.8,
-    zone_coverage: 1.8,
-    speed: 1.7,
-    acceleration: 1.5,
-    agility: 1.4,
-    catching: 1.2,
-    play_recognition: 1.5,
-    awareness: 1.4
+    MCV: 1.8,    // Man Coverage
+    ZCV: 1.8,    // Zone Coverage
+    SPD: 1.7,    // Speed
+    ACC: 1.5,    // Acceleration
+    AGI: 1.4,    // Agility
+    CTH: 1.2,    // Catching
+    PRC: 1.5,    // Play Recognition
+    AWR: 1.4     // Awareness
   },
   K: {
-    kick_power: 2.0,
-    kick_accuracy: 2.0,
-    awareness: 1.0
+    KPW: 2.0,    // Kick Power
+    KAC: 2.0,    // Kick Accuracy
+    AWR: 1.0     // Awareness
   },
   P: {
-    kick_power: 1.8,
-    kick_accuracy: 1.8,
-    awareness: 1.0
+    KPW: 1.8,    // Kick Power
+    KAC: 1.8,    // Kick Accuracy
+    AWR: 1.0     // Awareness
   }
 };
 

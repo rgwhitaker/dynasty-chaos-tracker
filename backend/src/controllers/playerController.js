@@ -51,18 +51,18 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      attributes, dealbreakers
+      height, weight, dev_trait, attributes, dealbreakers
     } = req.body;
 
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        attributes, dealbreakers
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        height, weight, dev_trait, attributes, dealbreakers
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
-        JSON.stringify(attributes || {}), dealbreakers || []
+        height, weight, dev_trait, JSON.stringify(attributes || {}), dealbreakers || []
       ]
     );
 
@@ -95,7 +95,8 @@ const updatePlayer = async (req, res) => {
     let paramCount = 1;
 
     const allowedFields = [
-      'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating'
+      'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating',
+      'height', 'weight', 'dev_trait'
     ];
 
     for (const field of allowedFields) {

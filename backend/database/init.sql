@@ -45,7 +45,10 @@ CREATE TABLE IF NOT EXISTS players (
     jersey_number INTEGER,
     year VARCHAR(20), -- FR, SO, JR, SR, GRAD
     overall_rating INTEGER,
-    attributes JSONB, -- Flexible storage for all position-specific attributes
+    height VARCHAR(10), -- Height (e.g., "6'2\"")
+    weight INTEGER, -- Weight in pounds
+    dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
+    attributes JSONB, -- Flexible storage for all position-specific attributes (55 ratings)
     dealbreakers TEXT[], -- Array of dealbreaker flags
     departure_risk DECIMAL(5,2), -- Predicted probability of leaving
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -98,7 +101,10 @@ CREATE TABLE IF NOT EXISTS recruits (
     position VARCHAR(10) NOT NULL,
     stars INTEGER,
     overall_rating INTEGER,
-    attributes JSONB, -- Predicted/known attributes
+    height VARCHAR(10), -- Height (e.g., "6'2\"")
+    weight INTEGER, -- Weight in pounds
+    dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
+    attributes JSONB, -- Predicted/known attributes (55 ratings)
     commitment_status VARCHAR(50), -- Committed, Considering, Not Interested
     commitment_probability DECIMAL(5,2), -- ML-predicted probability
     dealbreakers TEXT[], -- Array of dealbreaker preferences
