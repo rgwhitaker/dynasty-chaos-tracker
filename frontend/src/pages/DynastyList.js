@@ -9,6 +9,7 @@ import {
   Box,
   Paper,
   Grid,
+  Alert,
 } from '@mui/material';
 import { createDynasty } from '../store/slices/dynastySlice';
 
@@ -21,21 +22,27 @@ const DynastyList = () => {
     conference: '',
     season_year: new Date().getFullYear(),
   });
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
     try {
       const result = await dispatch(createDynasty(formData)).unwrap();
       // Navigate to the newly created dynasty's roster management page
       navigate(`/dynasties/${result.id}/roster`);
     } catch (error) {
+      const errorMessage = error?.message || 'Failed to create dynasty. Please try again.';
+      setError(errorMessage);
       console.error('Failed to create dynasty:', error);
     }
   };
@@ -51,6 +58,11 @@ const DynastyList = () => {
           Create New Dynasty
         </Typography>
         <Paper elevation={3} sx={{ p: 4, mt: 3 }}>
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
           <form onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid item xs={12}>
