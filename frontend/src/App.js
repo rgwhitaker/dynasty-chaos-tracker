@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DynastyList from './pages/DynastyList';
+import CreateDynasty from './pages/CreateDynasty';
 import DynastyDetail from './pages/DynastyDetail';
 import RosterManagement from './pages/RosterManagement';
 import DepthChart from './pages/DepthChart';
@@ -25,6 +26,7 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dynasties" element={<DynastyList />} />
+          <Route path="/dynasties/new" element={<CreateDynasty />} />
           <Route path="/dynasties/:id" element={<DynastyDetail />} />
           <Route path="/dynasties/:id/roster" element={<RosterManagement />} />
           <Route path="/dynasties/:id/depth-chart" element={<DepthChart />} />
