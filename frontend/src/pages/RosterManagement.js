@@ -362,8 +362,8 @@ const RosterManagement = () => {
                       name="height"
                       value={manualFormData.height}
                       onChange={handleManualChange}
-                      placeholder="6'2&quot;"
-                      helperText="e.g., 6'2&quot;"
+                      placeholder={`6'2"`}
+                      helperText={`e.g., 6'2"`}
                     />
                   </Grid>
                   <Grid item xs={12} sm={4}>
