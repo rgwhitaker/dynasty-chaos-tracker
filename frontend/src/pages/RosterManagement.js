@@ -23,14 +23,20 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CardActions,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
-import { getPlayers } from '../store/slices/playerSlice';
+import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
 import { POSITIONS, YEARS, DEV_TRAITS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
 
@@ -74,6 +80,18 @@ const RosterManagement = () => {
   const [manualError, setManualError] = useState(null);
   const [manualSuccess, setManualSuccess] = useState(null);
   const [manualLoading, setManualLoading] = useState(false);
+
+  // Edit player state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editError, setEditError] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingPlayer, setDeletingPlayer] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
@@ -191,6 +209,111 @@ const RosterManagement = () => {
     } finally {
       setManualLoading(false);
     }
+  };
+
+  const handleEditClick = (player) => {
+    setEditingPlayer(player);
+    setEditFormData({
+      first_name: player.first_name || '',
+      last_name: player.last_name || '',
+      position: player.position || '',
+      jersey_number: player.jersey_number || '',
+      year: player.year || '',
+      overall_rating: player.overall_rating || '',
+      height: player.height || '',
+      weight: player.weight || '',
+      dev_trait: player.dev_trait || '',
+      attributes: player.attributes || {},
+      dealbreakers: player.dealbreakers || [],
+    });
+    setEditDialogOpen(true);
+    setEditError(null);
+  };
+
+  const handleEditChange = (e) => {
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: e.target.value,
+    });
+    if (editError) setEditError(null);
+  };
+
+  const handleEditAttributeChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      attributes: {
+        ...editFormData.attributes,
+        [name]: value ? parseInt(value) : null,
+      },
+    });
+    if (editError) setEditError(null);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditError(null);
+    setEditLoading(true);
+
+    try {
+      const filteredAttributes = Object.entries(editFormData.attributes)
+        .filter(([_, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      
+      const playerData = {
+        ...editFormData,
+        jersey_number: editFormData.jersey_number ? parseInt(editFormData.jersey_number) : null,
+        overall_rating: editFormData.overall_rating ? parseInt(editFormData.overall_rating) : null,
+        weight: editFormData.weight ? parseInt(editFormData.weight) : null,
+        attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
+      };
+
+      await dispatch(updatePlayer({ 
+        dynastyId, 
+        playerId: editingPlayer.id, 
+        playerData 
+      })).unwrap();
+      
+      setEditDialogOpen(false);
+      setEditingPlayer(null);
+      setEditFormData({});
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update player. Please try again.';
+      setEditError(errorMessage);
+      console.error('Update player error:', error);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (player) => {
+    setDeletingPlayer(player);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setDeleteLoading(true);
+    try {
+      await dispatch(deletePlayer({ 
+        dynastyId, 
+        playerId: deletingPlayer.id 
+      })).unwrap();
+      
+      setDeleteDialogOpen(false);
+      setDeletingPlayer(null);
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to delete player. Please try again.';
+      console.error('Delete player error:', error);
+      alert(errorMessage);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+    setDeletingPlayer(null);
   };
 
   return (
@@ -564,12 +687,247 @@ const RosterManagement = () => {
                         </Typography>
                       )}
                     </CardContent>
+                    <CardActions>
+                      <Button 
+                        size="small" 
+                        startIcon={<EditIcon />}
+                        onClick={() => handleEditClick(player)}
+                      >
+                        Edit
+                      </Button>
+                      <Button 
+                        size="small" 
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteClick(player)}
+                      >
+                        Delete
+                      </Button>
+                    </CardActions>
                   </Card>
                 </Grid>
               ))}
             </Grid>
           )}
         </Paper>
+
+        {/* Edit Player Dialog */}
+        <Dialog 
+          open={editDialogOpen} 
+          onClose={() => setEditDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>Edit Player</DialogTitle>
+          <DialogContent>
+            {editError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {editError}
+              </Alert>
+            )}
+
+            <form onSubmit={handleEditSubmit} id="edit-player-form">
+              <Grid container spacing={2} sx={{ mt: 1 }}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="First Name"
+                    name="first_name"
+                    value={editFormData.first_name || ''}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Last Name"
+                    name="last_name"
+                    value={editFormData.last_name || ''}
+                    onChange={handleEditChange}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Position"
+                    name="position"
+                    value={editFormData.position || ''}
+                    onChange={handleEditChange}
+                    required
+                  >
+                    {POSITIONS.map((pos) => (
+                      <MenuItem key={pos} value={pos}>
+                        {pos}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Jersey Number"
+                    name="jersey_number"
+                    type="number"
+                    value={editFormData.jersey_number || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 0, max: 99 }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Year"
+                    name="year"
+                    value={editFormData.year || ''}
+                    onChange={handleEditChange}
+                  >
+                    {YEARS.map((year) => (
+                      <MenuItem key={year} value={year}>
+                        {year}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Overall Rating"
+                    name="overall_rating"
+                    type="number"
+                    value={editFormData.overall_rating || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 40, max: 99 }}
+                    helperText="Overall rating (40-99)"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Height"
+                    name="height"
+                    value={editFormData.height || ''}
+                    onChange={handleEditChange}
+                    placeholder={`6'2"`}
+                    helperText={`e.g., 6'2"`}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Weight"
+                    name="weight"
+                    type="number"
+                    value={editFormData.weight || ''}
+                    onChange={handleEditChange}
+                    inputProps={{ min: 150, max: 400 }}
+                    helperText="Weight in pounds"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Dev Trait"
+                    name="dev_trait"
+                    value={editFormData.dev_trait || ''}
+                    onChange={handleEditChange}
+                  >
+                    {DEV_TRAITS.map((trait) => (
+                      <MenuItem key={trait} value={trait}>
+                        {trait}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+                
+                {/* Player Attributes Section */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  <Typography variant="h6" gutterBottom>
+                    Player Attributes (Optional)
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Update individual player ratings. Values should be between 40-99.
+                  </Typography>
+                  
+                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                    <Accordion key={category} sx={{ mb: 1 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography>{category} Attributes</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Grid container spacing={2}>
+                          {attributes.map((attr) => (
+                            <Grid item xs={6} sm={4} md={3} key={attr}>
+                              <TextField
+                                fullWidth
+                                label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                name={attr}
+                                type="number"
+                                value={editFormData.attributes?.[attr] || ''}
+                                onChange={handleEditAttributeChange}
+                                inputProps={{ min: 40, max: 99 }}
+                                size="small"
+                              />
+                            </Grid>
+                          ))}
+                        </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+                  ))}
+                </Grid>
+              </Grid>
+            </form>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit"
+              form="edit-player-form"
+              variant="contained"
+              disabled={editLoading}
+              startIcon={editLoading ? <CircularProgress size={20} /> : null}
+            >
+              {editLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog 
+          open={deleteDialogOpen} 
+          onClose={handleDeleteCancel}
+        >
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Are you sure you want to delete {deletingPlayer?.first_name} {deletingPlayer?.last_name}?
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleDeleteCancel}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteConfirm}
+              color="error"
+              variant="contained"
+              disabled={deleteLoading}
+              startIcon={deleteLoading ? <CircularProgress size={20} /> : null}
+            >
+              {deleteLoading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Container>
   );
