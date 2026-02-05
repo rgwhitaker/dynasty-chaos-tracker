@@ -311,7 +311,7 @@ const RosterDepthChart = () => {
                       {selectedPlayer.overall_rating ?? '-'}
                     </Typography>
                   </Grid>
-                  {selectedPlayer.stud_score && (
+                  {selectedPlayer.stud_score != null && (
                     <Grid item xs={3}>
                       <Typography variant="caption" color="text.secondary">
                         Stud Score
