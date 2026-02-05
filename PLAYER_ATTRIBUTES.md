@@ -4,9 +4,9 @@ This document provides a comprehensive list of all player attributes used in the
 
 ## Overview
 
-The Dynasty Chaos Tracker supports all 54 player ratings from College Football 26, plus physical attributes (Height & Weight) and Development Trait.
+The Dynasty Chaos Tracker supports all 55 player ratings from College Football 26, plus physical attributes (Height & Weight) and Development Trait.
 
-## Player Ratings (54 Total)
+## Player Ratings (55 Total)
 
 ### Overall & Physical Attributes
 - **OVR** - Overall Rating
@@ -94,7 +94,7 @@ Players have one of four development traits that affect their progression:
 
 ## Storage
 
-All 54 ratings are stored in the `attributes` JSONB field in the database, allowing for flexible storage and querying. Physical attributes (height, weight) and development trait have dedicated columns in the database.
+All 55 ratings are stored in the `attributes` JSONB field in the database, allowing for flexible storage and querying. Physical attributes (height, weight) and development trait have dedicated columns in the database.
 
 ### Database Schema
 
@@ -111,7 +111,7 @@ CREATE TABLE players (
     height VARCHAR(10),
     weight INTEGER,
     dev_trait VARCHAR(20),
-    attributes JSONB,  -- Contains all 54 ratings
+    attributes JSONB,  -- Contains all 55 ratings
     -- ... other fields
 );
 ```
@@ -201,7 +201,7 @@ Attribute constants are defined in:
 - Frontend: `/frontend/src/constants/playerAttributes.js`
 
 These files export:
-- `PLAYER_RATINGS` - Array of all 54 rating abbreviations
+- `PLAYER_RATINGS` - Array of all 55 rating abbreviations
 - `PHYSICAL_ATTRIBUTES` - Array of physical attribute names
 - `DEV_TRAITS` - Array of development trait options
 - `POSITIONS` - Array of all valid positions

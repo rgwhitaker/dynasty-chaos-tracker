@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS players (
     height VARCHAR(10), -- Height (e.g., "6'2\"")
     weight INTEGER, -- Weight in pounds
     dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
-    attributes JSONB, -- Flexible storage for all position-specific attributes (54 ratings)
+    attributes JSONB, -- Flexible storage for all position-specific attributes (55 ratings)
     dealbreakers TEXT[], -- Array of dealbreaker flags
     departure_risk DECIMAL(5,2), -- Predicted probability of leaving
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS recruits (
     height VARCHAR(10), -- Height (e.g., "6'2\"")
     weight INTEGER, -- Weight in pounds
     dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
-    attributes JSONB, -- Predicted/known attributes (54 ratings)
+    attributes JSONB, -- Predicted/known attributes (55 ratings)
     commitment_status VARCHAR(50), -- Committed, Considering, Not Interested
     commitment_probability DECIMAL(5,2), -- ML-predicted probability
     dealbreakers TEXT[], -- Array of dealbreaker preferences

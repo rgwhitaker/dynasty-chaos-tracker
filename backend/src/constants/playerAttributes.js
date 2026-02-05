@@ -3,7 +3,7 @@
  * All player ratings, physical attributes, and development traits
  */
 
-// All 54 player ratings
+// All 55 player ratings
 const PLAYER_RATINGS = [
   'OVR',   // Overall Rating
   'SPD',   // Speed
