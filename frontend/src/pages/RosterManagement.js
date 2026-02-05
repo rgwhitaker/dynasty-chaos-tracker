@@ -20,15 +20,32 @@ import {
   ListItem,
   ListItemText,
   IconButton,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { getPlayers } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
-import { POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
+import { POSITIONS, YEARS, DEV_TRAITS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+
+// Attribute categories for organized display
+const ATTRIBUTE_CATEGORIES = {
+  'Physical': ['SPD', 'ACC', 'AGI', 'COD', 'STR', 'JMP', 'STA', 'TGH', 'INJ'],
+  'Awareness': ['AWR', 'PRC'],
+  'Ball Carrier': ['CAR', 'BCV', 'BTK', 'TRK', 'SFA', 'SPM', 'JKM'],
+  'Receiving': ['CTH', 'CIT', 'SPC', 'SRR', 'MRR', 'DRR', 'RLS'],
+  'Passing': ['THP', 'SAC', 'MAC', 'DAC', 'TUP', 'BSK', 'PAC'],
+  'Blocking': ['PBK', 'PBP', 'PBF', 'RBK', 'RBP', 'RBF', 'LBK', 'IBL', 'RUN'],
+  'Defense': ['TAK', 'POW', 'BSH', 'FMV', 'PMV', 'PUR'],
+  'Coverage': ['MCV', 'ZCV', 'PRS'],
+  'Special Teams': ['RET', 'KPW', 'KAC', 'LSP'],
+};
 
 const RosterManagement = () => {
   const { id: dynastyId } = useParams();
@@ -51,6 +68,8 @@ const RosterManagement = () => {
     height: '',
     weight: '',
     dev_trait: '',
+    attributes: {},
+    dealbreakers: [],
   });
   const [manualError, setManualError] = useState(null);
   const [manualSuccess, setManualSuccess] = useState(null);
@@ -111,6 +130,18 @@ const RosterManagement = () => {
     if (manualError) setManualError(null);
   };
 
+  const handleAttributeChange = (e) => {
+    const { name, value } = e.target;
+    setManualFormData({
+      ...manualFormData,
+      attributes: {
+        ...manualFormData.attributes,
+        [name]: value ? parseInt(value) : null,
+      },
+    });
+    if (manualError) setManualError(null);
+  };
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     setManualError(null);
@@ -118,11 +149,20 @@ const RosterManagement = () => {
     setManualLoading(true);
 
     try {
+      // Filter out null/empty attribute values before sending
+      const filteredAttributes = Object.entries(manualFormData.attributes)
+        .filter(([_, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      
       const playerData = {
         ...manualFormData,
         jersey_number: manualFormData.jersey_number ? parseInt(manualFormData.jersey_number) : null,
         overall_rating: manualFormData.overall_rating ? parseInt(manualFormData.overall_rating) : null,
         weight: manualFormData.weight ? parseInt(manualFormData.weight) : null,
+        // Only include attributes if any were filled in
+        attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        // Only include dealbreakers if any were added
+        dealbreakers: manualFormData.dealbreakers.length > 0 ? manualFormData.dealbreakers : undefined,
       };
 
       await playerService.createPlayer(dynastyId, playerData);
@@ -137,6 +177,8 @@ const RosterManagement = () => {
         height: '',
         weight: '',
         dev_trait: '',
+        attributes: {},
+        dealbreakers: [],
       });
       // Refresh the player list immediately since manual entry is synchronous
       dispatch(getPlayers(dynastyId));
@@ -394,6 +436,44 @@ const RosterManagement = () => {
                       ))}
                     </TextField>
                   </Grid>
+                  
+                  {/* Player Attributes Section */}
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Player Attributes (Optional)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Enter individual player ratings. All fields are optional. Values should be between 40-99.
+                    </Typography>
+                    
+                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                      <Accordion key={category} sx={{ mb: 1 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography>{category} Attributes</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Grid container spacing={2}>
+                            {attributes.map((attr) => (
+                              <Grid item xs={6} sm={4} md={3} key={attr}>
+                                <TextField
+                                  fullWidth
+                                  label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                  name={attr}
+                                  type="number"
+                                  value={manualFormData.attributes[attr] || ''}
+                                  onChange={handleAttributeChange}
+                                  inputProps={{ min: 40, max: 99 }}
+                                  size="small"
+                                />
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </AccordionDetails>
+                      </Accordion>
+                    ))}
+                  </Grid>
+                  
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button
@@ -410,6 +490,8 @@ const RosterManagement = () => {
                             height: '',
                             weight: '',
                             dev_trait: '',
+                            attributes: {},
+                            dealbreakers: [],
                           });
                           setManualError(null);
                           setManualSuccess(null);
