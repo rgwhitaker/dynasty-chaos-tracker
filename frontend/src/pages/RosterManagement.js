@@ -279,7 +279,7 @@ const RosterManagement = () => {
       setEditingPlayer(null);
       setEditFormData({});
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error || 'Failed to update player. Please try again.';
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update player. Please try again.';
       setEditError(errorMessage);
       console.error('Update player error:', error);
     } finally {
@@ -303,7 +303,7 @@ const RosterManagement = () => {
       setDeleteDialogOpen(false);
       setDeletingPlayer(null);
     } catch (error) {
-      const errorMessage = error.response?.data?.error || error || 'Failed to delete player. Please try again.';
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to delete player. Please try again.';
       console.error('Delete player error:', error);
       alert(errorMessage);
     } finally {
