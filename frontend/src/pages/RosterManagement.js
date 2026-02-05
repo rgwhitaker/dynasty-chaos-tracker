@@ -149,13 +149,18 @@ const RosterManagement = () => {
     setManualLoading(true);
 
     try {
+      // Filter out null/empty attribute values before sending
+      const filteredAttributes = Object.entries(manualFormData.attributes)
+        .filter(([_, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      
       const playerData = {
         ...manualFormData,
         jersey_number: manualFormData.jersey_number ? parseInt(manualFormData.jersey_number) : null,
         overall_rating: manualFormData.overall_rating ? parseInt(manualFormData.overall_rating) : null,
         weight: manualFormData.weight ? parseInt(manualFormData.weight) : null,
         // Only include attributes if any were filled in
-        attributes: Object.keys(manualFormData.attributes).length > 0 ? manualFormData.attributes : undefined,
+        attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         // Only include dealbreakers if any were added
         dealbreakers: manualFormData.dealbreakers.length > 0 ? manualFormData.dealbreakers : undefined,
       };
