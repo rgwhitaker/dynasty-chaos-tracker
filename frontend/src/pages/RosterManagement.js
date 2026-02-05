@@ -94,12 +94,10 @@ const RosterManagement = () => {
 
     try {
       await playerService.uploadScreenshots(dynastyId, uploadFiles, 'tesseract');
-      setUploadSuccess(`Successfully uploaded ${uploadFiles.length} screenshot(s). Players will be processed shortly.`);
+      setUploadSuccess(`Successfully uploaded ${uploadFiles.length} screenshot(s). OCR processing may take a few moments. Refresh the page to see new players.`);
       setUploadFiles([]);
-      // Refresh the player list
-      setTimeout(() => {
-        dispatch(getPlayers(dynastyId));
-      }, 2000);
+      // Note: OCR processing is asynchronous. Users should refresh to see results.
+      // Consider implementing polling or websocket notifications for real-time updates.
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to upload screenshots. Please try again.';
       setUploadError(errorMessage);
@@ -140,13 +138,10 @@ const RosterManagement = () => {
         year: '',
         overall_rating: '',
       });
-      // Refresh the player list
+      // Refresh the player list immediately since manual entry is synchronous
       dispatch(getPlayers(dynastyId));
-      // Hide form after a short delay
-      setTimeout(() => {
-        setShowManualForm(false);
-        setManualSuccess(null);
-      }, 2000);
+      // Keep form open so user can add another player if needed
+      // Success message will help confirm the action completed
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to add player. Please try again.';
       setManualError(errorMessage);
