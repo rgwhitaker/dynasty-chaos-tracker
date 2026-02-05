@@ -12,7 +12,7 @@ Updated the Dynasty Chaos Tracker to support all 55 player ratings from College 
 
 #### New Files:
 - `backend/src/constants/playerAttributes.js` - Centralized constants for all player attributes
-- `backend/database/migrations/add_player_physical_attributes.sql` - Migration script for existing databases
+- `backend/database/migrations/20240101_0000_add_player_physical_attributes.sql` - Migration script for existing databases
 
 #### Modified Files:
 - `backend/database/init.sql` - Added height, weight, dev_trait columns to players and recruits tables
@@ -140,9 +140,28 @@ Expected output:
 The updated `init.sql` will create tables with all new columns automatically.
 
 ### For Existing Databases
-Run the migration script:
+
+**Automatic (Recommended):**
+Migrations are now automatically applied when the backend server starts. Simply restart your backend:
+
 ```bash
-psql -U dynasty_user -d dynasty_tracker -f backend/database/migrations/add_player_physical_attributes.sql
+# With Docker
+docker-compose restart backend
+
+# Without Docker
+cd backend
+npm run dev
+```
+
+The migration system will:
+1. Create a `migrations` table to track applied migrations
+2. Automatically apply any pending migrations from `backend/database/migrations/`
+3. Log the migration status to the console
+
+**Manual (If needed):**
+Run the migration script manually:
+```bash
+psql -U dynasty_user -d dynasty_tracker -f backend/database/migrations/20240101_0000_add_player_physical_attributes.sql
 ```
 
 ## Backward Compatibility

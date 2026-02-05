@@ -7,6 +7,7 @@ const compression = require('compression');
 const morgan = require('morgan');
 const passport = require('./config/passport');
 const errorHandler = require('./middleware/errorHandler');
+const migrationRunner = require('./config/migrations');
 
 // Validate required environment variables
 const REQUIRED_ENV_VARS = ['JWT_SECRET', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_DB'];
@@ -53,11 +54,25 @@ app.get('/health', (req, res) => {
 // Error handling
 app.use(errorHandler);
 
-// Start server
+// Run migrations and start server
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+
+async function startServer() {
+  try {
+    // Run database migrations
+    await migrationRunner.runMigrations();
+    
+    // Start the server
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 module.exports = app;
