@@ -16,12 +16,13 @@ Dynasty Chaos Tracker is a comprehensive web application for College Football 26
 - ✅ **Batch Upload**: Process multiple screenshots at once
 - ✅ **Image Preprocessing**: Automatic sharpening, normalization, and thresholding
 - ✅ **Validation System**: Error detection with manual correction support
-- ✅ **JSONB Attributes**: Flexible storage for 20-30+ position-specific attributes
+- ✅ **JSONB Attributes**: Flexible storage for all 54 CFB26 player ratings
+- ✅ **Complete Player Attributes**: All 54 ratings (OVR, SPD, ACC, AGI, COD, STR, AWR, CAR, BCV, BTK, TRK, SFA, SPM, JKM, CTH, CIT, SPC, SRR, MRR, DRR, RLS, JMP, THP, SAC, MAC, DAC, RUN, TUP, BSK, PAC, PBK, PBP, PBF, RBK, RBP, RBF, LBK, IBL, PRC, TAK, POW, BSH, FMV, PMV, PUR, MCV, ZCV, PRS, RET, KPW, KAC, STA, TGH, INJ, LSP), Height, Weight, and Dev Trait (Normal/Impact/Star/Elite)
 - ✅ **Manual CRUD**: Full forms with autocomplete for manual entry
 - ✅ **Version Tracking**: Season progression with roster snapshots
 
 ### Epic 3: Attribute Tracking & Customization
-- ✅ **Dynamic Attributes**: JSONB storage supports unlimited position-specific attributes
+- ✅ **Dynamic Attributes**: JSONB storage supports all 54 position-specific attributes
 - ✅ **Custom Weighting**: User-defined weights (0-100%) per position
 - ✅ **Stud Score Engine**: Weighted sum formula with preset management
 - ✅ **Multiple Presets**: Save and load different schemes (e.g., "Run-Heavy Offense", "Air Raid")
@@ -279,6 +280,12 @@ psql -U dynasty_user -d dynasty_tracker -f backend/database/init.sql
 - `POST /api/stud-score/presets` - Create preset
 - `GET /api/stud-score/weights` - Get weights
 - `PUT /api/stud-score/weights` - Update weight
+
+## Player Attributes
+
+The Dynasty Chaos Tracker supports all 54 player ratings from College Football 26, plus physical attributes (Height & Weight) and Development Trait (Normal/Impact/Star/Elite).
+
+For a comprehensive list of all player attributes, see [PLAYER_ATTRIBUTES.md](PLAYER_ATTRIBUTES.md).
 
 ## Key Features Explained
 
