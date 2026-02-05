@@ -18,6 +18,16 @@ export const getPlayers = createAsyncThunk('player/getAll', async (dynastyId, th
   }
 });
 
+export const createPlayer = createAsyncThunk('player/create', async ({ dynastyId, playerData }, thunkAPI) => {
+  try {
+    const token = thunkAPI.getState().auth.user.token;
+    return await playerService.createPlayer(dynastyId, playerData, token);
+  } catch (error) {
+    const message = error.response?.data?.error || error.message;
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
 export const playerSlice = createSlice({
   name: 'player',
   initialState,
@@ -34,6 +44,18 @@ export const playerSlice = createSlice({
         state.players = action.payload;
       })
       .addCase(getPlayers.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isError = true;
+        state.message = action.payload;
+      })
+      .addCase(createPlayer.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(createPlayer.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.players.push(action.payload);
+      })
+      .addCase(createPlayer.rejected, (state, action) => {
         state.isLoading = false;
         state.isError = true;
         state.message = action.payload;
