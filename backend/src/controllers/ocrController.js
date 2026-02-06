@@ -35,10 +35,22 @@ const uploadScreenshot = async (req, res) => {
     // Process OCR in background
     if (filePaths.length === 1) {
       ocrService.processRosterScreenshot(filePaths[0], dynastyId, uploadRecord.id, ocrMethod)
-        .catch(err => console.error('OCR processing error:', err));
+        .then(result => {
+          console.log('OCR processing completed:', result);
+        })
+        .catch(err => {
+          console.error('OCR processing error:', err);
+          console.error('Error stack:', err.stack);
+        });
     } else {
       ocrService.processBatchUpload(filePaths, dynastyId, uploadRecord.id, ocrMethod)
-        .catch(err => console.error('Batch OCR processing error:', err));
+        .then(results => {
+          console.log('Batch OCR processing completed:', results);
+        })
+        .catch(err => {
+          console.error('Batch OCR processing error:', err);
+          console.error('Error stack:', err.stack);
+        });
     }
 
     res.json({ 
