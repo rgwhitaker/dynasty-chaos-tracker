@@ -28,6 +28,7 @@ import {
   DialogContent,
   DialogActions,
   CardActions,
+  Chip,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -38,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
-import { POSITIONS, YEARS, DEV_TRAITS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -682,9 +683,14 @@ const RosterManagement = () => {
                         </Typography>
                       )}
                       {player.dev_trait && (
-                        <Typography variant="body2" color="text.secondary">
-                          Dev Trait: {player.dev_trait}
-                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                          <Chip 
+                            label={player.dev_trait} 
+                            size="small" 
+                            color={DEV_TRAIT_COLORS[player.dev_trait] || 'default'}
+                            sx={{ fontWeight: 'bold' }}
+                          />
+                        </Box>
                       )}
                     </CardContent>
                     <CardActions>
