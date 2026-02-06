@@ -10,6 +10,7 @@ import DynastyList from './pages/DynastyList';
 import CreateDynasty from './pages/CreateDynasty';
 import DynastyDetail from './pages/DynastyDetail';
 import RosterManagement from './pages/RosterManagement';
+import RosterDepthChart from './pages/RosterDepthChart';
 import DepthChart from './pages/DepthChart';
 import Recruiting from './pages/Recruiting';
 import StudScoreConfig from './pages/StudScoreConfig';
@@ -28,7 +29,8 @@ function App() {
           <Route path="/dynasties" element={<DynastyList />} />
           <Route path="/dynasties/new" element={<CreateDynasty />} />
           <Route path="/dynasties/:id" element={<DynastyDetail />} />
-          <Route path="/dynasties/:id/roster" element={<RosterManagement />} />
+          <Route path="/dynasties/:id/roster" element={<RosterDepthChart />} />
+          <Route path="/dynasties/:id/roster/manage" element={<RosterManagement />} />
           <Route path="/dynasties/:id/depth-chart" element={<DepthChart />} />
           <Route path="/dynasties/:id/recruiting" element={<Recruiting />} />
           <Route path="/stud-score" element={<StudScoreConfig />} />
