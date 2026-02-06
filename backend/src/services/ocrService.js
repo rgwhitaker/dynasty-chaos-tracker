@@ -104,27 +104,59 @@ function parseRosterData(ocrText) {
   const players = [];
   const lines = ocrText.split('\n').filter(line => line.trim());
 
-  // Simple parsing logic - this would need to be more sophisticated
-  // based on actual screenshot format
-  const playerPattern = /^(\d+)\s+([A-Z]+)\s+([A-Z\s]+)\s+(\d+)/;
+  // More flexible parsing patterns to handle various OCR output formats
+  // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
+  const pattern1 = /^(\d+)\s+([A-Z]{1,3})\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  
+  // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85")
+  const pattern2 = /^([A-Z]{1,3})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  
+  // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
+  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,3})\s+(\d+)\s+(\d{2})/;
 
   for (const line of lines) {
-    const match = line.match(playerPattern);
+    let match = line.match(pattern1);
+    let jersey, position, name, overall;
+
     if (match) {
-      const [, jersey, position, name, overall] = match;
+      [, jersey, position, name, overall] = match;
+    } else {
+      match = line.match(pattern2);
+      if (match) {
+        [, position, jersey, name, overall] = match;
+      } else {
+        match = line.match(pattern3);
+        if (match) {
+          [, name, position, jersey, overall] = match;
+        }
+      }
+    }
+
+    if (match) {
       const nameParts = name.trim().split(/\s+/);
       const lastName = nameParts.pop();
-      const firstName = nameParts.join(' ');
+      const firstName = nameParts.join(' ') || lastName; // Handle single name
 
-      players.push({
-        jersey_number: parseInt(jersey),
-        position,
-        first_name: firstName,
-        last_name: lastName,
-        overall_rating: parseInt(overall),
-        attributes: {} // Would need more sophisticated parsing
-      });
+      // Validate parsed data before adding
+      const overallNum = parseInt(overall);
+      const jerseyNum = parseInt(jersey);
+      
+      if (overallNum >= 40 && overallNum <= 99 && jerseyNum >= 0 && jerseyNum <= 99) {
+        players.push({
+          jersey_number: jerseyNum,
+          position: position.toUpperCase(),
+          first_name: firstName,
+          last_name: lastName,
+          overall_rating: overallNum,
+          attributes: {} // Would need more sophisticated parsing
+        });
+      }
     }
+  }
+
+  console.log(`parseRosterData: Processed ${lines.length} lines, found ${players.length} valid players`);
+  if (players.length > 0) {
+    console.log('Sample parsed player:', players[0]);
   }
 
   return players;
@@ -135,17 +167,25 @@ function parseRosterData(ocrText) {
  */
 function validatePlayerData(players) {
   const errors = [];
-  const validPositions = ['QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'DB', 'K', 'P'];
+  // More comprehensive list of valid positions including common variations
+  const validPositions = [
+    'QB', 'RB', 'FB', 'WR', 'TE', 
+    'LT', 'LG', 'C', 'RG', 'RT', 'OL', 'OT', 'OG',
+    'LE', 'RE', 'DT', 'NT', 'DL', 'DE',
+    'LOLB', 'ROLB', 'MLB', 'LB', 'OLB', 'ILB',
+    'CB', 'FS', 'SS', 'DB', 'S',
+    'K', 'P'
+  ];
 
   players.forEach((player, index) => {
     if (!player.first_name || !player.last_name) {
       errors.push({ index, field: 'name', message: 'Invalid player name' });
     }
     if (!validPositions.includes(player.position)) {
-      errors.push({ index, field: 'position', message: 'Invalid position' });
+      errors.push({ index, field: 'position', message: `Invalid position: ${player.position}` });
     }
     if (player.overall_rating < 40 || player.overall_rating > 99) {
-      errors.push({ index, field: 'overall_rating', message: 'Invalid overall rating' });
+      errors.push({ index, field: 'overall_rating', message: `Invalid overall rating: ${player.overall_rating}` });
     }
   });
 
@@ -186,13 +226,32 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
         break;
     }
 
+    // Log extracted text for debugging
+    console.log('OCR extracted text:');
+    console.log('===================');
+    console.log(ocrText);
+    console.log('===================');
+
     // Parse roster data
     const parsedPlayers = parseRosterData(ocrText);
+    console.log(`Parsed ${parsedPlayers.length} players from OCR text`);
+
+    // Check if no players were parsed
+    if (parsedPlayers.length === 0) {
+      console.log('WARNING: No players could be parsed from OCR text');
+      await db.query(
+        'UPDATE ocr_uploads SET processing_status = $1, validation_errors = $2 WHERE id = $3',
+        ['failed', JSON.stringify([{ message: 'No players could be parsed from the screenshot. Please ensure the image shows a roster with player data in a clear format.' }]), uploadId]
+      );
+      return { status: 'failed', errors: [{ message: 'No players could be parsed from the screenshot' }], players: [] };
+    }
 
     // Validate data
     const validation = validatePlayerData(parsedPlayers);
 
     if (validation.errors.length > 0) {
+      console.log(`Validation errors found: ${validation.errors.length} errors`);
+      console.log('Validation errors:', JSON.stringify(validation.errors, null, 2));
       // Store validation errors for manual correction
       await db.query(
         'UPDATE ocr_uploads SET validation_errors = $1, processing_status = $2 WHERE id = $3',
@@ -212,6 +271,8 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
       );
       importedCount++;
     }
+
+    console.log(`Successfully imported ${importedCount} players to dynasty ${dynastyId}`);
 
     // Update upload status
     await db.query(
