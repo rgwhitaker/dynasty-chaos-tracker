@@ -106,13 +106,13 @@ function parseRosterData(ocrText) {
 
   // More flexible parsing patterns to handle various OCR output formats
   // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
-  const pattern1 = /^(\d+)\s+([A-Z]{1,3})\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  const pattern1 = /^(\d+)\s+([A-Z]{1,4})\s+([A-Za-z\s]+?)\s+(\d{2})/;
   
   // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85")
-  const pattern2 = /^([A-Z]{1,3})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  const pattern2 = /^([A-Z]{1,4})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
   
   // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
-  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,3})\s+(\d+)\s+(\d{2})/;
+  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,4})\s+(\d+)\s+(\d{2})/;
 
   for (const line of lines) {
     let match = line.match(pattern1);
@@ -175,14 +175,14 @@ function parseRosterData(ocrText) {
  */
 function validatePlayerData(players) {
   const errors = [];
-  // More comprehensive list of valid positions including common variations
+  // Valid roster positions from College Football game
   const validPositions = [
-    'QB', 'RB', 'FB', 'WR', 'TE', 
-    'LT', 'LG', 'C', 'RG', 'RT', 'OL', 'OT', 'OG',
-    'LE', 'RE', 'DT', 'NT', 'DL', 'DE',
-    'LOLB', 'ROLB', 'MLB', 'LB', 'OLB', 'ILB',
-    'CB', 'FS', 'SS', 'DB', 'S',
-    'K', 'P'
+    'QB', 'HB', 'FB', 'WR', 'TE',           // Offense skill positions
+    'LT', 'LG', 'C', 'RG', 'RT',            // Offensive line
+    'LEDG', 'REDG', 'DT',                   // Defensive line
+    'SAM', 'MIKE', 'WILL',                  // Linebackers
+    'CB', 'FS', 'SS',                        // Secondary
+    'K', 'P'                                 // Special teams
   ];
 
   players.forEach((player, index) => {

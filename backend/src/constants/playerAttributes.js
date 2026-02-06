@@ -84,15 +84,44 @@ const DEV_TRAIT_COLORS = {
   'Normal': 'default'   // grey
 };
 
-// Position groups
-const POSITIONS = [
-  'QB', 'RB', 'FB', 'WR', 'TE', 
-  'OL', 'C', 'OG', 'OT',
-  'DL', 'DE', 'DT', 
-  'LB', 'MLB', 'OLB', 
-  'CB', 'S', 'SS', 'FS',
-  'K', 'P'
+// Roster positions (actual in-game player positions)
+const ROSTER_POSITIONS = [
+  'QB', 'HB', 'FB', 'WR', 'TE',           // Offense skill positions
+  'LT', 'LG', 'C', 'RG', 'RT',            // Offensive line
+  'LEDG', 'REDG', 'DT',                   // Defensive line
+  'SAM', 'MIKE', 'WILL',                  // Linebackers
+  'CB', 'FS', 'SS',                        // Secondary
+  'K', 'P'                                 // Special teams
 ];
+
+// Depth chart positions (includes roster positions + special positions they can fill)
+const DEPTH_CHART_POSITIONS = [
+  // Base roster positions
+  'QB', 'HB', 'FB', 'WR', 'TE',
+  'LT', 'LG', 'C', 'RG', 'RT',
+  'LEDG', 'REDG', 'DT',
+  'SAM', 'MIKE', 'WILL',
+  'CB', 'FS', 'SS',
+  'K', 'P',
+  // Special depth chart positions
+  'KR',      // Kick Return
+  'PR',      // Punt Return
+  'KOS',     // Kickoff Specialist
+  'LS',      // Long Snapper
+  '3DRB',    // 3rd Down Running Back
+  'PWHB',    // Power Running Back
+  'SLWR',    // Slot Wide Receiver
+  'RLE',     // Rush Left End
+  'RRE',     // Rush Right End
+  'RDT',     // Rush Defensive Tackle
+  'SUBLB',   // Sub Linebacker
+  'SLCB',    // Slot Cornerback
+  'NT',      // Nose Tackle
+  'GAD'      // Goal Line/Adaptive Defense
+];
+
+// Legacy alias for backward compatibility
+const POSITIONS = ROSTER_POSITIONS;
 
 // Year classifications
 const YEARS = ['FR', 'SO', 'JR', 'SR', 'GRAD'];
@@ -162,6 +191,8 @@ module.exports = {
   DEV_TRAITS,
   DEV_TRAIT_COLORS,
   POSITIONS,
+  ROSTER_POSITIONS,
+  DEPTH_CHART_POSITIONS,
   YEARS,
   ATTRIBUTE_DISPLAY_NAMES
 };

@@ -68,7 +68,7 @@ function getDepthChartPositions() {
   return {
     offense: {
       QB: { name: 'Quarterback', depth: 3 },
-      RB: { name: 'Running Back', depth: 4 },
+      HB: { name: 'Halfback', depth: 4 },
       FB: { name: 'Fullback', depth: 2 },
       WR: { name: 'Wide Receiver', depth: 6 },
       TE: { name: 'Tight End', depth: 3 },
@@ -79,19 +79,35 @@ function getDepthChartPositions() {
       RT: { name: 'Right Tackle', depth: 2 }
     },
     defense: {
-      LE: { name: 'Left End', depth: 3 },
+      LEDG: { name: 'Left Edge', depth: 3 },
       DT: { name: 'Defensive Tackle', depth: 4 },
-      RE: { name: 'Right End', depth: 3 },
-      LOLB: { name: 'Left Outside LB', depth: 2 },
-      MLB: { name: 'Middle Linebacker', depth: 3 },
-      ROLB: { name: 'Right Outside LB', depth: 2 },
+      REDG: { name: 'Right Edge', depth: 3 },
+      SAM: { name: 'SAM Linebacker', depth: 2 },
+      MIKE: { name: 'MIKE Linebacker', depth: 2 },
+      WILL: { name: 'WILL Linebacker', depth: 2 },
       CB: { name: 'Cornerback', depth: 5 },
-      FS: { name: 'Free Safety', depth: 3 },
-      SS: { name: 'Strong Safety', depth: 3 }
+      FS: { name: 'Free Safety', depth: 2 },
+      SS: { name: 'Strong Safety', depth: 2 }
     },
     special: {
       K: { name: 'Kicker', depth: 2 },
-      P: { name: 'Punter', depth: 2 }
+      P: { name: 'Punter', depth: 2 },
+      KR: { name: 'Kick Returner', depth: 3 },
+      PR: { name: 'Punt Returner', depth: 3 },
+      KOS: { name: 'Kickoff Specialist', depth: 1 },
+      LS: { name: 'Long Snapper', depth: 2 }
+    },
+    situational: {
+      '3DRB': { name: '3rd Down RB', depth: 2 },
+      PWHB: { name: 'Power HB', depth: 2 },
+      SLWR: { name: 'Slot WR', depth: 3 },
+      RLE: { name: 'Rush Left End', depth: 2 },
+      RRE: { name: 'Rush Right End', depth: 2 },
+      RDT: { name: 'Rush DT', depth: 2 },
+      SUBLB: { name: 'Sub LB', depth: 2 },
+      SLCB: { name: 'Slot CB', depth: 3 },
+      NT: { name: 'Nose Tackle', depth: 2 },
+      GAD: { name: 'Goal Line/Adaptive', depth: 2 }
     }
   };
 }

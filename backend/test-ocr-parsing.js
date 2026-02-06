@@ -10,13 +10,13 @@ function parseRosterData(ocrText) {
 
   // More flexible parsing patterns to handle various OCR output formats
   // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
-  const pattern1 = /^(\d+)\s+([A-Z]{1,3})\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  const pattern1 = /^(\d+)\s+([A-Z]{1,4})\s+([A-Za-z\s]+?)\s+(\d{2})/;
   
   // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85")
-  const pattern2 = /^([A-Z]{1,3})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  const pattern2 = /^([A-Z]{1,4})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
   
   // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
-  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,3})\s+(\d+)\s+(\d{2})/;
+  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,4})\s+(\d+)\s+(\d{2})/;
 
   for (const line of lines) {
     let match = line.match(pattern1);
@@ -79,28 +79,28 @@ const testCases = [
   {
     name: 'Pattern 1: Jersey Position Name Overall',
     input: `12 QB John Smith 85
-15 RB Michael Johnson 82
+15 HB Michael Johnson 82
 7 WR David Williams 88`,
     expected: 3
   },
   {
     name: 'Pattern 2: Position Jersey Name Overall',
     input: `QB 12 John Smith 85
-RB 15 Michael Johnson 82
+HB 15 Michael Johnson 82
 WR 7 David Williams 88`,
     expected: 3
   },
   {
     name: 'Pattern 3: Name Position Jersey Overall',
     input: `John Smith QB 12 85
-Michael Johnson RB 15 82
+Michael Johnson HB 15 82
 David Williams WR 7 88`,
     expected: 3
   },
   {
     name: 'Mixed case names',
     input: `12 QB john smith 85
-15 RB Michael JOHNSON 82
+15 HB Michael JOHNSON 82
 7 WR david Williams 88`,
     expected: 3
   },
@@ -109,7 +109,7 @@ David Williams WR 7 88`,
     input: `Header Line
 12 QB John Smith 85
 Some noise here
-15 RB Michael Johnson 82
+15 HB Michael Johnson 82
 Another bad line
 7 WR David Williams 88
 Footer`,
@@ -118,25 +118,33 @@ Footer`,
   {
     name: 'Single name players',
     input: `12 QB Brady 85
-15 RB Smith 82`,
+15 HB Smith 82`,
     expected: 2
   },
   {
-    name: 'Three-letter positions',
-    input: `12 MLB John Smith 85
-15 OLB Michael Johnson 82`,
-    expected: 2
+    name: 'Linebacker positions',
+    input: `12 SAM John Smith 85
+15 MIKE Michael Johnson 82
+7 WILL David Williams 80`,
+    expected: 3
+  },
+  {
+    name: 'Defensive line positions',
+    input: `12 LEDG John Smith 85
+15 DT Michael Johnson 82
+7 REDG David Williams 80`,
+    expected: 3
   },
   {
     name: 'Edge case overall ratings',
     input: `12 QB John Smith 40
-15 RB Michael Johnson 99`,
+15 HB Michael Johnson 99`,
     expected: 2
   },
   {
     name: 'Invalid overall ratings (too low/high)',
     input: `12 QB John Smith 39
-15 RB Michael Johnson 100`,
+15 HB Michael Johnson 100`,
     expected: 0
   },
   {
