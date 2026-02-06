@@ -76,6 +76,14 @@ export const DEV_TRAITS = [
   'Elite'
 ];
 
+// Development trait colors (Material-UI color prop values)
+export const DEV_TRAIT_COLORS = {
+  'Elite': 'primary',   // blue
+  'Star': 'success',    // green
+  'Impact': 'warning',  // yellow
+  'Normal': 'default'   // grey
+};
+
 // Position groups
 export const POSITIONS = [
   'QB', 'RB', 'FB', 'WR', 'TE', 

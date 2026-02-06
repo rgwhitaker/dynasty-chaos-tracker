@@ -28,7 +28,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer } from '../store/slices/playerSlice';
-import { ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS } from '../constants/playerAttributes';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -142,16 +142,7 @@ const RosterDepthChart = () => {
   };
 
   const getDevTraitColor = (trait) => {
-    switch (trait) {
-      case 'Elite':
-        return 'error';
-      case 'Star':
-        return 'warning';
-      case 'Impact':
-        return 'success';
-      default:
-        return 'default';
-    }
+    return DEV_TRAIT_COLORS[trait] || 'default';
   };
 
   // Group players by position for the current unit
