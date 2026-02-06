@@ -98,11 +98,31 @@ async function extractTextGoogleVision(imagePath) {
 }
 
 /**
+ * Clean OCR text to handle common OCR errors
+ */
+function cleanOcrText(text) {
+  // Replace common OCR mistakes
+  return text
+    .replace(/\}/g, ')') // Replace } with )
+    .replace(/\{/g, '(') // Replace { with (
+    .replace(/\[(\d+)\]/g, '$1') // Replace [3] with 3
+    .replace(/\[x\]/gi, '99') // Replace [x] with 99 (common OCR error)
+    .replace(/Lal/g, '99') // Replace Lal with 99 (common OCR error)
+    .replace(/hal/g, '99') // Replace hal with 99 (common OCR error)
+    .replace(/v\*OVR/g, 'OVR') // Replace v*OVR with OVR
+    .replace(/\bO\b/g, '0') // Replace isolated O with 0
+    .replace(/\bl\b/g, '1'); // Replace isolated l with 1
+}
+
+/**
  * Parse roster data from OCR text
  */
 function parseRosterData(ocrText) {
   const players = [];
   const lines = ocrText.split('\n').filter(line => line.trim());
+
+  // Clean the OCR text first
+  const cleanedLines = lines.map(line => cleanOcrText(line));
 
   // More flexible parsing patterns to handle various OCR output formats
   // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
@@ -113,8 +133,14 @@ function parseRosterData(ocrText) {
   
   // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
   const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,4})\s+(\d+)\s+(\d{2})/;
+  
+  // Pattern 4: NCAA Roster format - Name Year Position Overall (e.g., "T.Bragg SO (RS) WR 89")
+  // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
+  // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
+  // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,5})\s+(\d{2}[\+]?)/i;
 
-  for (const line of lines) {
+  for (const line of cleanedLines) {
     let match = line.match(pattern1);
     let jersey, position, name, overall;
 
@@ -128,6 +154,17 @@ function parseRosterData(ocrText) {
         match = line.match(pattern3);
         if (match) {
           [, name, position, jersey, overall] = match;
+        } else {
+          // Try NCAA roster format (Pattern 4)
+          match = line.match(pattern4);
+          if (match) {
+            [, name, position, overall] = match;
+            // For NCAA format, we don't have jersey numbers in the roster screen
+            // We'll assign 0 as a placeholder which can be updated later
+            jersey = '0';
+            // Remove the '+' suffix if present
+            overall = overall.replace('+', '');
+          }
         }
       }
     }
@@ -136,7 +173,23 @@ function parseRosterData(ocrText) {
       const nameParts = name.trim().split(/\s+/);
       let firstName, lastName;
       
-      if (nameParts.length === 1) {
+      // Handle abbreviated names like "T.Bragg"
+      if (name.includes('.')) {
+        const parts = name.split('.');
+        if (parts.length === 2) {
+          firstName = parts[0]; // Initial
+          lastName = parts[1];
+        } else {
+          // Fallback to regular parsing
+          if (nameParts.length === 1) {
+            firstName = '';
+            lastName = nameParts[0];
+          } else {
+            lastName = nameParts.pop();
+            firstName = nameParts.join(' ');
+          }
+        }
+      } else if (nameParts.length === 1) {
         // Single name - use as last name, leave first name empty
         firstName = '';
         lastName = nameParts[0];
@@ -327,6 +380,7 @@ module.exports = {
   extractTextTesseract,
   extractTextTextract,
   extractTextGoogleVision,
+  cleanOcrText,
   parseRosterData,
   validatePlayerData,
   processRosterScreenshot,
