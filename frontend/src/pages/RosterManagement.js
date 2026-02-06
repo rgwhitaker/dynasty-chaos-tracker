@@ -43,6 +43,7 @@ import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
+  'Overall': ['OVR'],
   'Physical': ['SPD', 'ACC', 'AGI', 'COD', 'STR', 'JMP', 'STA', 'TGH', 'INJ'],
   'Awareness': ['AWR', 'PRC'],
   'Ball Carrier': ['CAR', 'BCV', 'BTK', 'TRK', 'SFA', 'SPM', 'JKM'],

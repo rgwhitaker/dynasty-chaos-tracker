@@ -32,6 +32,7 @@ import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS } from '../constants/playerAt
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
+  'Overall': ['OVR'],
   'Physical': ['SPD', 'ACC', 'AGI', 'COD', 'STR', 'JMP', 'STA', 'TGH', 'INJ'],
   'Awareness': ['AWR', 'PRC'],
   'Ball Carrier': ['CAR', 'BCV', 'BTK', 'TRK', 'SFA', 'SPM', 'JKM'],

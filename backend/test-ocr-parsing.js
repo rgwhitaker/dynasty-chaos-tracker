@@ -13,7 +13,9 @@ function cleanOcrText(text) {
     .replace(/\}/g, ')') // Replace } with )
     .replace(/\{/g, '(') // Replace { with (
     .replace(/\[(\d+)\]/g, '$1') // Replace [3] with 3
+    .replace(/\[(\d+)/g, '$1') // Replace [3 with 3 (missing closing bracket)
     .replace(/\[x\]/gi, '99') // Replace [x] with 99 (common OCR error)
+    .replace(/\[x/gi, '99') // Replace [x with 99 (missing closing bracket)
     .replace(/Lal/g, '99') // Replace Lal with 99 (common OCR error)
     .replace(/hal/g, '99') // Replace hal with 99 (common OCR error)
     .replace(/v\*OVR/g, 'OVR') // Replace v*OVR with OVR
@@ -28,6 +30,34 @@ function parseRosterData(ocrText) {
 
   // Clean the OCR text first
   const cleanedLines = lines.map(line => cleanOcrText(line));
+
+  // Check if first line is a header with attribute names
+  let headerAttributes = null;
+  let dataStartIndex = 0;
+  
+  if (cleanedLines.length > 0) {
+    const firstLine = cleanedLines[0].toUpperCase();
+    // Header detection: look for common attribute names
+    if (firstLine.includes('SPD') || firstLine.includes('ACC') || 
+        firstLine.includes('AGI') || firstLine.includes('COD') ||
+        (firstLine.includes('OVR') && firstLine.includes('POS'))) {
+      // Parse header to extract attribute column names
+      const headerParts = cleanedLines[0].split(/\s+/);
+      headerAttributes = [];
+      for (const part of headerParts) {
+        const cleaned = part.replace(/[^A-Za-z]/g, '').toUpperCase();
+        // Map common variations
+        if (cleaned === 'COD') {
+          headerAttributes.push('COD');
+        } else if (cleaned.length >= 2 && cleaned.length <= 4) {
+          // Likely an attribute abbreviation
+          headerAttributes.push(cleaned);
+        }
+      }
+      dataStartIndex = 1; // Skip header row
+      console.log('Detected header with attributes:', headerAttributes);
+    }
+  }
 
   // More flexible parsing patterns to handle various OCR output formats
   // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
@@ -45,7 +75,8 @@ function parseRosterData(ocrText) {
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
   const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,4})\s+(\d{2}[\+]?)/i;
 
-  for (const line of cleanedLines) {
+  for (let i = dataStartIndex; i < cleanedLines.length; i++) {
+    const line = cleanedLines[i];
     let match = line.match(pattern1);
     let jersey, position, name, overall;
 
@@ -108,13 +139,61 @@ function parseRosterData(ocrText) {
       const jerseyNum = parseInt(jersey);
       
       if (overallNum >= 40 && overallNum <= 99 && jerseyNum >= 0 && jerseyNum <= 99) {
+        // Initialize attributes with OVR
+        const attributes = {
+          OVR: overallNum
+        };
+
+        // If header with attributes was detected, parse additional attributes
+        if (headerAttributes && headerAttributes.length > 0) {
+          const lineParts = line.split(/\s+/);
+          // Find where the numeric attributes start (after position)
+          let attrStartIndex = -1;
+          for (let j = 0; j < lineParts.length; j++) {
+            const part = lineParts[j].toUpperCase();
+            // Position is typically 2-4 letters
+            if (part.match(/^[A-Z]{1,4}$/) && j > 0) {
+              // Check if next part is a number (the overall rating)
+              if (j + 1 < lineParts.length && lineParts[j + 1].match(/^\d+[\+]?$/)) {
+                attrStartIndex = j + 1;
+                break;
+              }
+            }
+          }
+
+          if (attrStartIndex >= 0 && attrStartIndex < lineParts.length) {
+            // Find attribute column indices from header
+            let attrColumnStart = -1;
+            for (let j = 0; j < headerAttributes.length; j++) {
+              if (headerAttributes[j] === 'OVR' || headerAttributes[j] === 'VOVR') {
+                attrColumnStart = j;
+                break;
+              }
+            }
+
+            if (attrColumnStart >= 0) {
+              // Parse attribute values
+              const attrValues = lineParts.slice(attrStartIndex);
+              for (let j = 0; j < attrValues.length && (attrColumnStart + j) < headerAttributes.length; j++) {
+                const attrName = headerAttributes[attrColumnStart + j];
+                const attrValue = parseInt(attrValues[j].replace('+', ''));
+                
+                // Validate attribute value (should be 0-99)
+                if (!isNaN(attrValue) && attrValue >= 0 && attrValue <= 99) {
+                  attributes[attrName] = attrValue;
+                }
+              }
+            }
+          }
+        }
+
         players.push({
           jersey_number: jerseyNum,
           position: position.toUpperCase(),
           first_name: firstName,
           last_name: lastName,
           overall_rating: overallNum,
-          attributes: {} // Would need more sophisticated parsing
+          attributes: attributes
         });
       }
     }
