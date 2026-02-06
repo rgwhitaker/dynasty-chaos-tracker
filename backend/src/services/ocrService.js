@@ -150,7 +150,10 @@ function parseRosterData(ocrText) {
         }
       }
       dataStartIndex = 1; // Skip header row
-      console.log('Detected header with attributes:', headerAttributes);
+      // Log only in development mode
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Detected header with attributes:', headerAttributes);
+      }
     }
   }
 
@@ -256,7 +259,7 @@ function parseRosterData(ocrText) {
             }
           }
 
-          if (attrStartIndex > 0 && attrStartIndex < lineParts.length) {
+          if (attrStartIndex >= 0 && attrStartIndex < lineParts.length) {
             // Find attribute column indices from header
             let attrColumnStart = -1;
             for (let j = 0; j < headerAttributes.length; j++) {

@@ -161,7 +161,7 @@ function parseRosterData(ocrText) {
             }
           }
 
-          if (attrStartIndex > 0 && attrStartIndex < lineParts.length) {
+          if (attrStartIndex >= 0 && attrStartIndex < lineParts.length) {
             // Find attribute column indices from header
             let attrColumnStart = -1;
             for (let j = 0; j < headerAttributes.length; j++) {
