@@ -209,7 +209,9 @@ function parseRosterData(ocrText) {
           first_name: firstName,
           last_name: lastName,
           overall_rating: overallNum,
-          attributes: {} // Would need more sophisticated parsing
+          attributes: {
+            OVR: overallNum  // Include the overall rating in attributes for display
+          }
         });
       }
     }
