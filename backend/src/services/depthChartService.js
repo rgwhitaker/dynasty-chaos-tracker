@@ -86,8 +86,8 @@ function getDepthChartPositions() {
       MIKE: { name: 'MIKE Linebacker', depth: 2 },
       WILL: { name: 'WILL Linebacker', depth: 2 },
       CB: { name: 'Cornerback', depth: 5 },
-      FS: { name: 'Free Safety', depth: 2 },
-      SS: { name: 'Strong Safety', depth: 2 }
+      FS: { name: 'Free Safety', depth: 3 },
+      SS: { name: 'Strong Safety', depth: 3 }
     },
     special: {
       K: { name: 'Kicker', depth: 2 },
