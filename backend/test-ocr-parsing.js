@@ -38,8 +38,16 @@ function parseRosterData(ocrText) {
 
     if (match) {
       const nameParts = name.trim().split(/\s+/);
-      const lastName = nameParts.pop();
-      const firstName = nameParts.join(' ') || lastName; // Handle single name
+      let firstName, lastName;
+      
+      if (nameParts.length === 1) {
+        // Single name - use as last name, leave first name empty
+        firstName = '';
+        lastName = nameParts[0];
+      } else {
+        lastName = nameParts.pop();
+        firstName = nameParts.join(' ');
+      }
 
       // Validate parsed data before adding
       const overallNum = parseInt(overall);
