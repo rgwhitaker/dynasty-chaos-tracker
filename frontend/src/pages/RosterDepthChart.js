@@ -46,16 +46,16 @@ const ATTRIBUTE_CATEGORIES = {
 // Position groups by unit
 const POSITION_GROUPS = {
   offense: {
-    'WR': { positions: ['WR'], label: 'Wide Receivers', order: 1 },
-    'OL': { positions: ['OT', 'OG', 'C', 'OL'], label: 'Offensive Line', order: 2 },
-    'QB': { positions: ['QB'], label: 'Quarterback', order: 3 },
-    'RB': { positions: ['RB', 'FB'], label: 'Running Backs', order: 4 },
-    'TE': { positions: ['TE'], label: 'Tight Ends', order: 5 },
+    'QB': { positions: ['QB'], label: 'Quarterback', order: 1 },
+    'RB': { positions: ['HB', 'FB'], label: 'Running Backs', order: 2 },
+    'WR': { positions: ['WR'], label: 'Wide Receivers', order: 3 },
+    'TE': { positions: ['TE'], label: 'Tight Ends', order: 4 },
+    'OL': { positions: ['LT', 'LG', 'C', 'RG', 'RT'], label: 'Offensive Line', order: 5 },
   },
   defense: {
-    'DL': { positions: ['DE', 'DT', 'DL'], label: 'Defensive Line', order: 1 },
-    'LB': { positions: ['MLB', 'OLB', 'LB'], label: 'Linebackers', order: 2 },
-    'DB': { positions: ['CB', 'S', 'SS', 'FS'], label: 'Defensive Backs', order: 3 },
+    'DL': { positions: ['LEDG', 'REDG', 'DT'], label: 'Defensive Line', order: 1 },
+    'LB': { positions: ['SAM', 'MIKE', 'WILL'], label: 'Linebackers', order: 2 },
+    'DB': { positions: ['CB', 'FS', 'SS'], label: 'Defensive Backs', order: 3 },
   },
   specialTeams: {
     'K': { positions: ['K'], label: 'Kicker', order: 1 },

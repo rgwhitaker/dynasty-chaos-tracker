@@ -24,8 +24,8 @@ async function exportDepthChartPDF(depthChart, dynastyInfo) {
 
       // Organize by unit
       const units = {
-        'Offense': ['QB', 'RB', 'FB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'],
-        'Defense': ['LE', 'DT', 'RE', 'LOLB', 'MLB', 'ROLB', 'CB', 'FS', 'SS'],
+        'Offense': ['QB', 'HB', 'FB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'],
+        'Defense': ['LEDG', 'DT', 'REDG', 'SAM', 'MIKE', 'WILL', 'CB', 'FS', 'SS'],
         'Special Teams': ['K', 'P']
       };
 
