@@ -138,7 +138,7 @@ function parseRosterData(ocrText) {
   // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
   // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
-  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,5})\s+(\d{2}[\+]?)/i;
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,4})\s+(\d{2}[\+]?)/i;
 
   for (const line of cleanedLines) {
     let match = line.match(pattern1);

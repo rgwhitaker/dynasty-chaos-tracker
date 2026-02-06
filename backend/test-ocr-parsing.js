@@ -1,9 +1,12 @@
 /**
  * Test script for OCR parsing logic
  * Run with: node backend/test-ocr-parsing.js
+ * 
+ * NOTE: This file duplicates the parsing logic from ocrService.js for standalone testing.
+ * Any changes to the parsing logic should be reflected in both files.
  */
 
-// Import the cleanOcrText function
+// Duplicate of cleanOcrText function from ocrService.js for standalone testing
 function cleanOcrText(text) {
   // Replace common OCR mistakes
   return text
@@ -18,7 +21,7 @@ function cleanOcrText(text) {
     .replace(/\bl\b/g, '1'); // Replace isolated l with 1
 }
 
-// Simple mock of the parseRosterData function for testing
+// Duplicate of parseRosterData function from ocrService.js for standalone testing
 function parseRosterData(ocrText) {
   const players = [];
   const lines = ocrText.split('\n').filter(line => line.trim());
@@ -40,7 +43,7 @@ function parseRosterData(ocrText) {
   // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
   // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
-  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,5})\s+(\d{2}[\+]?)/i;
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,4})\s+(\d{2}[\+]?)/i;
 
   for (const line of cleanedLines) {
     let match = line.match(pattern1);
