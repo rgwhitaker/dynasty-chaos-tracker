@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const express = require('express');
 const cors = require('cors');
@@ -59,6 +60,13 @@ const PORT = process.env.PORT || 3001;
 
 async function startServer() {
   try {
+    // Ensure uploads directory exists
+    const uploadsDir = path.resolve(__dirname, '../uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+      console.log(`Created uploads directory: ${uploadsDir}`);
+    }
+    
     // Run database migrations
     await migrationRunner.runMigrations();
     
