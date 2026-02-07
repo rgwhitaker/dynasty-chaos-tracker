@@ -101,14 +101,14 @@ const RosterManagement = () => {
 
   // Handle paste events for clipboard images
   useEffect(() => {
-    const handlePaste = async (e) => {
+    const handlePaste = (e) => {
       const items = e.clipboardData?.items;
       if (!items) return;
 
       const imageFiles = [];
       for (let i = 0; i < items.length; i++) {
         const item = items[i];
-        if (item.type.indexOf('image') !== -1) {
+        if (item.type.startsWith('image/')) {
           const blob = item.getAsFile();
           if (blob) {
             // Create a File object with a timestamp-based name
@@ -133,7 +133,7 @@ const RosterManagement = () => {
     return () => {
       window.removeEventListener('paste', handlePaste);
     };
-  }, []);
+  }, [setUploadFiles, setUploadError, setUploadSuccess]);
 
   const onDrop = useCallback((acceptedFiles) => {
     setUploadFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
