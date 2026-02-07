@@ -46,3 +46,6 @@ temp/
 
 # Uploads
 backend/uploads/
+
+# Test files
+backend/test-duplicate-detection.js
