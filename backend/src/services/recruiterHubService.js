@@ -26,7 +26,7 @@ function isGraduating(player) {
  * Check if a player has dealbreaker risk
  */
 function hasDealbreakers(player) {
-  return player.dealbreakers && player.dealbreakers.length > 0;
+  return !!(player.dealbreakers && Array.isArray(player.dealbreakers) && player.dealbreakers.length > 0);
 }
 
 /**
