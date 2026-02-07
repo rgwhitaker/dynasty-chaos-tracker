@@ -222,6 +222,28 @@ const RosterDepthChart = () => {
               sx={{ height: 18, fontSize: '0.65rem', fontWeight: 'bold', mt: 0.5 }}
             />
           )}
+
+          {/* Physical Attributes */}
+          {(player.height || player.weight) && (
+            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+              {player.height && (
+                <Chip 
+                  label={player.height} 
+                  size="small" 
+                  variant="outlined"
+                  sx={{ height: 18, fontSize: '0.65rem' }}
+                />
+              )}
+              {player.weight && (
+                <Chip 
+                  label={`${player.weight} lbs`} 
+                  size="small" 
+                  variant="outlined"
+                  sx={{ height: 18, fontSize: '0.65rem' }}
+                />
+              )}
+            </Box>
+          )}
         </CardContent>
       </Card>
     );
