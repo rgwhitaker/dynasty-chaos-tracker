@@ -49,6 +49,7 @@ const RecruiterHub = () => {
 
   useEffect(() => {
     loadAnalysis();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynastyId]);
 
   const loadAnalysis = async () => {
@@ -286,7 +287,7 @@ const RecruiterHub = () => {
                 {expandedPosition} - Player Details
               </Typography>
               
-              {positionAnalysis[expandedPosition].risks.dealbreakers.length > 0 && (
+              {positionAnalysis[expandedPosition].risks.players.dealbreakers.length > 0 && (
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="error" gutterBottom>
                     Dealbreaker Risks ({positionAnalysis[expandedPosition].risks.dealbreakersCount})
@@ -304,7 +305,7 @@ const RecruiterHub = () => {
                 </Box>
               )}
 
-              {positionAnalysis[expandedPosition].risks.draftRisk.length > 0 && (
+              {positionAnalysis[expandedPosition].risks.players.draftRisk.length > 0 && (
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="warning.main" gutterBottom>
                     Draft Risk ({positionAnalysis[expandedPosition].risks.draftRiskCount})
@@ -322,7 +323,7 @@ const RecruiterHub = () => {
                 </Box>
               )}
 
-              {positionAnalysis[expandedPosition].risks.graduating.length > 0 && (
+              {positionAnalysis[expandedPosition].risks.players.graduating.length > 0 && (
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="info.main" gutterBottom>
                     Graduating ({positionAnalysis[expandedPosition].risks.graduatingCount})

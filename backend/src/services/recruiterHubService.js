@@ -107,13 +107,26 @@ function calculateRecruitingNeed(position, currentCount, atRiskCount) {
   const projectedCount = currentCount - atRiskCount;
   const needToRecruit = Math.max(0, targetDepth - projectedCount);
 
+  // Determine status
+  let status;
+  if (needToRecruit > 0) {
+    // Below target depth - critical
+    status = 'CRITICAL';
+  } else if (atRiskCount > 0 && projectedCount === targetDepth) {
+    // At target depth but has risk - warning
+    status = 'WARNING';
+  } else {
+    // Above target depth - OK
+    status = 'OK';
+  }
+
   return {
     currentCount,
     atRiskCount,
     projectedCount,
     targetDepth,
     needToRecruit,
-    status: needToRecruit > 0 ? 'CRITICAL' : projectedCount < targetDepth ? 'WARNING' : 'OK'
+    status
   };
 }
 
