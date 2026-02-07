@@ -202,11 +202,17 @@ function parsePlayerDetailScreen(ocrText) {
   
   // Extract class/year from patterns like "Senior (SR (RS))" or "Class Senior"
   const classPattern = /(?:Class\s+)?(Freshman|Sophomore|Junior|Senior)\s*(?:\(([A-Z]{2}(?:\s*\([A-Z]{2}\))?)\))?/i;
+  const classMapping = {
+    'FRESHMAN': 'FR',
+    'SOPHOMORE': 'SO',
+    'JUNIOR': 'JR',
+    'SENIOR': 'SR'
+  };
   for (const line of cleanedLines) {
     const match = line.match(classPattern);
     if (match) {
-      // Store the abbreviated form if available, otherwise the full form
-      const classAbbr = match[2] || match[1].substring(0, 2).toUpperCase();
+      // Store the abbreviated form if available, otherwise map the full form
+      const classAbbr = match[2] || classMapping[match[1].toUpperCase()];
       player.attributes.CLASS = classAbbr;
       break;
     }
@@ -227,21 +233,23 @@ function parsePlayerDetailScreen(ocrText) {
   }
   
   // Extract height from patterns like "Height 6'0"" or "6'0""
+  const primeMap = { '′': "'", '″': '"' };
   const heightPattern = /(?:Height\s+)?(\d+[''′]\s*\d+[""″]?)/i;
   for (const line of cleanedLines) {
     const match = line.match(heightPattern);
     if (match) {
-      player.attributes.HEIGHT = match[1].replace(/[′″]/g, (m) => m === '′' ? "'" : '"');
+      player.attributes.HEIGHT = match[1].replace(/[′″]/g, (m) => primeMap[m] || m);
       break;
     }
   }
   
   // Extract weight from patterns like "Weight 211 lbs" or "211 lbs"
-  const weightPattern = /(?:Weight\s+)?(\d{2,3})\s*(?:lbs?)?/i;
+  // Require either the "Weight" label or "lbs" suffix to reduce false positives
+  const weightPattern = /(?:Weight\s+(\d{2,3})(?:\s*lbs?)?|(\d{2,3})\s*lbs)/i;
   for (const line of cleanedLines) {
     const match = line.match(weightPattern);
     if (match) {
-      const weight = parseInt(match[1]);
+      const weight = parseInt(match[1] || match[2]);
       // Weight should be reasonable (150-400 lbs)
       if (weight >= 150 && weight <= 400) {
         player.attributes.WEIGHT = weight;
