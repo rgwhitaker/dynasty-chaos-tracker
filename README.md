@@ -285,7 +285,7 @@ psql -U dynasty_user -d dynasty_tracker -f backend/database/init.sql
 
 The Dynasty Chaos Tracker supports all 55 player ratings from College Football 26, plus physical attributes (Height & Weight) and Development Trait (Normal/Impact/Star/Elite).
 
-For a comprehensive list of all player attributes, see [PLAYER_ATTRIBUTES.md](PLAYER_ATTRIBUTES.md).
+For a comprehensive list of all player attributes, see [PLAYER_ATTRIBUTES.md](docs/PLAYER_ATTRIBUTES.md).
 
 ## Key Features Explained
 
