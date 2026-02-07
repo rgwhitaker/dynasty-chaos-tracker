@@ -13,6 +13,7 @@ import RosterManagement from './pages/RosterManagement';
 import RosterDepthChart from './pages/RosterDepthChart';
 import DepthChart from './pages/DepthChart';
 import Recruiting from './pages/Recruiting';
+import RecruiterHub from './pages/RecruiterHub';
 import StudScoreConfig from './pages/StudScoreConfig';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -33,6 +34,7 @@ function App() {
           <Route path="/dynasties/:id/roster/manage" element={<RosterManagement />} />
           <Route path="/dynasties/:id/depth-chart" element={<DepthChart />} />
           <Route path="/dynasties/:id/recruiting" element={<Recruiting />} />
+          <Route path="/dynasties/:id/recruiter-hub" element={<RecruiterHub />} />
           <Route path="/stud-score" element={<StudScoreConfig />} />
         </Route>
       </Routes>
