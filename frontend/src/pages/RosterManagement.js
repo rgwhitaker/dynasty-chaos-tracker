@@ -99,8 +99,44 @@ const RosterManagement = () => {
     dispatch(getPlayers(dynastyId));
   }, [dispatch, dynastyId]);
 
+  // Handle paste events for clipboard images
+  useEffect(() => {
+    const handlePaste = async (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            // Create a File object with a timestamp-based name
+            const timestamp = new Date().getTime();
+            const file = new File([blob], `pasted-screenshot-${timestamp}.png`, { type: blob.type });
+            imageFiles.push(file);
+          }
+        }
+      }
+
+      if (imageFiles.length > 0) {
+        setUploadFiles(prevFiles => [...prevFiles, ...imageFiles]);
+        setUploadError(null);
+        setUploadSuccess(null);
+      }
+    };
+
+    // Add paste event listener to the window
+    window.addEventListener('paste', handlePaste);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, []);
+
   const onDrop = useCallback((acceptedFiles) => {
-    setUploadFiles(acceptedFiles);
+    setUploadFiles(prevFiles => [...prevFiles, ...acceptedFiles]);
     setUploadError(null);
     setUploadSuccess(null);
   }, []);
@@ -332,6 +368,7 @@ const RosterManagement = () => {
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Upload screenshots of your roster from the game. Our OCR system will automatically extract player data.
+            You can also paste images directly from your clipboard (Ctrl+V or Cmd+V).
           </Typography>
 
           {uploadError && (
@@ -369,7 +406,7 @@ const RosterManagement = () => {
               {isDragActive ? 'Drop the files here' : 'Drag & drop screenshots here'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              or click to select files (PNG, JPG, JPEG)
+              or click to select files • Press Ctrl+V (Cmd+V) to paste from clipboard
             </Typography>
           </Box>
 
