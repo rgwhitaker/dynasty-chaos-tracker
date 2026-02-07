@@ -152,8 +152,13 @@ function isPlayerDetailScreen(ocrText) {
     }
   }
   
-  // If we have multiple indicators or labeled fields, it's likely a detail screen
-  return indicatorCount >= 2 || labeledFieldCount >= 2;
+  // If we have at least one indicator and one labeled field, or multiple indicators/fields, it's likely a detail screen
+  // Also check for the OVR badge pattern which is common in detail screens
+  const hasOvrBadge = /\d{2}\s*(?:OVR|OVERALL)/i.test(ocrText);
+  
+  return (indicatorCount >= 2 || labeledFieldCount >= 2 || 
+          (indicatorCount >= 1 && labeledFieldCount >= 1) ||
+          (hasOvrBadge && labeledFieldCount >= 1));
 }
 
 /**
