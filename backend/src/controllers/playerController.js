@@ -1,6 +1,24 @@
 const db = require('../config/database');
 const studScoreService = require('../services/studScoreService');
 
+/**
+ * Helper function to ensure player attributes are properly parsed from JSONB
+ * @param {Object} player - Player object from database
+ * @returns {Object} Player object with parsed attributes
+ */
+const ensureAttributesParsed = (player) => {
+  let attributes = player.attributes;
+  if (typeof attributes === 'string') {
+    try {
+      attributes = JSON.parse(attributes);
+    } catch (e) {
+      console.error('Failed to parse attributes for player:', player.id, player.first_name, player.last_name, e);
+      attributes = {};
+    }
+  }
+  return attributes || {};
+};
+
 const getPlayers = async (req, res) => {
   try {
     const { dynastyId } = req.params;
@@ -23,18 +41,7 @@ const getPlayers = async (req, res) => {
     // Calculate stud scores for each player and ensure attributes are parsed
     const playersWithScores = await Promise.all(
       result.rows.map(async (player) => {
-        // Ensure attributes is always a parsed object
-        let attributes = player.attributes;
-        if (typeof attributes === 'string') {
-          try {
-            attributes = JSON.parse(attributes);
-          } catch (e) {
-            console.error('Failed to parse player attributes:', e);
-            attributes = {};
-          }
-        }
-        attributes = attributes || {};
-
+        const attributes = ensureAttributesParsed(player);
         const studScore = await studScoreService.calculateStudScore(req.user.id, player);
         return { ...player, attributes, stud_score: studScore };
       })
@@ -79,19 +86,7 @@ const createPlayer = async (req, res) => {
     );
 
     const player = result.rows[0];
-    
-    // Ensure attributes is always a parsed object
-    let playerAttributes = player.attributes;
-    if (typeof playerAttributes === 'string') {
-      try {
-        playerAttributes = JSON.parse(playerAttributes);
-      } catch (e) {
-        console.error('Failed to parse player attributes:', e);
-        playerAttributes = {};
-      }
-    }
-    playerAttributes = playerAttributes || {};
-
+    const playerAttributes = ensureAttributesParsed(player);
     const studScore = await studScoreService.calculateStudScore(req.user.id, player);
 
     res.status(201).json({ ...player, attributes: playerAttributes, stud_score: studScore });
@@ -163,19 +158,7 @@ const updatePlayer = async (req, res) => {
     }
 
     const player = result.rows[0];
-    
-    // Ensure attributes is always a parsed object
-    let playerAttributes = player.attributes;
-    if (typeof playerAttributes === 'string') {
-      try {
-        playerAttributes = JSON.parse(playerAttributes);
-      } catch (e) {
-        console.error('Failed to parse player attributes:', e);
-        playerAttributes = {};
-      }
-    }
-    playerAttributes = playerAttributes || {};
-
+    const playerAttributes = ensureAttributesParsed(player);
     const studScore = await studScoreService.calculateStudScore(req.user.id, player);
 
     res.json({ ...player, attributes: playerAttributes, stud_score: studScore });
