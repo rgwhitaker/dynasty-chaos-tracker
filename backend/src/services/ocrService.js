@@ -407,27 +407,67 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
       return { status: 'requires_validation', errors: validation.errors, players: parsedPlayers };
     }
 
-    // Import players
+    // Import players with duplicate detection
     let importedCount = 0;
+    let updatedCount = 0;
     for (const player of validation.players) {
-      await db.query(
-        `INSERT INTO players (dynasty_id, first_name, last_name, position, jersey_number, overall_rating, attributes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [dynastyId, player.first_name, player.last_name, player.position, 
-         player.jersey_number, player.overall_rating, JSON.stringify(player.attributes)]
+      // Check if player already exists (match on dynasty_id, first_name, last_name, position)
+      const existingPlayer = await db.query(
+        `SELECT id, attributes, jersey_number, overall_rating 
+         FROM players 
+         WHERE dynasty_id = $1 
+           AND LOWER(first_name) = LOWER($2) 
+           AND LOWER(last_name) = LOWER($3) 
+           AND position = $4
+         LIMIT 1`,
+        [dynastyId, player.first_name, player.last_name, player.position]
       );
-      importedCount++;
+
+      if (existingPlayer.rows.length > 0) {
+        // Player exists - merge attributes and update
+        const existing = existingPlayer.rows[0];
+        const existingAttrs = existing.attributes || {};
+        const newAttrs = player.attributes || {};
+        
+        // Merge attributes (new values override existing ones)
+        const mergedAttrs = { ...existingAttrs, ...newAttrs };
+        
+        await db.query(
+          `UPDATE players 
+           SET jersey_number = $1, 
+               overall_rating = $2, 
+               attributes = $3,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $4`,
+          [
+            player.jersey_number || existing.jersey_number,
+            player.overall_rating || existing.overall_rating,
+            JSON.stringify(mergedAttrs),
+            existing.id
+          ]
+        );
+        updatedCount++;
+      } else {
+        // Player doesn't exist - insert new
+        await db.query(
+          `INSERT INTO players (dynasty_id, first_name, last_name, position, jersey_number, overall_rating, attributes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [dynastyId, player.first_name, player.last_name, player.position, 
+           player.jersey_number, player.overall_rating, JSON.stringify(player.attributes)]
+        );
+        importedCount++;
+      }
     }
 
-    console.log(`Successfully imported ${importedCount} players to dynasty ${dynastyId}`);
+    console.log(`Successfully processed ${importedCount} new players and updated ${updatedCount} existing players in dynasty ${dynastyId}`);
 
     // Update upload status
     await db.query(
       'UPDATE ocr_uploads SET processing_status = $1, players_imported = $2 WHERE id = $3',
-      ['completed', importedCount, uploadId]
+      ['completed', importedCount + updatedCount, uploadId]
     );
 
-    return { status: 'completed', importedCount };
+    return { status: 'completed', importedCount, updatedCount, totalProcessed: importedCount + updatedCount };
 
   } catch (error) {
     console.error('OCR processing error:', error);
