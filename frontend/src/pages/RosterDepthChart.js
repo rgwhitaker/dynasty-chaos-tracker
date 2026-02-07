@@ -30,6 +30,14 @@ import {
 import { getPlayers, deletePlayer } from '../store/slices/playerSlice';
 import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS } from '../constants/playerAttributes';
 
+// Common chip container styles
+const CHIP_CONTAINER_STYLES = {
+  display: 'flex',
+  gap: 0.5,
+  mt: 0.5,
+  flexWrap: 'wrap'
+};
+
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
   'Overall': ['OVR'],
@@ -198,7 +206,7 @@ const RosterDepthChart = () => {
               <Typography variant="body2" fontWeight="bold" noWrap>
                 {player.first_name} {player.last_name}
               </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+              <Box sx={CHIP_CONTAINER_STYLES}>
                 <Chip label={`#${player.jersey_number}`} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
                 <Chip label={player.position} size="small" color="primary" sx={{ height: 18, fontSize: '0.7rem' }} />
                 <Chip label={player.year} size="small" sx={{ height: 18, fontSize: '0.7rem' }} />
@@ -225,7 +233,7 @@ const RosterDepthChart = () => {
 
           {/* Physical Attributes */}
           {(player.height || player.weight) && (
-            <Box sx={{ display: 'flex', gap: 0.5, mt: 0.5, flexWrap: 'wrap' }}>
+            <Box sx={CHIP_CONTAINER_STYLES}>
               {player.height && (
                 <Chip 
                   label={player.height} 

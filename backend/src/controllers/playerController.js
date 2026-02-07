@@ -12,7 +12,7 @@ const ensureAttributesParsed = (player) => {
     try {
       attributes = JSON.parse(attributes);
     } catch (e) {
-      console.error('Failed to parse attributes for player:', player.id, player.first_name, player.last_name, e);
+      console.error(`Failed to parse attributes for player ID ${player.id} (${player.first_name} ${player.last_name}):`, e);
       attributes = {};
     }
   }
