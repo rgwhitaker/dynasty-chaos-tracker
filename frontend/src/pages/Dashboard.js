@@ -63,13 +63,21 @@ const Dashboard = () => {
                 <Typography variant="body2" color="text.secondary">
                   Season: {dynasty.season_year || 'N/A'}
                 </Typography>
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   <Button
                     size="small"
                     variant="outlined"
                     onClick={() => navigate(`/dynasties/${dynasty.id}/roster`)}
                   >
                     View Roster
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => navigate(`/dynasties/${dynasty.id}/recruiter-hub`)}
+                  >
+                    Recruiter Hub
                   </Button>
                 </Box>
               </CardContent>

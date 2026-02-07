@@ -301,13 +301,22 @@ const RosterDepthChart = () => {
         <Typography variant="h4" component="h1">
           Roster Depth Chart
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<SettingsIcon />}
-          onClick={() => navigate(`/dynasties/${dynastyId}/roster/manage`)}
-        >
-          Manage Roster
-        </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            onClick={() => navigate(`/dynasties/${dynastyId}/roster/manage`)}
+          >
+            Manage Roster
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate(`/dynasties/${dynastyId}/recruiter-hub`)}
+          >
+            Recruiter Hub
+          </Button>
+        </Box>
       </Box>
 
       {hasPlayers && (
