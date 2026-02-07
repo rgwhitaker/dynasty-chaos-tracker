@@ -77,7 +77,7 @@ function getPositionAttritionRisk(players) {
 /**
  * Calculate recruiting recommendations for a position
  */
-function calculateRecruitingNeed(currentCount, atRiskCount) {
+function calculateRecruitingNeed(position, currentCount, atRiskCount) {
   // Basic logic: maintain minimum depth of 3-4 players per position
   const minDepth = {
     'QB': 3,
@@ -103,7 +103,7 @@ function calculateRecruitingNeed(currentCount, atRiskCount) {
     'P': 2
   };
 
-  const targetDepth = minDepth[currentCount] || 3;
+  const targetDepth = minDepth[position] || 3;
   const projectedCount = currentCount - atRiskCount;
   const needToRecruit = Math.max(0, targetDepth - projectedCount);
 
@@ -151,7 +151,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     ROSTER_POSITIONS.forEach(position => {
       const players = playersByPosition[position] || [];
       const risks = getPositionAttritionRisk(players);
-      const recommendations = calculateRecruitingNeed(players.length, risks.total);
+      const recommendations = calculateRecruitingNeed(position, players.length, risks.total);
 
       positionAnalysis[position] = {
         position,
