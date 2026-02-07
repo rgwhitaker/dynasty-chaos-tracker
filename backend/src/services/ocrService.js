@@ -408,24 +408,30 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
     }
 
     // Import players with duplicate detection
+    // First, fetch all existing players for this dynasty to avoid N+1 queries
+    const existingPlayersResult = await db.query(
+      `SELECT id, first_name, last_name, position, attributes, jersey_number, overall_rating 
+       FROM players 
+       WHERE dynasty_id = $1`,
+      [dynastyId]
+    );
+    
+    // Create a lookup map for fast duplicate detection
+    const existingPlayersMap = new Map();
+    for (const p of existingPlayersResult.rows) {
+      const key = `${p.first_name.toLowerCase()}_${p.last_name.toLowerCase()}_${p.position}`;
+      existingPlayersMap.set(key, p);
+    }
+
     let importedCount = 0;
     let updatedCount = 0;
     for (const player of validation.players) {
-      // Check if player already exists (match on dynasty_id, first_name, last_name, position)
-      const existingPlayer = await db.query(
-        `SELECT id, attributes, jersey_number, overall_rating 
-         FROM players 
-         WHERE dynasty_id = $1 
-           AND LOWER(first_name) = LOWER($2) 
-           AND LOWER(last_name) = LOWER($3) 
-           AND position = $4
-         LIMIT 1`,
-        [dynastyId, player.first_name, player.last_name, player.position]
-      );
+      // Check if player already exists using the in-memory map
+      const key = `${player.first_name.toLowerCase()}_${player.last_name.toLowerCase()}_${player.position}`;
+      const existing = existingPlayersMap.get(key);
 
-      if (existingPlayer.rows.length > 0) {
+      if (existing) {
         // Player exists - merge attributes and update
-        const existing = existingPlayer.rows[0];
         const existingAttrs = existing.attributes || {};
         const newAttrs = player.attributes || {};
         
@@ -440,8 +446,8 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $4`,
           [
-            player.jersey_number || existing.jersey_number,
-            player.overall_rating || existing.overall_rating,
+            player.jersey_number ?? existing.jersey_number,
+            player.overall_rating ?? existing.overall_rating,
             JSON.stringify(mergedAttrs),
             existing.id
           ]
