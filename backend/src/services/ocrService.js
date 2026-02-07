@@ -117,6 +117,153 @@ function cleanOcrText(text) {
 }
 
 /**
+ * Detect if OCR text is from a player detail screen vs roster list
+ */
+function isPlayerDetailScreen(ocrText) {
+  const upperText = ocrText.toUpperCase();
+  
+  // Look for keywords/patterns that indicate a detail screen
+  const detailScreenIndicators = [
+    'OVERVIEW', 'RATINGS', 'MENTALS', 'PHYSICALS',
+    'ARCHETYPE', 'DEVELOPMENT TRAIT', 'DEALBREAKER',
+    'PIPELINE', 'HOMETOWN', 'STAR RATING'
+  ];
+  
+  // Count how many detail screen indicators are present
+  let indicatorCount = 0;
+  for (const indicator of detailScreenIndicators) {
+    if (upperText.includes(indicator)) {
+      indicatorCount++;
+    }
+  }
+  
+  // Look for labeled field patterns (e.g., "Position QB", "Class Senior", "Height 6'0"")
+  const labeledFieldPatterns = [
+    /\bPOSITION\s+[A-Z]{1,4}/i,
+    /\bCLASS\s+(FRESHMAN|SOPHOMORE|JUNIOR|SENIOR)/i,
+    /\bHEIGHT\s+\d/i,
+    /\bWEIGHT\s+\d/i
+  ];
+  
+  let labeledFieldCount = 0;
+  for (const pattern of labeledFieldPatterns) {
+    if (pattern.test(ocrText)) {
+      labeledFieldCount++;
+    }
+  }
+  
+  // If we have multiple indicators or labeled fields, it's likely a detail screen
+  return indicatorCount >= 2 || labeledFieldCount >= 2;
+}
+
+/**
+ * Parse player detail screen (individual player view)
+ */
+function parsePlayerDetailScreen(ocrText) {
+  const lines = ocrText.split('\n').filter(line => line.trim());
+  const cleanedLines = lines.map(line => cleanOcrText(line));
+  
+  const player = {
+    jersey_number: 0,
+    position: '',
+    first_name: '',
+    last_name: '',
+    overall_rating: 0,
+    attributes: {}
+  };
+  
+  // Extract player name - typically at the top in uppercase (e.g., "Cai WOODS")
+  // Look for a line with 2 words, both capitalized
+  const namePattern = /^([A-Z][a-z]+)\s+([A-Z]+)$/;
+  for (let i = 0; i < Math.min(5, cleanedLines.length); i++) {
+    const match = cleanedLines[i].match(namePattern);
+    if (match) {
+      player.first_name = match[1];
+      player.last_name = match[2];
+      break;
+    }
+  }
+  
+  // Extract position and jersey number from "Position QB (R) #16" format
+  const positionPattern = /Position\s+([A-Z]{1,4})\s*(?:\([A-Z]\))?\s*#?(\d+)/i;
+  for (const line of cleanedLines) {
+    const match = line.match(positionPattern);
+    if (match) {
+      player.position = match[1].toUpperCase();
+      player.jersey_number = parseInt(match[2]);
+      break;
+    }
+  }
+  
+  // Extract class/year from patterns like "Senior (SR (RS))" or "Class Senior"
+  const classPattern = /(?:Class\s+)?(Freshman|Sophomore|Junior|Senior)\s*(?:\(([A-Z]{2}(?:\s*\([A-Z]{2}\))?)\))?/i;
+  for (const line of cleanedLines) {
+    const match = line.match(classPattern);
+    if (match) {
+      // Store the abbreviated form if available, otherwise the full form
+      const classAbbr = match[2] || match[1].substring(0, 2).toUpperCase();
+      player.attributes.CLASS = classAbbr;
+      break;
+    }
+  }
+  
+  // Extract overall rating from "84 OVR" badge or similar
+  const overallPattern = /(\d{2})\s*(?:OVR|OVERALL)/i;
+  for (const line of cleanedLines) {
+    const match = line.match(overallPattern);
+    if (match) {
+      const overall = parseInt(match[1]);
+      if (overall >= 40 && overall <= 99) {
+        player.overall_rating = overall;
+        player.attributes.OVR = overall;
+        break;
+      }
+    }
+  }
+  
+  // Extract height from patterns like "Height 6'0"" or "6'0""
+  const heightPattern = /(?:Height\s+)?(\d+[''′]\s*\d+[""″]?)/i;
+  for (const line of cleanedLines) {
+    const match = line.match(heightPattern);
+    if (match) {
+      player.attributes.HEIGHT = match[1].replace(/[′″]/g, (m) => m === '′' ? "'" : '"');
+      break;
+    }
+  }
+  
+  // Extract weight from patterns like "Weight 211 lbs" or "211 lbs"
+  const weightPattern = /(?:Weight\s+)?(\d{2,3})\s*(?:lbs?)?/i;
+  for (const line of cleanedLines) {
+    const match = line.match(weightPattern);
+    if (match) {
+      const weight = parseInt(match[1]);
+      // Weight should be reasonable (150-400 lbs)
+      if (weight >= 150 && weight <= 400) {
+        player.attributes.WEIGHT = weight;
+        break;
+      }
+    }
+  }
+  
+  // Extract development trait if present
+  const devTraitPattern = /(?:Development\s+Trait|Dev\s+Trait)\s*:?\s*([A-Za-z\s]+)/i;
+  for (const line of cleanedLines) {
+    const match = line.match(devTraitPattern);
+    if (match) {
+      player.attributes.DEV_TRAIT = match[1].trim();
+      break;
+    }
+  }
+  
+  // Validate that we have the minimum required data
+  if (player.last_name && player.position && player.overall_rating >= 40) {
+    return [player]; // Return as array for consistency with parseRosterData
+  }
+  
+  return [];
+}
+
+/**
  * Parse roster data from OCR text
  */
 function parseRosterData(ocrText) {
@@ -300,6 +447,19 @@ function parseRosterData(ocrText) {
   console.log(`parseRosterData: Processed ${lines.length} lines, found ${players.length} valid players`);
   if (players.length > 0) {
     console.log('Sample parsed player:', players[0]);
+  }
+
+  // If no players were found, try parsing as player detail screen
+  if (players.length === 0) {
+    console.log('No players found with roster list parsing, attempting player detail screen parsing...');
+    if (isPlayerDetailScreen(ocrText)) {
+      console.log('Detected player detail screen format');
+      const detailPlayers = parsePlayerDetailScreen(ocrText);
+      if (detailPlayers.length > 0) {
+        console.log('Successfully parsed player detail screen:', detailPlayers[0]);
+        return detailPlayers;
+      }
+    }
   }
 
   return players;
@@ -510,6 +670,8 @@ module.exports = {
   extractTextGoogleVision,
   cleanOcrText,
   parseRosterData,
+  parsePlayerDetailScreen,
+  isPlayerDetailScreen,
   validatePlayerData,
   processRosterScreenshot,
   processBatchUpload
