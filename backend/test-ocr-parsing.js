@@ -23,13 +23,78 @@ function cleanOcrText(text) {
     .replace(/\bl\b/g, '1'); // Replace isolated l with 1
 }
 
+/**
+ * Correct common position OCR misreads
+ */
+function correctPosition(position) {
+  const upperPos = position.toUpperCase();
+  
+  // Common OCR position misreads - map to correct position
+  const positionCorrections = {
+    'OT': 'DT',   // O confused with D
+    '0T': 'DT',   // 0 confused with D
+    'Dl': 'DT',   // l confused with T
+    'D1': 'DT',   // 1 confused with T
+    'DI': 'DT',   // I confused with T
+    'HG': 'HB',   // G confused with B
+    'W8': 'WR',   // 8 confused with R
+    'TE': 'TE',   // Already correct
+    'CB': 'CB',   // Already correct
+    'QB': 'QB',   // Already correct
+  };
+  
+  // First check if it's in correction map
+  if (positionCorrections[upperPos]) {
+    return positionCorrections[upperPos];
+  }
+  
+  // Return original if no correction needed
+  return upperPos;
+}
+
+/**
+ * Extract name suffix (Jr., Sr., II, III, IV, V)
+ */
+function extractNameSuffix(nameParts) {
+  if (nameParts.length === 0) {
+    return { suffix: null, nameParts };
+  }
+  
+  const lastPart = nameParts[nameParts.length - 1];
+  const suffixPattern = /^(Jr\.?|Sr\.?|II|III|IV|V|2nd|3rd|4th|5th)$/i;
+  
+  if (suffixPattern.test(lastPart)) {
+    const suffix = lastPart;
+    const remainingParts = nameParts.slice(0, -1);
+    return { suffix, nameParts: remainingParts };
+  }
+  
+  return { suffix: null, nameParts };
+}
+
+/**
+ * Clean highlighted row artifacts from OCR text
+ * Highlighted/selected rows in game screenshots often produce OCR artifacts
+ */
+function cleanHighlightedRowArtifacts(line) {
+  // Remove common highlight artifacts:
+  // - Block characters: █, ▀, ▄, ▌, ▐, ░, ▒, ▓
+  // - Special markers/arrows: ►, >, », ▶
+  // - Selection indicators
+  return line
+    .replace(/[█▀▄▌▐░▒▓]/g, '') // Remove block characters
+    .replace(/^[►>»▶➤➜]\s*/g, '') // Remove leading arrows/indicators
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+}
+
 // Duplicate of parseRosterData function from ocrService.js for standalone testing
 function parseRosterData(ocrText) {
   const players = [];
   const lines = ocrText.split('\n').filter(line => line.trim());
 
-  // Clean the OCR text first
-  const cleanedLines = lines.map(line => cleanOcrText(line));
+  // Clean the OCR text first, including highlighted row artifacts
+  const cleanedLines = lines.map(line => cleanHighlightedRowArtifacts(cleanOcrText(line)));
 
   // Check if first line is a header with attribute names
   let headerAttributes = null;
@@ -60,20 +125,21 @@ function parseRosterData(ocrText) {
   }
 
   // More flexible parsing patterns to handle various OCR output formats
-  // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
-  const pattern1 = /^(\d+)\s+([A-Z]{1,4})\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85" or "12 QB John Smith Jr. 85")
+  const pattern1 = /^(\d+)\s+([A-Z0-9]{1,4})\s+([A-Za-z\s.]+?)\s+(\d{2})/;
   
-  // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85")
-  const pattern2 = /^([A-Z]{1,4})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85" or "OT 12 John Smith Jr. 85")
+  const pattern2 = /^([A-Z0-9]{1,4})\s+(\d+)\s+([A-Za-z\s.]+?)\s+(\d{2})/;
   
-  // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
-  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,4})\s+(\d+)\s+(\d{2})/;
+  // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85" or "John Smith Jr. QB 12 85")
+  const pattern3 = /^([A-Za-z\s.]+?)\s+([A-Z0-9]{1,4})\s+(\d+)\s+(\d{2})/;
   
   // Pattern 4: NCAA Roster format - Name Year Position Overall (e.g., "T.Bragg SO (RS) WR 89")
   // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
   // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
-  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,4})\s+(\d{2}[\+]?)/i;
+  // Handles suffixes like Jr., Sr., II, III, etc.
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?(?:\s+(?:Jr\.?|Sr\.?|II|III|IV|V))?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z0-9]{1,4})\s+(\d{2}[\+]?)/i;
 
   for (let i = dataStartIndex; i < cleanedLines.length; i++) {
     const line = cleanedLines[i];
@@ -106,15 +172,29 @@ function parseRosterData(ocrText) {
     }
 
     if (match) {
-      const nameParts = name.trim().split(/\s+/);
-      let firstName, lastName;
+      let nameParts = name.trim().split(/\s+/);
+      let firstName, lastName, suffix = null;
+      
+      // Extract suffix first (Jr., Sr., II, III, etc.)
+      const suffixResult = extractNameSuffix(nameParts);
+      suffix = suffixResult.suffix;
+      nameParts = suffixResult.nameParts;
       
       // Handle abbreviated names like "T.Bragg"
       if (name.includes('.')) {
         const parts = name.split('.');
         if (parts.length === 2) {
           firstName = parts[0]; // Initial
-          lastName = parts[1];
+          lastName = parts[1].trim();
+          // Re-check for suffix in lastName if it wasn't caught earlier
+          if (!suffix) {
+            const lastNameParts = lastName.split(/\s+/);
+            const lastNameSuffix = extractNameSuffix(lastNameParts);
+            if (lastNameSuffix.suffix) {
+              suffix = lastNameSuffix.suffix;
+              lastName = lastNameSuffix.nameParts.join(' ');
+            }
+          }
         } else {
           // Fallback to regular parsing
           if (nameParts.length === 1) {
@@ -138,11 +218,19 @@ function parseRosterData(ocrText) {
       const overallNum = parseInt(overall);
       const jerseyNum = parseInt(jersey);
       
+      // Apply position correction for common OCR errors
+      const correctedPosition = correctPosition(position);
+      
       if (overallNum >= 40 && overallNum <= 99 && jerseyNum >= 0 && jerseyNum <= 99) {
         // Initialize attributes with OVR
         const attributes = {
           OVR: overallNum
         };
+        
+        // Add suffix to attributes if present
+        if (suffix) {
+          attributes.SUFFIX = suffix;
+        }
 
         // If header with attributes was detected, parse additional attributes
         if (headerAttributes && headerAttributes.length > 0) {
@@ -189,7 +277,7 @@ function parseRosterData(ocrText) {
 
         players.push({
           jersey_number: jerseyNum,
-          position: position.toUpperCase(),
+          position: correctedPosition,
           first_name: firstName,
           last_name: lastName,
           overall_rating: overallNum,
@@ -320,6 +408,48 @@ B.Tate FR (RS) SAM 86+`,
     name: 'NCAA Roster Format - Hyphenated names',
     input: `J.Smith-Marsette FR(RS) C 86
 A.Johnson-Lee SO WR 85`,
+    expected: 2
+  },
+  {
+    name: 'Position correction - OT misread as DT',
+    input: `12 OT John Smith 85
+15 DT Michael Johnson 82`,
+    expected: 2
+  },
+  {
+    name: 'Position correction - 0T misread as DT',
+    input: `12 0T John Smith 85`,
+    expected: 1
+  },
+  {
+    name: 'Name with suffix Jr.',
+    input: `12 QB John Smith Jr. 85
+15 HB Michael Jones Sr. 82`,
+    expected: 2
+  },
+  {
+    name: 'Name with suffix II, III',
+    input: `12 QB John Smith II 85
+15 HB Michael Jones III 82
+7 WR David Brown IV 88`,
+    expected: 3
+  },
+  {
+    name: 'Highlighted row with arrow indicator',
+    input: `► 12 QB John Smith 85
+15 HB Michael Johnson 82`,
+    expected: 2
+  },
+  {
+    name: 'Highlighted row with block characters',
+    input: `█ 12 QB John Smith 85
+15 HB Michael Johnson 82`,
+    expected: 2
+  },
+  {
+    name: 'NCAA format with suffix',
+    input: `J.Smith Jr. FR WR 85
+T.Brown III SO QB 88`,
     expected: 2
   }
 ];
