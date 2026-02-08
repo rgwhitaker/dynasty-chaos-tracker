@@ -620,6 +620,8 @@ const RosterDepthChart = () => {
                 value={selectedPlayer}
                 onChange={handlePlayerChange}
                 options={players || []}
+                loading={isLoading}
+                disabled={isLoading}
                 getOptionLabel={(player) => 
                   `${player.first_name} ${player.last_name} - #${player.jersey_number} ${player.position}`
                 }
