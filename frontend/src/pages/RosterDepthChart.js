@@ -489,7 +489,7 @@ const RosterDepthChart = () => {
 
     return (
       <Box key={groupKey} sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2, gap: 2 }}>
           <Typography variant="h6" sx={{ 
             borderBottom: 2, 
             borderColor: 'primary.main',
