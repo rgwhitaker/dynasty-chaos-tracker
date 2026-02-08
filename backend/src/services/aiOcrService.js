@@ -49,9 +49,9 @@ Return ONLY valid players with:
 - last_name (required)
 - overall_rating (40-99)
 - attributes object with:
-  - OVR: overall rating
-  - SUFFIX: name suffix if present (Jr., Sr., II, III, etc.)
-  - Any other numeric attributes from the roster
+  - OVR: overall rating (required)
+  - SUFFIX: name suffix if present (Jr., Sr., II, III, etc.), or empty string if no suffix (required)
+  - Any other numeric attributes from the roster (optional)
 
 Parse carefully and validate all data. Return empty array if no valid players found.`;
 
@@ -138,7 +138,7 @@ Parse carefully and validate all data. Return empty array if no valid players fo
                         INJ: { type: 'integer' },
                         TGH: { type: 'integer' }
                       },
-                      required: ['OVR'],
+                      required: ['OVR', 'SUFFIX'],
                       additionalProperties: false
                     }
                   },
