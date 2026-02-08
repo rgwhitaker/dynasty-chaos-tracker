@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const studScoreService = require('../services/studScoreService');
+const { validateStatCaps, calculatePotentialScore } = require('../constants/statCaps');
 
 /**
  * Helper function to ensure player attributes are properly parsed from JSONB
@@ -43,7 +44,29 @@ const getPlayers = async (req, res) => {
       result.rows.map(async (player) => {
         const attributes = ensureAttributesParsed(player);
         const studScore = await studScoreService.calculateStudScore(req.user.id, player);
-        return { ...player, attributes, stud_score: studScore };
+        
+        // Parse stat_caps if it's a string
+        let statCaps = player.stat_caps;
+        if (typeof statCaps === 'string') {
+          try {
+            statCaps = JSON.parse(statCaps);
+          } catch (e) {
+            statCaps = {};
+          }
+        }
+        
+        // Calculate potential score
+        const potentialScore = calculatePotentialScore(statCaps, player.position);
+        const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
+        
+        return { 
+          ...player, 
+          attributes, 
+          stat_caps: statCaps,
+          stud_score: studScore,
+          potential_score: potentialScore,
+          adjusted_stud_score: adjustedStudScore,
+        };
       })
     );
 
@@ -70,26 +93,58 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      height, weight, dev_trait, attributes, dealbreakers
+      height, weight, dev_trait, attributes, dealbreakers, stat_caps
     } = req.body;
+
+    // Validate stat_caps if provided
+    if (stat_caps && position) {
+      const validation = validateStatCaps(position, stat_caps);
+      if (!validation.isValid) {
+        return res.status(400).json({ 
+          error: 'Invalid stat caps data', 
+          details: validation.errors 
+        });
+      }
+    }
 
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, attributes, dealbreakers
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        height, weight, dev_trait, attributes, dealbreakers, stat_caps
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, JSON.stringify(attributes || {}), dealbreakers || []
+        height, weight, dev_trait, JSON.stringify(attributes || {}), dealbreakers || [],
+        JSON.stringify(stat_caps || {})
       ]
     );
 
     const player = result.rows[0];
     const playerAttributes = ensureAttributesParsed(player);
     const studScore = await studScoreService.calculateStudScore(req.user.id, player);
+    
+    // Parse stat_caps
+    let parsedStatCaps = player.stat_caps;
+    if (typeof parsedStatCaps === 'string') {
+      try {
+        parsedStatCaps = JSON.parse(parsedStatCaps);
+      } catch (e) {
+        parsedStatCaps = {};
+      }
+    }
+    
+    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position);
+    const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
 
-    res.status(201).json({ ...player, attributes: playerAttributes, stud_score: studScore });
+    res.status(201).json({ 
+      ...player, 
+      attributes: playerAttributes, 
+      stat_caps: parsedStatCaps,
+      stud_score: studScore,
+      potential_score: potentialScore,
+      adjusted_stud_score: adjustedStudScore,
+    });
   } catch (error) {
     console.error('Create player error:', error);
     res.status(500).json({ error: 'Failed to create player' });
@@ -141,6 +196,28 @@ const updatePlayer = async (req, res) => {
       paramCount++;
     }
 
+    // Handle JSONB stat_caps with validation
+    if (req.body.stat_caps !== undefined) {
+      const position = req.body.position || (await db.query(
+        'SELECT position FROM players WHERE id = $1',
+        [playerId]
+      )).rows[0]?.position;
+
+      if (position && req.body.stat_caps) {
+        const validation = validateStatCaps(position, req.body.stat_caps);
+        if (!validation.isValid) {
+          return res.status(400).json({ 
+            error: 'Invalid stat caps data', 
+            details: validation.errors 
+          });
+        }
+      }
+
+      fields.push(`stat_caps = $${paramCount}`);
+      values.push(JSON.stringify(req.body.stat_caps));
+      paramCount++;
+    }
+
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
@@ -160,8 +237,28 @@ const updatePlayer = async (req, res) => {
     const player = result.rows[0];
     const playerAttributes = ensureAttributesParsed(player);
     const studScore = await studScoreService.calculateStudScore(req.user.id, player);
+    
+    // Parse stat_caps
+    let parsedStatCaps = player.stat_caps;
+    if (typeof parsedStatCaps === 'string') {
+      try {
+        parsedStatCaps = JSON.parse(parsedStatCaps);
+      } catch (e) {
+        parsedStatCaps = {};
+      }
+    }
+    
+    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position);
+    const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
 
-    res.json({ ...player, attributes: playerAttributes, stud_score: studScore });
+    res.json({ 
+      ...player, 
+      attributes: playerAttributes, 
+      stat_caps: parsedStatCaps,
+      stud_score: studScore,
+      potential_score: potentialScore,
+      adjusted_stud_score: adjustedStudScore,
+    });
   } catch (error) {
     console.error('Update player error:', error);
     res.status(500).json({ error: 'Failed to update player' });

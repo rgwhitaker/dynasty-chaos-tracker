@@ -49,3 +49,4 @@ backend/uploads/
 
 # Test files
 backend/test-duplicate-detection.js
+test-stat-caps.js

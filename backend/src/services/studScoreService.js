@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { PLAYER_RATINGS } = require('../constants/playerAttributes');
+const { calculatePotentialScore } = require('../constants/statCaps');
 
 // Default attribute weights by position (using CFB26 attribute abbreviations)
 const DEFAULT_WEIGHTS = {
@@ -203,8 +204,23 @@ async function getOrCreateDefaultPreset(userId) {
   }
 }
 
+/**
+ * Calculate adjusted stud score that factors in potential
+ * @param {number} studScore - Current stud score
+ * @param {number} potentialScore - Potential score (0-100)
+ * @param {number} potentialWeight - Weight for potential (0-1), default 0.3
+ * @returns {number} Adjusted stud score
+ */
+function calculateAdjustedStudScore(studScore, potentialScore, potentialWeight = 0.3) {
+  const currentWeight = 1 - potentialWeight;
+  const adjustedScore = (studScore * currentWeight) + (potentialScore * potentialWeight);
+  return Math.round(adjustedScore * 10) / 10;
+}
+
 module.exports = {
   calculateStudScore,
   getOrCreateDefaultPreset,
+  calculatePotentialScore,
+  calculateAdjustedStudScore,
   DEFAULT_WEIGHTS
 };
