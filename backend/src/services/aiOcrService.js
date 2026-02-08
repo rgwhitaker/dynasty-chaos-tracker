@@ -1,24 +1,23 @@
 const OpenAI = require('openai');
+const { Ollama } = require('ollama');
 
-// Initialize OpenAI client
+// AI Provider Configuration
+const AI_PROVIDER = process.env.AI_PROVIDER || 'ollama'; // 'ollama', 'openai'
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+
+// Initialize clients based on configuration
 const openai = process.env.OPENAI_API_KEY 
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-/**
- * Parse roster data using AI-powered post-processing
- * This provides more robust parsing than regex, handling:
- * - Position misreads (DT/OT confusion)
- * - Player name suffixes (Jr., Sr., II, III, etc.)
- * - Highlighted rows with special characters
- * - OCR artifacts and formatting issues
- */
-async function parseRosterWithAI(ocrText) {
-  if (!openai) {
-    throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY environment variable.');
-  }
+const ollama = new Ollama({ host: OLLAMA_URL });
 
-  const prompt = `You are an expert at parsing college football roster data from OCR text output.
+/**
+ * Build the parsing prompt for roster data
+ */
+function buildParsingPrompt(ocrText) {
+  return `You are an expert at parsing college football roster data from OCR text output.
 
 OCR Text:
 ${ocrText}
@@ -42,7 +41,7 @@ Common OCR Errors to Fix:
 - "HG" should be "HB"
 - "W8" should be "WR"
 
-Return ONLY valid players with:
+Return ONLY valid players as a JSON object with a "players" array. Each player must have:
 - jersey_number (0-99, use 0 if not available)
 - position (2-4 letter code, corrected)
 - first_name (can be empty or initial)
@@ -53,15 +52,82 @@ Return ONLY valid players with:
   - SUFFIX: name suffix if present (Jr., Sr., II, III, etc.)
   - Any other numeric attributes from the roster
 
-Parse carefully and validate all data. Return empty array if no valid players found.`;
+Example output format:
+{
+  "players": [
+    {
+      "jersey_number": 12,
+      "position": "DT",
+      "first_name": "John",
+      "last_name": "Smith",
+      "overall_rating": 85,
+      "attributes": { "OVR": 85, "SUFFIX": "Jr." }
+    }
+  ]
+}
 
+Parse carefully and validate all data. Return {"players": []} if no valid players found.`;
+}
+
+/**
+ * Parse roster data using Ollama (self-hosted LLM)
+ */
+async function parseWithOllama(ocrText) {
   try {
+    console.log(`Using Ollama model: ${OLLAMA_MODEL} at ${OLLAMA_URL}`);
+    
+    const prompt = buildParsingPrompt(ocrText);
+    
+    const response = await ollama.chat({
+      model: OLLAMA_MODEL,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a precise data extraction assistant that returns only valid JSON objects with player data.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      format: 'json', // Request JSON format
+      options: {
+        temperature: 0.1, // Low temperature for consistency
+        num_predict: 2000, // Allow enough tokens for full response
+      }
+    });
+
+    const content = response.message.content;
+    const result = JSON.parse(content);
+    const players = result.players || [];
+
+    console.log(`Ollama AI OCR: Parsed ${players.length} players from OCR text`);
+    if (players.length > 0) {
+      console.log('Ollama Sample player:', players[0]);
+    }
+
+    return players;
+  } catch (error) {
+    console.error('Ollama AI OCR parsing error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Parse roster data using OpenAI (cloud LLM)
+ */
+async function parseWithOpenAI(ocrText) {
+  try {
+    console.log('Using OpenAI GPT-4o-mini');
+    
+    const prompt = buildParsingPrompt(ocrText);
+    
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: 'You are a precise data extraction assistant that returns only valid JSON arrays of player objects.'
+          content: 'You are a precise data extraction assistant that returns only valid JSON objects with player data.'
         },
         {
           role: 'user',
@@ -101,21 +167,46 @@ Parse carefully and validate all data. Return empty array if no valid players fo
           }
         }
       },
-      temperature: 0.1, // Low temperature for consistent, accurate parsing
+      temperature: 0.1,
     });
 
     const result = JSON.parse(completion.choices[0].message.content);
     const players = result.players || [];
 
-    console.log(`AI OCR: Parsed ${players.length} players from OCR text`);
+    console.log(`OpenAI AI OCR: Parsed ${players.length} players from OCR text`);
     if (players.length > 0) {
-      console.log('AI OCR Sample player:', players[0]);
+      console.log('OpenAI Sample player:', players[0]);
     }
 
     return players;
   } catch (error) {
-    console.error('AI OCR parsing error:', error);
+    console.error('OpenAI AI OCR parsing error:', error);
     throw error;
+  }
+}
+
+/**
+ * Parse roster data using AI-powered post-processing
+ * Supports both self-hosted (Ollama) and cloud (OpenAI) LLMs
+ * This provides more robust parsing than regex, handling:
+ * - Position misreads (DT/OT confusion)
+ * - Player name suffixes (Jr., Sr., II, III, etc.)
+ * - Highlighted rows with special characters
+ * - OCR artifacts and formatting issues
+ */
+async function parseRosterWithAI(ocrText) {
+  // Determine which AI provider to use
+  const provider = AI_PROVIDER.toLowerCase();
+  
+  if (provider === 'ollama') {
+    return await parseWithOllama(ocrText);
+  } else if (provider === 'openai') {
+    if (!openai) {
+      throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY environment variable.');
+    }
+    return await parseWithOpenAI(ocrText);
+  } else {
+    throw new Error(`Unknown AI provider: ${provider}. Use 'ollama' or 'openai'`);
   }
 }
 
