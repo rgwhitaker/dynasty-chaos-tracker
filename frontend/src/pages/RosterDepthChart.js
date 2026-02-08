@@ -26,6 +26,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Autocomplete,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -142,6 +143,12 @@ const RosterDepthChart = () => {
   const handleCloseDetail = () => {
     setDetailDialogOpen(false);
     setSelectedPlayer(null);
+  };
+
+  const handlePlayerChange = (event, newPlayer) => {
+    if (newPlayer) {
+      setSelectedPlayer(newPlayer);
+    }
   };
 
   const handleEditPlayer = () => {
@@ -604,16 +611,43 @@ const RosterDepthChart = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box sx={{ flex: 1, mr: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Select Player
+              </Typography>
+              <Autocomplete
+                value={selectedPlayer}
+                onChange={handlePlayerChange}
+                options={players || []}
+                getOptionLabel={(player) => 
+                  `${player.first_name} ${player.last_name} - #${player.jersey_number} ${player.position}`
+                }
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Choose a player..."
+                    size="small"
+                  />
+                )}
+                sx={{ minWidth: 300 }}
+              />
+            </Box>
+            <IconButton onClick={handleCloseDetail}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          {selectedPlayer && (
             <Box>
               <Typography variant="h5">
-                {selectedPlayer?.first_name} {selectedPlayer?.last_name}
+                {selectedPlayer.first_name} {selectedPlayer.last_name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Chip label={`#${selectedPlayer?.jersey_number}`} size="small" />
-                <Chip label={selectedPlayer?.position} size="small" color="primary" />
-                <Chip label={selectedPlayer?.year} size="small" />
-                {selectedPlayer?.dev_trait && (
+                <Chip label={`#${selectedPlayer.jersey_number}`} size="small" />
+                <Chip label={selectedPlayer.position} size="small" color="primary" />
+                <Chip label={selectedPlayer.year} size="small" />
+                {selectedPlayer.dev_trait && (
                   <Chip 
                     label={selectedPlayer.dev_trait} 
                     size="small" 
@@ -623,10 +657,7 @@ const RosterDepthChart = () => {
                 )}
               </Box>
             </Box>
-            <IconButton onClick={handleCloseDetail}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          )}
         </DialogTitle>
         <DialogContent dividers>
           {selectedPlayer && (
