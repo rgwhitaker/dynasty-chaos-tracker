@@ -30,17 +30,14 @@ function correctPosition(position) {
   const upperPos = position.toUpperCase();
   
   // Common OCR position misreads - map to correct position
+  // Note: Only map OCR errors that are clearly wrong, not legitimate positions
   const positionCorrections = {
-    'OT': 'DT',   // O confused with D
     '0T': 'DT',   // 0 confused with D
     'Dl': 'DT',   // l confused with T
     'D1': 'DT',   // 1 confused with T
     'DI': 'DT',   // I confused with T
     'HG': 'HB',   // G confused with B
     'W8': 'WR',   // 8 confused with R
-    'TE': 'TE',   // Already correct
-    'CB': 'CB',   // Already correct
-    'QB': 'QB',   // Already correct
   };
   
   // First check if it's in correction map
@@ -126,13 +123,13 @@ function parseRosterData(ocrText) {
 
   // More flexible parsing patterns to handle various OCR output formats
   // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85" or "12 QB John Smith Jr. 85")
-  const pattern1 = /^(\d+)\s+([A-Z0-9]{1,4})\s+([A-Za-z\s.]+?)\s+(\d{2})/;
+  const pattern1 = /^(\d+)\s+([A-Z0-9il]{1,4})\s+([A-Za-z\s.]+?)\s+(\d{2})/i;
   
   // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85" or "OT 12 John Smith Jr. 85")
-  const pattern2 = /^([A-Z0-9]{1,4})\s+(\d+)\s+([A-Za-z\s.]+?)\s+(\d{2})/;
+  const pattern2 = /^([A-Z0-9il]{1,4})\s+(\d+)\s+([A-Za-z\s.]+?)\s+(\d{2})/i;
   
   // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85" or "John Smith Jr. QB 12 85")
-  const pattern3 = /^([A-Za-z\s.]+?)\s+([A-Z0-9]{1,4})\s+(\d+)\s+(\d{2})/;
+  const pattern3 = /^([A-Za-z\s.]+?)\s+([A-Z0-9il]{1,4})\s+(\d+)\s+(\d{2})/i;
   
   // Pattern 4: NCAA Roster format - Name Year Position Overall (e.g., "T.Bragg SO (RS) WR 89")
   // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
@@ -172,31 +169,25 @@ function parseRosterData(ocrText) {
     }
 
     if (match) {
-      let nameParts = name.trim().split(/\s+/);
       let firstName, lastName, suffix = null;
       
-      // Extract suffix first (Jr., Sr., II, III, etc.)
-      const suffixResult = extractNameSuffix(nameParts);
-      suffix = suffixResult.suffix;
-      nameParts = suffixResult.nameParts;
-      
-      // Handle abbreviated names like "T.Bragg"
+      // Handle abbreviated names like "T.Bragg" - split by dot first
       if (name.includes('.')) {
         const parts = name.split('.');
         if (parts.length === 2) {
           firstName = parts[0]; // Initial
-          lastName = parts[1].trim();
-          // Re-check for suffix in lastName if it wasn't caught earlier
-          if (!suffix) {
-            const lastNameParts = lastName.split(/\s+/);
-            const lastNameSuffix = extractNameSuffix(lastNameParts);
-            if (lastNameSuffix.suffix) {
-              suffix = lastNameSuffix.suffix;
-              lastName = lastNameSuffix.nameParts.join(' ');
-            }
-          }
+          // Check for suffix in the last name part
+          const lastNameParts = parts[1].trim().split(/\s+/);
+          const suffixResult = extractNameSuffix(lastNameParts);
+          suffix = suffixResult.suffix;
+          lastName = suffixResult.nameParts.join(' ');
         } else {
           // Fallback to regular parsing
+          let nameParts = name.trim().split(/\s+/);
+          const suffixResult = extractNameSuffix(nameParts);
+          suffix = suffixResult.suffix;
+          nameParts = suffixResult.nameParts;
+          
           if (nameParts.length === 1) {
             firstName = '';
             lastName = nameParts[0];
@@ -205,13 +196,21 @@ function parseRosterData(ocrText) {
             firstName = nameParts.join(' ');
           }
         }
-      } else if (nameParts.length === 1) {
-        // Single name - use as last name, leave first name empty
-        firstName = '';
-        lastName = nameParts[0];
       } else {
-        lastName = nameParts.pop();
-        firstName = nameParts.join(' ');
+        // No dot - regular name parsing
+        let nameParts = name.trim().split(/\s+/);
+        const suffixResult = extractNameSuffix(nameParts);
+        suffix = suffixResult.suffix;
+        nameParts = suffixResult.nameParts;
+        
+        if (nameParts.length === 1) {
+          // Single name - use as last name, leave first name empty
+          firstName = '';
+          lastName = nameParts[0];
+        } else {
+          lastName = nameParts.pop();
+          firstName = nameParts.join(' ');
+        }
       }
 
       // Validate parsed data before adding
@@ -411,15 +410,16 @@ A.Johnson-Lee SO WR 85`,
     expected: 2
   },
   {
-    name: 'Position correction - OT misread as DT',
-    input: `12 OT John Smith 85
+    name: 'Position correction - 0T (zero-T) misread as DT',
+    input: `12 0T John Smith 85
 15 DT Michael Johnson 82`,
     expected: 2
   },
   {
-    name: 'Position correction - 0T misread as DT',
-    input: `12 0T John Smith 85`,
-    expected: 1
+    name: 'Position correction - Dl and D1 misread as DT',
+    input: `12 Dl John Smith 85
+15 D1 Michael Johnson 82`,
+    expected: 2
   },
   {
     name: 'Name with suffix Jr.',
