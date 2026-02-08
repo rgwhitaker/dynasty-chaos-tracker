@@ -138,7 +138,7 @@ Parse carefully and validate all data. Return empty array if no valid players fo
                         INJ: { type: 'integer' },
                         TGH: { type: 'integer' }
                       },
-                      required: [],
+                      required: ['OVR'],
                       additionalProperties: false
                     }
                   },
