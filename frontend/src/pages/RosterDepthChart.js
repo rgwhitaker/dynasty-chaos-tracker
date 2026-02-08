@@ -35,7 +35,7 @@ import {
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
-import { getPlayers, deletePlayer } from '../store/slices/playerSlice';
+import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
 import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
 import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
@@ -116,6 +116,13 @@ const RosterDepthChart = () => {
   const [addPlayerError, setAddPlayerError] = useState(null);
   const [addPlayerLoading, setAddPlayerLoading] = useState(false);
 
+  // Edit player state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [editError, setEditError] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
   }, [dispatch, dynastyId]);
@@ -138,7 +145,25 @@ const RosterDepthChart = () => {
 
   const handleEditPlayer = () => {
     if (selectedPlayer) {
-      navigate(`/dynasties/${dynastyId}/roster/manage?editPlayer=${selectedPlayer.id}`);
+      setEditingPlayer(selectedPlayer);
+      setEditFormData({
+        first_name: selectedPlayer.first_name || '',
+        last_name: selectedPlayer.last_name || '',
+        position: selectedPlayer.position || '',
+        jersey_number: selectedPlayer.jersey_number || '',
+        year: selectedPlayer.year || '',
+        overall_rating: selectedPlayer.overall_rating || '',
+        height: selectedPlayer.height || '',
+        weight: selectedPlayer.weight || '',
+        dev_trait: selectedPlayer.dev_trait || '',
+        attributes: selectedPlayer.attributes || {},
+        dealbreakers: selectedPlayer.dealbreakers || [],
+        stat_caps: selectedPlayer.stat_caps || {},
+      });
+      setEditDialogOpen(true);
+      setEditError(null);
+      // Close the detail dialog to show edit dialog
+      setDetailDialogOpen(false);
     }
   };
 
@@ -279,6 +304,74 @@ const RosterDepthChart = () => {
       console.error('Add player error:', error);
     } finally {
       setAddPlayerLoading(false);
+    }
+  };
+
+  // Edit player handlers
+  const handleEditChange = (e) => {
+    setEditFormData({
+      ...editFormData,
+      [e.target.name]: e.target.value,
+    });
+    if (editError) setEditError(null);
+  };
+
+  const handleEditAttributeChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      attributes: {
+        ...editFormData.attributes,
+        [name]: value ? parseInt(value) : null,
+      },
+    });
+    if (editError) setEditError(null);
+  };
+
+  const handleEditStatCapsChange = (newStatCaps) => {
+    setEditFormData({
+      ...editFormData,
+      stat_caps: newStatCaps,
+    });
+    if (editError) setEditError(null);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditError(null);
+    setEditLoading(true);
+
+    try {
+      const filteredAttributes = Object.entries(editFormData.attributes)
+        .filter(([_, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      
+      const playerData = {
+        ...editFormData,
+        jersey_number: editFormData.jersey_number ? parseInt(editFormData.jersey_number) : null,
+        overall_rating: editFormData.overall_rating ? parseInt(editFormData.overall_rating) : null,
+        weight: editFormData.weight ? parseInt(editFormData.weight) : null,
+        attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
+        stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
+      };
+
+      await dispatch(updatePlayer({ 
+        dynastyId, 
+        playerId: editingPlayer.id, 
+        playerData 
+      })).unwrap();
+      
+      setEditDialogOpen(false);
+      setEditingPlayer(null);
+      setEditFormData({});
+      setSelectedPlayer(null);
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update player. Please try again.';
+      setEditError(errorMessage);
+      console.error('Update player error:', error);
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -983,6 +1076,211 @@ const RosterDepthChart = () => {
             startIcon={addPlayerLoading ? <CircularProgress size={20} /> : <AddIcon />}
           >
             {addPlayerLoading ? 'Adding...' : 'Add Player'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Player Dialog */}
+      <Dialog 
+        open={editDialogOpen} 
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Edit Player</DialogTitle>
+        <DialogContent>
+          {editError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {editError}
+            </Alert>
+          )}
+
+          <form onSubmit={handleEditSubmit} id="edit-player-form">
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  name="first_name"
+                  value={editFormData.first_name || ''}
+                  onChange={handleEditChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="last_name"
+                  value={editFormData.last_name || ''}
+                  onChange={handleEditChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Position"
+                  name="position"
+                  value={editFormData.position || ''}
+                  onChange={handleEditChange}
+                  required
+                >
+                  {POSITIONS.map((pos) => (
+                    <MenuItem key={pos} value={pos}>
+                      {pos}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Jersey Number"
+                  name="jersey_number"
+                  type="number"
+                  value={editFormData.jersey_number || ''}
+                  onChange={handleEditChange}
+                  inputProps={{ min: 0, max: 99 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Year"
+                  name="year"
+                  value={editFormData.year || ''}
+                  onChange={handleEditChange}
+                >
+                  {YEARS.map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Overall Rating"
+                  name="overall_rating"
+                  type="number"
+                  value={editFormData.overall_rating || ''}
+                  onChange={handleEditChange}
+                  inputProps={{ min: 40, max: 99 }}
+                  helperText="Overall rating (40-99)"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Height"
+                  name="height"
+                  value={editFormData.height || ''}
+                  onChange={handleEditChange}
+                  placeholder={`6'2"`}
+                  helperText={`e.g., 6'2"`}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Weight"
+                  name="weight"
+                  type="number"
+                  value={editFormData.weight || ''}
+                  onChange={handleEditChange}
+                  inputProps={{ min: 150, max: 400 }}
+                  helperText="Weight in pounds"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Dev Trait"
+                  name="dev_trait"
+                  value={editFormData.dev_trait || ''}
+                  onChange={handleEditChange}
+                >
+                  {DEV_TRAITS.map((trait) => (
+                    <MenuItem key={trait} value={trait}>
+                      {trait}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              
+              {/* Player Attributes Section */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Player Attributes (Optional)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Update individual player ratings. Values should be between 40-99.
+                </Typography>
+                
+                {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                  <Accordion key={category} sx={{ mb: 1 }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>{category} Attributes</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={2}>
+                        {attributes.map((attr) => (
+                          <Grid item xs={6} sm={4} md={3} key={attr}>
+                            <TextField
+                              fullWidth
+                              label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                              name={attr}
+                              type="number"
+                              value={editFormData.attributes?.[attr] || ''}
+                              onChange={handleEditAttributeChange}
+                              inputProps={{ min: 40, max: 99 }}
+                              size="small"
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Grid>
+              
+              {/* Stat Caps Section */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                {editFormData.position && (
+                  <StatCapEditor
+                    position={editFormData.position}
+                    statCaps={editFormData.stat_caps || {}}
+                    onChange={handleEditStatCapsChange}
+                  />
+                )}
+                {!editFormData.position && (
+                  <Alert severity="info">
+                    Select a position above to configure stat caps
+                  </Alert>
+                )}
+              </Grid>
+            </Grid>
+          </form>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            form="edit-player-form"
+            variant="contained"
+            disabled={editLoading}
+            startIcon={editLoading ? <CircularProgress size={20} /> : null}
+          >
+            {editLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
