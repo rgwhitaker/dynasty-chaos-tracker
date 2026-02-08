@@ -409,7 +409,7 @@ const RosterDepthChart = () => {
             startIcon={<AddIcon />}
             onClick={() => handleOpenAddPlayer(positions[0])}
           >
-            Add {groupKey}
+            Add Player
           </Button>
         </Box>
         {groupPlayers.length > 0 ? (
