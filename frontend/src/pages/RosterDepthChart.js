@@ -254,7 +254,7 @@ const RosterDepthChart = () => {
     try {
       // Filter out null/empty attribute values before sending
       const filteredAttributes = Object.entries(addPlayerFormData.attributes)
-        .filter(([_, value]) => value !== null && value !== '')
+        .filter(([, value]) => value !== null && value !== '')
         .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
       
       const playerData = {
