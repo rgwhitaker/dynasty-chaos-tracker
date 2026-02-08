@@ -29,6 +29,8 @@ import {
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer } from '../store/slices/playerSlice';
 import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS } from '../constants/playerAttributes';
+import { getStatCapSummary } from '../constants/statCaps';
+import StatCapEditor from '../components/StatCapEditor';
 
 // Common chip container styles
 const CHIP_CONTAINER_STYLES = {
@@ -413,6 +415,26 @@ const RosterDepthChart = () => {
                       </Typography>
                     </Grid>
                   )}
+                  {selectedPlayer.potential_score != null && (
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        Potential
+                      </Typography>
+                      <Typography variant="h4" color="secondary">
+                        {selectedPlayer.potential_score}%
+                      </Typography>
+                    </Grid>
+                  )}
+                  {selectedPlayer.adjusted_stud_score != null && (
+                    <Grid item xs={3}>
+                      <Typography variant="caption" color="text.secondary">
+                        Adjusted Score
+                      </Typography>
+                      <Typography variant="h4" color="primary">
+                        {selectedPlayer.adjusted_stud_score}
+                      </Typography>
+                    </Grid>
+                  )}
                   <Grid item xs={3}>
                     <Typography variant="caption" color="text.secondary">
                       Height
@@ -431,6 +453,94 @@ const RosterDepthChart = () => {
                   </Grid>
                 </Grid>
               </Box>
+
+              {/* Stat Caps Section */}
+              {selectedPlayer.stat_caps && Object.keys(selectedPlayer.stat_caps).length > 0 && (
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle1" color="primary" gutterBottom>
+                    Stat Caps Summary
+                  </Typography>
+                  {(() => {
+                    const summary = getStatCapSummary(selectedPlayer.stat_caps, selectedPlayer.position);
+                    return (
+                      <Grid container spacing={2}>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            textAlign: 'center'
+                          }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Purchased Blocks
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold">
+                              {summary.purchasedBlocks} / {summary.totalBlocks}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            textAlign: 'center'
+                          }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Capped Blocks
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold">
+                              {summary.cappedBlocks}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            textAlign: 'center'
+                          }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Available Blocks
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold">
+                              {summary.availableBlocks}
+                            </Typography>
+                          </Box>
+                        </Grid>
+                        <Grid item xs={6} sm={3}>
+                          <Box sx={{ 
+                            p: 1.5, 
+                            border: '1px solid',
+                            borderColor: 'primary.main',
+                            borderRadius: 1,
+                            textAlign: 'center',
+                            bgcolor: 'primary.50'
+                          }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Potential Score
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold" color="primary">
+                              {summary.potentialScore}%
+                            </Typography>
+                          </Box>
+                        </Grid>
+                      </Grid>
+                    );
+                  })()}
+                  <Box sx={{ mt: 2 }}>
+                    <StatCapEditor
+                      position={selectedPlayer.position}
+                      statCaps={selectedPlayer.stat_caps}
+                      readOnly={true}
+                    />
+                  </Box>
+                </Box>
+              )}
 
               {/* Attributes by Category */}
               {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => {

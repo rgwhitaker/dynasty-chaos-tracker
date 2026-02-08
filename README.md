@@ -26,6 +26,12 @@ Dynasty Chaos Tracker is a comprehensive web application for College Football 26
 - ✅ **Custom Weighting**: User-defined weights (0-100%) per position
 - ✅ **Stud Score Engine**: Weighted sum formula with preset management
 - ✅ **Multiple Presets**: Save and load different schemes (e.g., "Run-Heavy Offense", "Air Raid")
+- ✅ **Stat Cap Tracking**: Visual tracking of player potential with 20-block upgrade system per stat group
+  - Position-specific stat groups (6-7 groups per position)
+  - Track purchased blocks and capped (unavailable) blocks
+  - Potential Score: 0-100 based on available upgrade capacity
+  - Adjusted Stud Score: Combines current performance with potential
+  - Interactive visual editor with color-coded blocks
 - ✅ **Dealbreaker Tracking**: Player and recruit dealbreaker flags
 - ✅ **Departure Predictions**: ML-powered analytics for identifying players likely to leave
 

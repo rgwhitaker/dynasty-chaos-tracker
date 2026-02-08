@@ -40,6 +40,7 @@ import {
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import StatCapEditor from '../components/StatCapEditor';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -78,6 +79,7 @@ const RosterManagement = () => {
     dev_trait: '',
     attributes: {},
     dealbreakers: [],
+    stat_caps: {},
   });
   const [manualError, setManualError] = useState(null);
   const [manualSuccess, setManualSuccess] = useState(null);
@@ -198,6 +200,14 @@ const RosterManagement = () => {
     if (manualError) setManualError(null);
   };
 
+  const handleStatCapsChange = (newStatCaps) => {
+    setManualFormData({
+      ...manualFormData,
+      stat_caps: newStatCaps,
+    });
+    if (manualError) setManualError(null);
+  };
+
   const handleManualSubmit = async (e) => {
     e.preventDefault();
     setManualError(null);
@@ -219,6 +229,8 @@ const RosterManagement = () => {
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         // Only include dealbreakers if any were added
         dealbreakers: manualFormData.dealbreakers.length > 0 ? manualFormData.dealbreakers : undefined,
+        // Only include stat_caps if position is set and any caps were entered
+        stat_caps: manualFormData.position && Object.keys(manualFormData.stat_caps).length > 0 ? manualFormData.stat_caps : undefined,
       };
 
       await playerService.createPlayer(dynastyId, playerData);
@@ -235,6 +247,7 @@ const RosterManagement = () => {
         dev_trait: '',
         attributes: {},
         dealbreakers: [],
+        stat_caps: {},
       });
       // Refresh the player list immediately since manual entry is synchronous
       dispatch(getPlayers(dynastyId));
@@ -263,6 +276,7 @@ const RosterManagement = () => {
       dev_trait: player.dev_trait || '',
       attributes: player.attributes || {},
       dealbreakers: player.dealbreakers || [],
+      stat_caps: player.stat_caps || {},
     });
     setEditDialogOpen(true);
     setEditError(null);
@@ -288,6 +302,14 @@ const RosterManagement = () => {
     if (editError) setEditError(null);
   };
 
+  const handleEditStatCapsChange = (newStatCaps) => {
+    setEditFormData({
+      ...editFormData,
+      stat_caps: newStatCaps,
+    });
+    if (editError) setEditError(null);
+  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setEditError(null);
@@ -305,6 +327,7 @@ const RosterManagement = () => {
         weight: editFormData.weight ? parseInt(editFormData.weight) : null,
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
+        stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
       };
 
       await dispatch(updatePlayer({ 
@@ -636,6 +659,23 @@ const RosterManagement = () => {
                     ))}
                   </Grid>
                   
+                  {/* Stat Caps Section */}
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    {manualFormData.position && (
+                      <StatCapEditor
+                        position={manualFormData.position}
+                        statCaps={manualFormData.stat_caps}
+                        onChange={handleStatCapsChange}
+                      />
+                    )}
+                    {!manualFormData.position && (
+                      <Alert severity="info">
+                        Select a position above to configure stat caps
+                      </Alert>
+                    )}
+                  </Grid>
+                  
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button
@@ -654,6 +694,7 @@ const RosterManagement = () => {
                             dev_trait: '',
                             attributes: {},
                             dealbreakers: [],
+                            stat_caps: {},
                           });
                           setManualError(null);
                           setManualSuccess(null);
@@ -923,6 +964,23 @@ const RosterManagement = () => {
                       </AccordionDetails>
                     </Accordion>
                   ))}
+                </Grid>
+                
+                {/* Stat Caps Section */}
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                  {editFormData.position && (
+                    <StatCapEditor
+                      position={editFormData.position}
+                      statCaps={editFormData.stat_caps || {}}
+                      onChange={handleEditStatCapsChange}
+                    />
+                  )}
+                  {!editFormData.position && (
+                    <Alert severity="info">
+                      Select a position above to configure stat caps
+                    </Alert>
+                  )}
                 </Grid>
               </Grid>
             </form>
