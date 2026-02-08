@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -35,6 +35,7 @@ import {
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
   Edit as EditIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
@@ -57,6 +58,7 @@ const ATTRIBUTE_CATEGORIES = {
 
 const RosterManagement = () => {
   const { id: dynastyId } = useParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const { players, isLoading } = useSelector((state) => state.player);
 
@@ -379,9 +381,18 @@ const RosterManagement = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Roster Management
-        </Typography>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="h4" component="h1">
+            Roster Management
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(`/dynasties/${dynastyId}/roster`)}
+          >
+            Back to Roster
+          </Button>
+        </Box>
 
         {/* Upload Section */}
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
