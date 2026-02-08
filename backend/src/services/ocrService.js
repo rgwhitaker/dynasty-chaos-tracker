@@ -4,6 +4,7 @@ const vision = require('@google-cloud/vision');
 const sharp = require('sharp');
 const fs = require('fs').promises;
 const db = require('../config/database');
+const { parseRosterWithAI, validateAIPlayers } = require('./aiOcrService');
 
 // Initialize AWS Textract
 const textract = new AWS.Textract({
@@ -566,6 +567,35 @@ function parseRosterData(ocrText) {
 }
 
 /**
+ * Parse roster data with AI-powered post-processing and fallback to regex
+ * Uses AI (OpenAI GPT) as primary method for better accuracy, falls back to regex if unavailable
+ */
+async function parseRosterDataWithAI(ocrText, useAI = true) {
+  // Try AI parsing first if enabled and API key is available
+  if (useAI && process.env.OPENAI_API_KEY) {
+    try {
+      console.log('Attempting AI-powered OCR parsing...');
+      const aiPlayers = await parseRosterWithAI(ocrText);
+      
+      if (aiPlayers && aiPlayers.length > 0) {
+        console.log(`AI parsing successful: ${aiPlayers.length} players found`);
+        return aiPlayers;
+      } else {
+        console.log('AI parsing returned no players, falling back to regex parsing...');
+      }
+    } catch (error) {
+      console.error('AI parsing failed, falling back to regex parsing:', error.message);
+    }
+  } else if (useAI && !process.env.OPENAI_API_KEY) {
+    console.log('AI parsing requested but OPENAI_API_KEY not configured, using regex parsing');
+  }
+  
+  // Fallback to regex-based parsing
+  console.log('Using regex-based parsing...');
+  return parseRosterData(ocrText);
+}
+
+/**
  * Validate parsed player data
  */
 function validatePlayerData(players) {
@@ -639,8 +669,9 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
       console.log(`OCR extracted text length: ${ocrText.length} characters`);
     }
 
-    // Parse roster data
-    const parsedPlayers = parseRosterData(ocrText);
+    // Parse roster data with AI (falls back to regex if AI unavailable)
+    const useAI = process.env.USE_AI_OCR !== 'false'; // Default to true unless explicitly disabled
+    const parsedPlayers = await parseRosterDataWithAI(ocrText, useAI);
     console.log(`Parsed ${parsedPlayers.length} players from OCR text`);
 
     // Check if no players were parsed
@@ -770,6 +801,7 @@ module.exports = {
   extractTextGoogleVision,
   cleanOcrText,
   parseRosterData,
+  parseRosterDataWithAI,
   parsePlayerDetailScreen,
   isPlayerDetailScreen,
   validatePlayerData,
