@@ -31,8 +31,8 @@ const HeightInput = ({ value, onChange, name = 'height', ...otherProps }) => {
       name={name}
       value={value}
       onChange={handleChange}
-      placeholder="6'2&quot;"
-      helperText="e.g., 6'2&quot;"
+      placeholder={`6'2"`}
+      helperText={`e.g., 6'2"`}
       inputProps={{
         inputMode: 'numeric', // Show numeric keyboard on mobile
         pattern: '[0-9]*', // Additional hint for mobile keyboards

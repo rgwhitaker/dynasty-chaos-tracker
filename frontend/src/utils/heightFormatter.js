@@ -17,14 +17,17 @@ export const formatHeightInput = (value) => {
     return '';
   }
   
+  // Limit to 3 digits maximum (e.g., 6'11")
+  const limitedDigits = digits.slice(0, 3);
+  
   // If only one digit, just return it (partial input)
-  if (digits.length === 1) {
-    return digits;
+  if (limitedDigits.length === 1) {
+    return limitedDigits;
   }
   
   // If two or more digits, format as feet'inches"
-  const feet = digits[0];
-  const inches = digits.slice(1);
+  const feet = limitedDigits[0];
+  const inches = limitedDigits.slice(1);
   
   // Return formatted string
   return `${feet}'${inches}"`;
