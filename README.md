@@ -37,6 +37,12 @@ Dynasty Chaos Tracker is a comprehensive web application for College Football 26
 - 🔄 D3.js visual depth chart (frontend visualization in progress)
 
 ### Epic 5: Recruiting & Predictions
+- ✅ **Recruiter Hub**: Comprehensive dashboard analyzing roster retention risks and recruiting needs
+  - Dealbreaker risk tracking (players with dissatisfaction flags)
+  - Draft risk identification (OVR >= 87 upperclassmen)
+  - Graduation tracking (seniors and grad students)
+  - Position-by-position recruiting recommendations
+  - Drilldown views with specific player details
 - ✅ **Gap Analysis**: Automatic recruiting needs based on roster composition
 - ✅ **Dealbreaker Forecasting**: Match recruit preferences to your dynasty
 - ✅ **Priority Scoring**: ML-based recruit ranking
@@ -274,6 +280,9 @@ psql -U dynasty_user -d dynasty_tracker -f backend/database/init.sql
 - `GET /api/dynasties/:id/recruiting` - List recruits
 - `GET /api/dynasties/:id/recruiting/targets` - Get priority targets
 - `POST /api/dynasties/:id/recruiting` - Add recruit
+
+### Recruiter Hub
+- `GET /api/dynasties/:id/recruiter-hub` - Analyze roster attrition risks and recruiting needs
 
 ### Stud Score
 - `GET /api/stud-score/presets` - List weight presets
