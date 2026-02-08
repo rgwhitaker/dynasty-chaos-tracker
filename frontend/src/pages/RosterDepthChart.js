@@ -613,9 +613,6 @@ const RosterDepthChart = () => {
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
             <Box sx={{ flex: 1, mr: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Select Player
-              </Typography>
               <Autocomplete
                 value={selectedPlayer}
                 onChange={handlePlayerChange}
@@ -631,6 +628,7 @@ const RosterDepthChart = () => {
                     {...params}
                     placeholder="Choose a player..."
                     size="small"
+                    label="Select Player"
                   />
                 )}
                 sx={{ minWidth: 300 }}
