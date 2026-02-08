@@ -1,20 +1,20 @@
 # AI-Powered OCR Post-Processing
 
-This document describes the AI-powered OCR post-processing feature for roster screenshot uploads.
+This document describes the AI-powered OCR post-processing feature for roster screenshot uploads using OpenAI.
 
 ## Overview
 
-The system uses AI (OpenAI GPT-4o-mini) to intelligently parse and structure OCR text output, providing more robust handling of edge cases compared to regex-based parsing.
+The system uses OpenAI GPT-4o-mini to intelligently parse and structure OCR text output, providing more robust handling of edge cases compared to regex-based parsing.
 
 ## Features
 
 ### 1. Intelligent Position Correction
 AI understands context and corrects common OCR misreads:
-- `OT` → `DT` (when context indicates defensive tackle)
-- `0T` → `DT` (zero confused with D)
-- `Dl`, `D1`, `DI` → `DT` (lowercase l, digit 1, capital I confused with T)
-- `HG` → `HB` (G confused with B)
-- `W8` → `WR` (8 confused with R)
+- `DT` misread as `OT` → Corrected to `DT` when context indicates defensive tackle
+- `0T` (zero-T) → Corrected to `DT`
+- `Dl`, `D1`, `DI` → Corrected to `DT`
+- `HG` → Corrected to `HB`
+- `W8` → Corrected to `WR`
 
 ### 2. Smart Name Suffix Parsing
 Automatically detects and extracts name suffixes:
@@ -83,9 +83,11 @@ const result = await processRosterScreenshot(
 
 ### Unit Tests
 
+The AI OCR functionality is tested alongside regex parsing:
+
 ```bash
-# Test with your OpenAI API key
-OPENAI_API_KEY=sk-...your-key node backend/test-ai-ocr.js
+# Run OCR parsing tests
+node backend/test-ocr-parsing.js
 ```
 
 ### Test Cases Covered
