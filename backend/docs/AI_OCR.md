@@ -60,10 +60,10 @@ If `OPENAI_API_KEY` is not set or AI parsing fails, the system automatically fal
 const { parseRosterDataWithAI } = require('./services/ocrService');
 
 // Parse with AI (falls back to regex if unavailable)
-const players = await parseRosterDataWithAI(ocrText, useAI = true);
+const players = await parseRosterDataWithAI(ocrText, true);
 
 // Force regex parsing (skip AI)
-const players = await parseRosterDataWithAI(ocrText, useAI = false);
+const players = await parseRosterDataWithAI(ocrText, false);
 ```
 
 ### Via API

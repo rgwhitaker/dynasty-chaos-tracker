@@ -36,8 +36,8 @@ Position Codes (correct these if OCR misread them):
 - Special: K, P
 
 Common OCR Errors to Fix:
-- "OT" is often misread "DT" (should be DT unless clearly offensive tackle context)
-- "0T" should be "DT"
+- "DT" is often misread as "OT" - correct back to "DT" when context indicates defensive tackle
+- "0T" (zero-T) should be "DT"
 - "Dl" or "D1" or "DI" should be "DT"
 - "HG" should be "HB"
 - "W8" should be "WR"
