@@ -1,5 +1,5 @@
 const Tesseract = require('tesseract.js');
-const AWS = require('aws-sdk');
+const { TextractClient, DetectDocumentTextCommand } = require('@aws-sdk/client-textract');
 const vision = require('@google-cloud/vision');
 const sharp = require('sharp');
 const fs = require('fs').promises;
@@ -7,7 +7,7 @@ const db = require('../config/database');
 const { parseRosterWithAI, validateAIPlayers } = require('./aiOcrService');
 
 // Initialize AWS Textract
-const textract = new AWS.Textract({
+const textractClient = new TextractClient({
   region: process.env.AWS_REGION || 'us-east-1'
 });
 
@@ -59,13 +59,13 @@ async function extractTextTextract(imagePath) {
   try {
     const imageBytes = await fs.readFile(imagePath);
     
-    const params = {
+    const command = new DetectDocumentTextCommand({
       Document: {
         Bytes: imageBytes
       }
-    };
+    });
 
-    const result = await textract.detectDocumentText(params).promise();
+    const result = await textractClient.send(command);
     
     const text = result.Blocks
       .filter(block => block.BlockType === 'LINE')
