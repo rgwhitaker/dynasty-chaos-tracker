@@ -4,6 +4,7 @@ const vision = require('@google-cloud/vision');
 const sharp = require('sharp');
 const fs = require('fs').promises;
 const db = require('../config/database');
+const { parseRosterWithAI, validateAIPlayers } = require('./aiOcrService');
 
 // Initialize AWS Textract
 const textract = new AWS.Textract({
@@ -114,6 +115,68 @@ function cleanOcrText(text) {
     .replace(/v\*OVR/g, 'OVR') // Replace v*OVR with OVR
     .replace(/\bO\b/g, '0') // Replace isolated O with 0
     .replace(/\bl\b/g, '1'); // Replace isolated l with 1
+}
+
+/**
+ * Correct common position OCR misreads
+ */
+function correctPosition(position) {
+  const upperPos = position.toUpperCase();
+  
+  // Common OCR position misreads - map to correct position
+  // Note: Only map OCR errors that are clearly wrong, not legitimate positions
+  const positionCorrections = {
+    '0T': 'DT',   // 0 confused with D
+    'Dl': 'DT',   // l confused with T
+    'D1': 'DT',   // 1 confused with T
+    'DI': 'DT',   // I confused with T
+    'HG': 'HB',   // G confused with B
+    'W8': 'WR',   // 8 confused with R
+  };
+  
+  // First check if it's in correction map
+  if (positionCorrections[upperPos]) {
+    return positionCorrections[upperPos];
+  }
+  
+  // Return original if no correction needed
+  return upperPos;
+}
+
+/**
+ * Extract name suffix (Jr., Sr., II, III, IV, V)
+ */
+function extractNameSuffix(nameParts) {
+  if (nameParts.length === 0) {
+    return { suffix: null, nameParts };
+  }
+  
+  const lastPart = nameParts[nameParts.length - 1];
+  const suffixPattern = /^(Jr\.?|Sr\.?|II|III|IV|V|2nd|3rd|4th|5th)$/i;
+  
+  if (suffixPattern.test(lastPart)) {
+    const suffix = lastPart;
+    const remainingParts = nameParts.slice(0, -1);
+    return { suffix, nameParts: remainingParts };
+  }
+  
+  return { suffix: null, nameParts };
+}
+
+/**
+ * Clean highlighted row artifacts from OCR text
+ * Highlighted/selected rows in game screenshots often produce OCR artifacts
+ */
+function cleanHighlightedRowArtifacts(line) {
+  // Remove common highlight artifacts:
+  // - Block characters: █, ▀, ▄, ▌, ▐, ░, ▒, ▓
+  // - Special markers/arrows: ►, >, », ▶
+  // - Selection indicators
+  return line
+    .replace(/[█▀▄▌▐░▒▓]/g, '') // Remove block characters
+    .replace(/^[►>»▶➤➜]\s*/g, '') // Remove leading arrows/indicators
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
 }
 
 /**
@@ -283,8 +346,8 @@ function parseRosterData(ocrText) {
   const players = [];
   const lines = ocrText.split('\n').filter(line => line.trim());
 
-  // Clean the OCR text first
-  const cleanedLines = lines.map(line => cleanOcrText(line));
+  // Clean the OCR text first, including highlighted row artifacts
+  const cleanedLines = lines.map(line => cleanHighlightedRowArtifacts(cleanOcrText(line)));
 
   // Check if first line is a header with attribute names
   let headerAttributes = null;
@@ -318,20 +381,21 @@ function parseRosterData(ocrText) {
   }
 
   // More flexible parsing patterns to handle various OCR output formats
-  // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85")
-  const pattern1 = /^(\d+)\s+([A-Z]{1,4})\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  // Pattern 1: Jersey Position Name Overall (e.g., "12 QB John Smith 85" or "12 QB John Smith Jr. 85")
+  const pattern1 = /^(\d+)\s+([A-Z0-9il]{1,4})\s+([A-Za-z\s.]+?)\s+(\d{2})/i;
   
-  // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85")
-  const pattern2 = /^([A-Z]{1,4})\s+(\d+)\s+([A-Za-z\s]+?)\s+(\d{2})/;
+  // Pattern 2: Position Jersey Name Overall (e.g., "QB 12 John Smith 85" or "OT 12 John Smith Jr. 85")
+  const pattern2 = /^([A-Z0-9il]{1,4})\s+(\d+)\s+([A-Za-z\s.]+?)\s+(\d{2})/i;
   
-  // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85")
-  const pattern3 = /^([A-Za-z\s]+?)\s+([A-Z]{1,4})\s+(\d+)\s+(\d{2})/;
+  // Pattern 3: Name Position Jersey Overall (e.g., "John Smith QB 12 85" or "John Smith Jr. QB 12 85")
+  const pattern3 = /^([A-Za-z\s.]+?)\s+([A-Z0-9il]{1,4})\s+(\d+)\s+(\d{2})/i;
   
   // Pattern 4: NCAA Roster format - Name Year Position Overall (e.g., "T.Bragg SO (RS) WR 89")
   // Matches: Initial.LastName or First.LastName or Initial LastName or FirstName LastName, 
   // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
-  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z]{1,4})\s+(\d{2}[\+]?)/i;
+  // Handles suffixes like Jr., Sr., II, III, etc.
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?(?:\s+(?:Jr\.?|Sr\.?|II|III|IV|V))?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z0-9]{1,4})\s+(\d{2}[\+]?)/i;
 
   for (let i = dataStartIndex; i < cleanedLines.length; i++) {
     const line = cleanedLines[i];
@@ -364,17 +428,25 @@ function parseRosterData(ocrText) {
     }
 
     if (match) {
-      const nameParts = name.trim().split(/\s+/);
-      let firstName, lastName;
+      let firstName, lastName, suffix = null;
       
-      // Handle abbreviated names like "T.Bragg"
+      // Handle abbreviated names like "T.Bragg" - split by dot first
       if (name.includes('.')) {
         const parts = name.split('.');
         if (parts.length === 2) {
           firstName = parts[0]; // Initial
-          lastName = parts[1];
+          // Check for suffix in the last name part
+          const lastNameParts = parts[1].trim().split(/\s+/);
+          const suffixResult = extractNameSuffix(lastNameParts);
+          suffix = suffixResult.suffix;
+          lastName = suffixResult.nameParts.join(' ');
         } else {
           // Fallback to regular parsing
+          let nameParts = name.trim().split(/\s+/);
+          const suffixResult = extractNameSuffix(nameParts);
+          suffix = suffixResult.suffix;
+          nameParts = suffixResult.nameParts;
+          
           if (nameParts.length === 1) {
             firstName = '';
             lastName = nameParts[0];
@@ -383,24 +455,40 @@ function parseRosterData(ocrText) {
             firstName = nameParts.join(' ');
           }
         }
-      } else if (nameParts.length === 1) {
-        // Single name - use as last name, leave first name empty
-        firstName = '';
-        lastName = nameParts[0];
       } else {
-        lastName = nameParts.pop();
-        firstName = nameParts.join(' ');
+        // No dot - regular name parsing
+        let nameParts = name.trim().split(/\s+/);
+        const suffixResult = extractNameSuffix(nameParts);
+        suffix = suffixResult.suffix;
+        nameParts = suffixResult.nameParts;
+        
+        if (nameParts.length === 1) {
+          // Single name - use as last name, leave first name empty
+          firstName = '';
+          lastName = nameParts[0];
+        } else {
+          lastName = nameParts.pop();
+          firstName = nameParts.join(' ');
+        }
       }
 
       // Validate parsed data before adding
       const overallNum = parseInt(overall);
       const jerseyNum = parseInt(jersey);
       
+      // Apply position correction for common OCR errors
+      const correctedPosition = correctPosition(position);
+      
       if (overallNum >= 40 && overallNum <= 99 && jerseyNum >= 0 && jerseyNum <= 99) {
         // Initialize attributes with OVR
         const attributes = {
           OVR: overallNum
         };
+        
+        // Add suffix to attributes if present
+        if (suffix) {
+          attributes.SUFFIX = suffix;
+        }
 
         // If header with attributes was detected, parse additional attributes
         if (headerAttributes && headerAttributes.length > 0) {
@@ -447,7 +535,7 @@ function parseRosterData(ocrText) {
 
         players.push({
           jersey_number: jerseyNum,
-          position: position.toUpperCase(),
+          position: correctedPosition,
           first_name: firstName,
           last_name: lastName,
           overall_rating: overallNum,
@@ -476,6 +564,35 @@ function parseRosterData(ocrText) {
   }
 
   return players;
+}
+
+/**
+ * Parse roster data with AI-powered post-processing and fallback to regex
+ * Uses AI (OpenAI GPT) as primary method for better accuracy, falls back to regex if unavailable
+ */
+async function parseRosterDataWithAI(ocrText, useAI = true) {
+  // Try AI parsing first if enabled and API key is available
+  if (useAI && process.env.OPENAI_API_KEY) {
+    try {
+      console.log('Attempting AI-powered OCR parsing...');
+      const aiPlayers = await parseRosterWithAI(ocrText);
+      
+      if (aiPlayers && aiPlayers.length > 0) {
+        console.log(`AI parsing successful: ${aiPlayers.length} players found`);
+        return aiPlayers;
+      } else {
+        console.log('AI parsing returned no players, falling back to regex parsing...');
+      }
+    } catch (error) {
+      console.error('AI parsing failed, falling back to regex parsing:', error.message);
+    }
+  } else if (useAI && !process.env.OPENAI_API_KEY) {
+    console.log('AI parsing requested but OPENAI_API_KEY not configured, using regex parsing');
+  }
+  
+  // Fallback to regex-based parsing
+  console.log('Using regex-based parsing...');
+  return parseRosterData(ocrText);
 }
 
 /**
@@ -552,8 +669,9 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
       console.log(`OCR extracted text length: ${ocrText.length} characters`);
     }
 
-    // Parse roster data
-    const parsedPlayers = parseRosterData(ocrText);
+    // Parse roster data with AI (falls back to regex if AI unavailable)
+    const useAI = process.env.USE_AI_OCR !== 'false'; // Default to true unless explicitly disabled
+    const parsedPlayers = await parseRosterDataWithAI(ocrText, useAI);
     console.log(`Parsed ${parsedPlayers.length} players from OCR text`);
 
     // Check if no players were parsed
@@ -683,6 +801,7 @@ module.exports = {
   extractTextGoogleVision,
   cleanOcrText,
   parseRosterData,
+  parseRosterDataWithAI,
   parsePlayerDetailScreen,
   isPlayerDetailScreen,
   validatePlayerData,
