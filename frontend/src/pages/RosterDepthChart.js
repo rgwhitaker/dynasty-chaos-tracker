@@ -68,10 +68,11 @@ const ATTRIBUTE_CATEGORIES = {
 const POSITION_GROUPS = {
   offense: {
     'QB': { positions: ['QB'], label: 'Quarterback', order: 1 },
-    'RB': { positions: ['HB', 'FB'], label: 'Running Backs', order: 2 },
-    'WR': { positions: ['WR'], label: 'Wide Receivers', order: 3 },
-    'TE': { positions: ['TE'], label: 'Tight Ends', order: 4 },
-    'OL': { positions: ['LT', 'LG', 'C', 'RG', 'RT'], label: 'Offensive Line', order: 5 },
+    'HB': { positions: ['HB'], label: 'Halfback', order: 2 },
+    'FB': { positions: ['FB'], label: 'Fullback', order: 3 },
+    'WR': { positions: ['WR'], label: 'Wide Receivers', order: 4 },
+    'TE': { positions: ['TE'], label: 'Tight Ends', order: 5 },
+    'OL': { positions: ['LT', 'LG', 'C', 'RG', 'RT'], label: 'Offensive Line', order: 6 },
   },
   defense: {
     'DL': { positions: ['LEDG', 'REDG', 'DT'], label: 'Defensive Line', order: 1 },
