@@ -42,6 +42,7 @@ import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSl
 import playerService from '../services/playerService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
+import HeightInput from '../components/HeightInput';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -594,14 +595,10 @@ const RosterManagement = () => {
                     />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <TextField
-                      fullWidth
-                      label="Height"
-                      name="height"
+                    <HeightInput
                       value={manualFormData.height}
                       onChange={handleManualChange}
-                      placeholder={`6'2"`}
-                      helperText={`e.g., 6'2"`}
+                      name="height"
                     />
                   </Grid>
                   <Grid item xs={12} sm={4}>
@@ -901,14 +898,10 @@ const RosterManagement = () => {
                   />
                 </Grid>
                 <Grid item xs={12} sm={4}>
-                  <TextField
-                    fullWidth
-                    label="Height"
-                    name="height"
+                  <HeightInput
                     value={editFormData.height || ''}
                     onChange={handleEditChange}
-                    placeholder={`6'2"`}
-                    helperText={`e.g., 6'2"`}
+                    name="height"
                   />
                 </Grid>
                 <Grid item xs={12} sm={4}>

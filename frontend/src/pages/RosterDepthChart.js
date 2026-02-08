@@ -40,6 +40,7 @@ import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS
 import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
 import playerService from '../services/playerService';
+import HeightInput from '../components/HeightInput';
 
 // Common chip container styles
 const CHIP_CONTAINER_STYLES = {
@@ -969,14 +970,10 @@ const RosterDepthChart = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Height"
-                  name="height"
+                <HeightInput
                   value={addPlayerFormData.height}
                   onChange={handleAddPlayerChange}
-                  placeholder={`6'2"`}
-                  helperText={`e.g., 6'2"`}
+                  name="height"
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -1174,14 +1171,10 @@ const RosterDepthChart = () => {
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
-                <TextField
-                  fullWidth
-                  label="Height"
-                  name="height"
+                <HeightInput
                   value={editFormData.height || ''}
                   onChange={handleEditChange}
-                  placeholder={`6'2"`}
-                  helperText={`e.g., 6'2"`}
+                  name="height"
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
