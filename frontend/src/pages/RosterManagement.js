@@ -28,6 +28,7 @@ import {
   DialogActions,
   CardActions,
   Chip,
+  MenuItem,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -545,13 +546,11 @@ const RosterManagement = () => {
                       value={manualFormData.position}
                       onChange={handleManualChange}
                       required
-                      SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
                       {POSITIONS.map((pos) => (
-                        <option key={pos} value={pos}>
+                        <MenuItem key={pos} value={pos}>
                           {pos}
-                        </option>
+                        </MenuItem>
                       ))}
                     </TextField>
                   </Grid>
@@ -574,13 +573,11 @@ const RosterManagement = () => {
                       name="year"
                       value={manualFormData.year}
                       onChange={handleManualChange}
-                      SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
                       {YEARS.map((year) => (
-                        <option key={year} value={year}>
+                        <MenuItem key={year} value={year}>
                           {year}
-                        </option>
+                        </MenuItem>
                       ))}
                     </TextField>
                   </Grid>
@@ -627,13 +624,11 @@ const RosterManagement = () => {
                       name="dev_trait"
                       value={manualFormData.dev_trait}
                       onChange={handleManualChange}
-                      SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
                       {DEV_TRAITS.map((trait) => (
-                        <option key={trait} value={trait}>
+                        <MenuItem key={trait} value={trait}>
                           {trait}
-                        </option>
+                        </MenuItem>
                       ))}
                     </TextField>
                   </Grid>
@@ -858,13 +853,11 @@ const RosterManagement = () => {
                     value={editFormData.position || ''}
                     onChange={handleEditChange}
                     required
-                    SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
                     {POSITIONS.map((pos) => (
-                      <option key={pos} value={pos}>
+                      <MenuItem key={pos} value={pos}>
                         {pos}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -887,13 +880,11 @@ const RosterManagement = () => {
                     name="year"
                     value={editFormData.year || ''}
                     onChange={handleEditChange}
-                    SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
                     {YEARS.map((year) => (
-                      <option key={year} value={year}>
+                      <MenuItem key={year} value={year}>
                         {year}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
@@ -940,13 +931,11 @@ const RosterManagement = () => {
                     name="dev_trait"
                     value={editFormData.dev_trait || ''}
                     onChange={handleEditChange}
-                    SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
                     {DEV_TRAITS.map((trait) => (
-                      <option key={trait} value={trait}>
+                      <MenuItem key={trait} value={trait}>
                         {trait}
-                      </option>
+                      </MenuItem>
                     ))}
                   </TextField>
                 </Grid>
