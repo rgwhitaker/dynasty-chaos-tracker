@@ -20,17 +20,26 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   Paper,
+  TextField,
+  MenuItem,
+  Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Close as CloseIcon,
   Settings as SettingsIcon,
+  Add as AddIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer } from '../store/slices/playerSlice';
-import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS } from '../constants/playerAttributes';
+import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
 import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
+import playerService from '../services/playerService';
 
 // Common chip container styles
 const CHIP_CONTAINER_STYLES = {
@@ -87,6 +96,25 @@ const RosterDepthChart = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const [unit, setUnit] = useState('offense');
+
+  // Add player dialog state
+  const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
+  const [selectedPosition, setSelectedPosition] = useState('');
+  const [addPlayerFormData, setAddPlayerFormData] = useState({
+    first_name: '',
+    last_name: '',
+    position: '',
+    jersey_number: '',
+    year: '',
+    overall_rating: '',
+    height: '',
+    weight: '',
+    dev_trait: '',
+    attributes: {},
+    stat_caps: {},
+  });
+  const [addPlayerError, setAddPlayerError] = useState(null);
+  const [addPlayerLoading, setAddPlayerLoading] = useState(false);
 
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
@@ -150,6 +178,108 @@ const RosterDepthChart = () => {
     setDeleteDialogOpen(false);
     setDeletingPlayer(null);
     setDeleteError(null);
+  };
+
+  // Add player dialog handlers
+  const handleOpenAddPlayer = (position) => {
+    setSelectedPosition(position);
+    setAddPlayerFormData({
+      first_name: '',
+      last_name: '',
+      position: position,
+      jersey_number: '',
+      year: '',
+      overall_rating: '',
+      height: '',
+      weight: '',
+      dev_trait: '',
+      attributes: {},
+      stat_caps: {},
+    });
+    setAddPlayerError(null);
+    setAddPlayerDialogOpen(true);
+  };
+
+  const handleCloseAddPlayer = () => {
+    setAddPlayerDialogOpen(false);
+    setAddPlayerFormData({
+      first_name: '',
+      last_name: '',
+      position: '',
+      jersey_number: '',
+      year: '',
+      overall_rating: '',
+      height: '',
+      weight: '',
+      dev_trait: '',
+      attributes: {},
+      stat_caps: {},
+    });
+    setAddPlayerError(null);
+  };
+
+  const handleAddPlayerChange = (e) => {
+    setAddPlayerFormData({
+      ...addPlayerFormData,
+      [e.target.name]: e.target.value,
+    });
+    if (addPlayerError) setAddPlayerError(null);
+  };
+
+  const handleAddPlayerAttributeChange = (e) => {
+    const { name, value } = e.target;
+    setAddPlayerFormData({
+      ...addPlayerFormData,
+      attributes: {
+        ...addPlayerFormData.attributes,
+        [name]: value ? parseInt(value) : null,
+      },
+    });
+    if (addPlayerError) setAddPlayerError(null);
+  };
+
+  const handleAddPlayerStatCapsChange = (newStatCaps) => {
+    setAddPlayerFormData({
+      ...addPlayerFormData,
+      stat_caps: newStatCaps,
+    });
+    if (addPlayerError) setAddPlayerError(null);
+  };
+
+  const handleAddPlayerSubmit = async (e) => {
+    e.preventDefault();
+    setAddPlayerError(null);
+    setAddPlayerLoading(true);
+
+    try {
+      // Filter out null/empty attribute values before sending
+      const filteredAttributes = Object.entries(addPlayerFormData.attributes)
+        .filter(([_, value]) => value !== null && value !== '')
+        .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+      
+      const playerData = {
+        ...addPlayerFormData,
+        jersey_number: addPlayerFormData.jersey_number ? parseInt(addPlayerFormData.jersey_number) : null,
+        overall_rating: addPlayerFormData.overall_rating ? parseInt(addPlayerFormData.overall_rating) : null,
+        weight: addPlayerFormData.weight ? parseInt(addPlayerFormData.weight) : null,
+        attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        stat_caps: addPlayerFormData.position && Object.keys(addPlayerFormData.stat_caps).length > 0 ? addPlayerFormData.stat_caps : undefined,
+      };
+
+      await playerService.createPlayer(dynastyId, playerData);
+      
+      // Refresh the player list
+      dispatch(getPlayers(dynastyId));
+      
+      // Close the dialog
+      handleCloseAddPlayer();
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to add player. Please try again.';
+      setAddPlayerError(errorMessage);
+      console.error('Add player error:', error);
+    } finally {
+      setAddPlayerLoading(false);
+    }
   };
 
   const getDevTraitColor = (trait) => {
@@ -261,28 +391,41 @@ const RosterDepthChart = () => {
 
   // Render position group section
   const renderPositionGroup = (groupKey, groupData) => {
-    const { label, players: groupPlayers } = groupData;
-
-    if (groupPlayers.length === 0) return null;
+    const { label, players: groupPlayers, positions } = groupData;
 
     return (
       <Box key={groupKey} sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom sx={{ 
-          borderBottom: 2, 
-          borderColor: 'primary.main',
-          pb: 0.5,
-          mb: 2
-        }}>
-          {label}
-        </Typography>
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1.5, 
-          flexWrap: 'wrap',
-          alignItems: 'flex-start'
-        }}>
-          {groupPlayers.map(player => renderPlayerCard(player))}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ 
+            borderBottom: 2, 
+            borderColor: 'primary.main',
+            pb: 0.5,
+          }}>
+            {label}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenAddPlayer(positions[0])}
+          >
+            Add {groupKey}
+          </Button>
         </Box>
+        {groupPlayers.length > 0 ? (
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1.5, 
+            flexWrap: 'wrap',
+            alignItems: 'flex-start'
+          }}>
+            {groupPlayers.map(player => renderPlayerCard(player))}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', ml: 2 }}>
+            No players at this position
+          </Typography>
+        )}
       </Box>
     );
   };
@@ -626,6 +769,220 @@ const RosterDepthChart = () => {
             disabled={deleteLoading}
           >
             {deleteLoading ? <CircularProgress size={24} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Player Dialog */}
+      <Dialog 
+        open={addPlayerDialogOpen} 
+        onClose={handleCloseAddPlayer}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h5">
+              Add New Player
+            </Typography>
+            <IconButton onClick={handleCloseAddPlayer}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {addPlayerError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {addPlayerError}
+            </Alert>
+          )}
+
+          <form onSubmit={handleAddPlayerSubmit} id="add-player-form">
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  name="first_name"
+                  value={addPlayerFormData.first_name}
+                  onChange={handleAddPlayerChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="last_name"
+                  value={addPlayerFormData.last_name}
+                  onChange={handleAddPlayerChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Position"
+                  name="position"
+                  value={addPlayerFormData.position}
+                  onChange={handleAddPlayerChange}
+                  required
+                >
+                  {POSITIONS.map((pos) => (
+                    <MenuItem key={pos} value={pos}>
+                      {pos}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Jersey Number"
+                  name="jersey_number"
+                  type="number"
+                  value={addPlayerFormData.jersey_number}
+                  onChange={handleAddPlayerChange}
+                  inputProps={{ min: 0, max: 99 }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Year"
+                  name="year"
+                  value={addPlayerFormData.year}
+                  onChange={handleAddPlayerChange}
+                >
+                  {YEARS.map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Overall Rating"
+                  name="overall_rating"
+                  type="number"
+                  value={addPlayerFormData.overall_rating}
+                  onChange={handleAddPlayerChange}
+                  inputProps={{ min: 40, max: 99 }}
+                  helperText="Overall rating (40-99)"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Height"
+                  name="height"
+                  value={addPlayerFormData.height}
+                  onChange={handleAddPlayerChange}
+                  placeholder={`6'2"`}
+                  helperText={`e.g., 6'2"`}
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  label="Weight"
+                  name="weight"
+                  type="number"
+                  value={addPlayerFormData.weight}
+                  onChange={handleAddPlayerChange}
+                  inputProps={{ min: 150, max: 400 }}
+                  helperText="Weight in pounds"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Dev Trait"
+                  name="dev_trait"
+                  value={addPlayerFormData.dev_trait}
+                  onChange={handleAddPlayerChange}
+                >
+                  {DEV_TRAITS.map((trait) => (
+                    <MenuItem key={trait} value={trait}>
+                      {trait}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              
+              {/* Player Attributes Section */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Player Attributes (Optional)
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  Enter individual player ratings. All fields are optional. Values should be between 40-99.
+                </Typography>
+                
+                {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
+                  <Accordion key={category} sx={{ mb: 1 }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>{category} Attributes</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Grid container spacing={2}>
+                        {attributes.map((attr) => (
+                          <Grid item xs={6} sm={4} md={3} key={attr}>
+                            <TextField
+                              fullWidth
+                              label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                              name={attr}
+                              type="number"
+                              value={addPlayerFormData.attributes[attr] || ''}
+                              onChange={handleAddPlayerAttributeChange}
+                              inputProps={{ min: 40, max: 99 }}
+                              size="small"
+                            />
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                ))}
+              </Grid>
+              
+              {/* Stat Caps Section */}
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+                {addPlayerFormData.position && (
+                  <StatCapEditor
+                    position={addPlayerFormData.position}
+                    statCaps={addPlayerFormData.stat_caps}
+                    onChange={handleAddPlayerStatCapsChange}
+                  />
+                )}
+                {!addPlayerFormData.position && (
+                  <Alert severity="info">
+                    Select a position above to configure stat caps
+                  </Alert>
+                )}
+              </Grid>
+            </Grid>
+          </form>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={handleCloseAddPlayer}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="add-player-form"
+            variant="contained"
+            disabled={addPlayerLoading}
+            startIcon={addPlayerLoading ? <CircularProgress size={20} /> : <AddIcon />}
+          >
+            {addPlayerLoading ? 'Adding...' : 'Add Player'}
           </Button>
         </DialogActions>
       </Dialog>
