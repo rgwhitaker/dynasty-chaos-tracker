@@ -26,6 +26,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  Autocomplete,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -153,6 +154,12 @@ const RosterDepthChart = () => {
   const handleCloseDetail = () => {
     setDetailDialogOpen(false);
     setSelectedPlayer(null);
+  };
+
+  const handlePlayerChange = (event, newPlayer) => {
+    if (newPlayer) {
+      setSelectedPlayer(newPlayer);
+    }
   };
 
   const handleEditPlayer = () => {
@@ -615,16 +622,43 @@ const RosterDepthChart = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box sx={{ flex: 1, mr: 2 }}>
+              <Autocomplete
+                value={selectedPlayer}
+                onChange={handlePlayerChange}
+                options={players || []}
+                loading={isLoading}
+                disabled={isLoading}
+                getOptionLabel={(player) => 
+                  `${player.first_name} ${player.last_name} - #${player.jersey_number} ${player.position}`
+                }
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    placeholder="Choose a player..."
+                    size="small"
+                    label="Select Player"
+                  />
+                )}
+                sx={{ minWidth: 300 }}
+              />
+            </Box>
+            <IconButton onClick={handleCloseDetail}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+          {selectedPlayer && (
             <Box>
               <Typography variant="h5">
-                {selectedPlayer?.first_name} {selectedPlayer?.last_name}
+                {selectedPlayer.first_name} {selectedPlayer.last_name}
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Chip label={`#${selectedPlayer?.jersey_number}`} size="small" />
-                <Chip label={selectedPlayer?.position} size="small" color="primary" />
-                <Chip label={selectedPlayer?.year} size="small" />
-                {selectedPlayer?.dev_trait && (
+                <Chip label={`#${selectedPlayer.jersey_number}`} size="small" />
+                <Chip label={selectedPlayer.position} size="small" color="primary" />
+                <Chip label={selectedPlayer.year} size="small" />
+                {selectedPlayer.dev_trait && (
                   <Chip 
                     label={selectedPlayer.dev_trait} 
                     size="small" 
@@ -634,10 +668,7 @@ const RosterDepthChart = () => {
                 )}
               </Box>
             </Box>
-            <IconButton onClick={handleCloseDetail}>
-              <CloseIcon />
-            </IconButton>
-          </Box>
+          )}
         </DialogTitle>
         <DialogContent dividers>
           {selectedPlayer && (
@@ -1134,11 +1165,13 @@ const RosterDepthChart = () => {
                   value={editFormData.position || ''}
                   onChange={handleEditChange}
                   required
+                  SelectProps={{ native: true }}
                 >
+                  <option value="" disabled>Select a position</option>
                   {POSITIONS.map((pos) => (
-                    <MenuItem key={pos} value={pos}>
+                    <option key={pos} value={pos}>
                       {pos}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
@@ -1161,11 +1194,13 @@ const RosterDepthChart = () => {
                   name="year"
                   value={editFormData.year || ''}
                   onChange={handleEditChange}
+                  SelectProps={{ native: true }}
                 >
+                  <option value="">Select a year</option>
                   {YEARS.map((year) => (
-                    <MenuItem key={year} value={year}>
+                    <option key={year} value={year}>
                       {year}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
@@ -1208,11 +1243,13 @@ const RosterDepthChart = () => {
                   name="dev_trait"
                   value={editFormData.dev_trait || ''}
                   onChange={handleEditChange}
+                  SelectProps={{ native: true }}
                 >
+                  <option value="">Select a dev trait</option>
                   {DEV_TRAITS.map((trait) => (
-                    <MenuItem key={trait} value={trait}>
+                    <option key={trait} value={trait}>
                       {trait}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
