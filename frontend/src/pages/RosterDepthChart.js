@@ -1156,7 +1156,7 @@ const RosterDepthChart = () => {
                   required
                   SelectProps={{ native: true }}
                 >
-                  <option value=""></option>
+                  <option value="" disabled>Select a position</option>
                   {POSITIONS.map((pos) => (
                     <option key={pos} value={pos}>
                       {pos}
@@ -1185,7 +1185,7 @@ const RosterDepthChart = () => {
                   onChange={handleEditChange}
                   SelectProps={{ native: true }}
                 >
-                  <option value=""></option>
+                  <option value="">Select a year</option>
                   {YEARS.map((year) => (
                     <option key={year} value={year}>
                       {year}
@@ -1234,7 +1234,7 @@ const RosterDepthChart = () => {
                   onChange={handleEditChange}
                   SelectProps={{ native: true }}
                 >
-                  <option value=""></option>
+                  <option value="">Select a dev trait</option>
                   {DEV_TRAITS.map((trait) => (
                     <option key={trait} value={trait}>
                       {trait}

@@ -549,7 +549,7 @@ const RosterManagement = () => {
                       required
                       SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
+                      <option value="" disabled>Select a position</option>
                       {POSITIONS.map((pos) => (
                         <option key={pos} value={pos}>
                           {pos}
@@ -578,7 +578,7 @@ const RosterManagement = () => {
                       onChange={handleManualChange}
                       SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
+                      <option value="">Select a year</option>
                       {YEARS.map((year) => (
                         <option key={year} value={year}>
                           {year}
@@ -627,7 +627,7 @@ const RosterManagement = () => {
                       onChange={handleManualChange}
                       SelectProps={{ native: true }}
                     >
-                      <option value=""></option>
+                      <option value="">Select a dev trait</option>
                       {DEV_TRAITS.map((trait) => (
                         <option key={trait} value={trait}>
                           {trait}
@@ -858,7 +858,7 @@ const RosterManagement = () => {
                     required
                     SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
+                    <option value="" disabled>Select a position</option>
                     {POSITIONS.map((pos) => (
                       <option key={pos} value={pos}>
                         {pos}
@@ -887,7 +887,7 @@ const RosterManagement = () => {
                     onChange={handleEditChange}
                     SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
+                    <option value="">Select a year</option>
                     {YEARS.map((year) => (
                       <option key={year} value={year}>
                         {year}
@@ -936,7 +936,7 @@ const RosterManagement = () => {
                     onChange={handleEditChange}
                     SelectProps={{ native: true }}
                   >
-                    <option value=""></option>
+                    <option value="">Select a dev trait</option>
                     {DEV_TRAITS.map((trait) => (
                       <option key={trait} value={trait}>
                         {trait}
