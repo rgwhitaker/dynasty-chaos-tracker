@@ -37,9 +37,11 @@ async function preprocessImage(imagePath) {
     // Create inverted version to capture text on white/highlighted backgrounds
     // This helps detect the first player row which often has inverted colors
     // (white background with dark text vs dark background with light text)
+    // Note: {alpha: false} preserves the alpha channel - without it, negate()
+    // inverts alpha from 255 (opaque) to 0 (transparent), making the image invisible to OCR
     await sharp(imagePath)
       .grayscale()
-      .negate()
+      .negate({ alpha: false })
       .normalize()
       .sharpen()
       .toFile(invertedPath);
