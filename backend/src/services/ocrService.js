@@ -623,7 +623,11 @@ function mergeParsedPlayers(playerSets) {
   for (const players of playerSets) {
     for (const player of players) {
       // Create a unique key based on name and position
-      const key = `${player.first_name.toLowerCase()}_${player.last_name.toLowerCase()}_${player.position}`;
+      // Use empty string as fallback for null/undefined values
+      const firstName = (player.first_name || '').toLowerCase();
+      const lastName = (player.last_name || '').toLowerCase();
+      const position = player.position || '';
+      const key = `${firstName}_${lastName}_${position}`;
       
       const existing = playerMap.get(key);
       if (!existing) {
