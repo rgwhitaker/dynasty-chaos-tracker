@@ -35,16 +35,18 @@ Position Codes (correct these if OCR misread them):
 - Defense: LEDG, REDG, DT, SAM, MIKE, WILL, CB, FS, SS
 - Special: K, P
 
-Common OCR Errors to Fix:
-- "DT" is often misread as "OT" - correct back to "DT" when context indicates defensive tackle
-- "0T" (zero-T) should be "DT"
-- "Dl" or "D1" or "DI" should be "DT"
+CRITICAL OCR Error Corrections:
+- "OT", "oT", "0T" (zero-T), "Ol", "OI" are almost ALWAYS misreads of "DT" (Defensive Tackle)
+- Look for defensive stats columns (PMV, FMV, BSH, TAK, PUR) to confirm defensive position
+- "Dl", "D1", "DI" should be "DT"
 - "HG" should be "HB"
 - "W8" should be "WR"
+- If you see "OT" with defensive stats, it's definitely "DT"
+- True offensive tackles use specific positions: LT or RT (not generic "OT")
 
 Return ONLY valid players with:
 - jersey_number (0-99, use 0 if not available)
-- position (2-4 letter code, corrected)
+- position (2-4 letter code, corrected to valid position)
 - first_name (can be empty or initial)
 - last_name (required)
 - overall_rating (40-99)
