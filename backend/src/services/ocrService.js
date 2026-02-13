@@ -23,11 +23,13 @@ async function preprocessImage(imagePath) {
   try {
     const outputPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '_processed.png');
     
+    // Remove threshold operation to preserve text on both white and dark backgrounds
+    // The threshold(128) was causing text on white backgrounds to be lost
+    // Grayscale + normalize + sharpen is sufficient for OCR
     await sharp(imagePath)
       .grayscale()
       .normalize()
       .sharpen()
-      .threshold(128)
       .toFile(outputPath);
 
     return outputPath;
