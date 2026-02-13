@@ -31,7 +31,11 @@ function correctPosition(position) {
   
   // Common OCR position misreads - map to correct position
   // Note: Only map OCR errors that are clearly wrong, not legitimate positions
+  // Valid positions are: QB, HB, FB, WR, TE, LT, LG, C, RG, RT (offense),
+  //                      LEDG, REDG, DT (D-line), SAM, MIKE, WILL (LB),
+  //                      CB, FS, SS (secondary), K, P (special teams)
   const positionCorrections = {
+    'OT': 'DT',   // O confused with D - Note: OT is NOT a valid position (tackles are LT/RT)
     '0T': 'DT',   // 0 confused with D
     'Dl': 'DT',   // l confused with T
     'D1': 'DT',   // 1 confused with T
@@ -414,6 +418,13 @@ A.Johnson-Lee SO WR 85`,
     input: `12 0T John Smith 85
 15 DT Michael Johnson 82`,
     expected: 2
+  },
+  {
+    name: 'Position correction - OT misread as DT',
+    input: `12 OT John Smith 85
+15 OT Michael Johnson 82
+7 DT David Williams 80`,
+    expected: 3
   },
   {
     name: 'Position correction - Dl and D1 misread as DT',
