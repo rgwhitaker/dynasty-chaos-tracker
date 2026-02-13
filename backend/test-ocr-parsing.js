@@ -420,7 +420,7 @@ A.Johnson-Lee SO WR 85`,
     expected: 2
   },
   {
-    name: 'Position correction - OT (O-T) misread as DT',
+    name: 'Position correction - OT misread as DT',
     input: `12 OT John Smith 85
 15 OT Michael Johnson 82
 7 DT David Williams 80`,
