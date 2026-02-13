@@ -37,9 +37,11 @@ async function preprocessImage(imagePath) {
     // Create inverted version to capture text on white/highlighted backgrounds
     // This helps detect the first player row which often has inverted colors
     // (white background with dark text vs dark background with light text)
+    // Note: {alpha: false} preserves the alpha channel - without it, negate()
+    // inverts alpha from 255 (opaque) to 0 (transparent), making the image invisible to OCR
     await sharp(imagePath)
       .grayscale()
-      .negate()
+      .negate({ alpha: false })
       .normalize()
       .sharpen()
       .toFile(invertedPath);
@@ -589,6 +591,12 @@ function parseRosterData(ocrText) {
  * Uses AI (OpenAI GPT) as primary method for better accuracy, falls back to regex if unavailable
  */
 async function parseRosterDataWithAI(ocrText, useAI = true) {
+  // Skip parsing if OCR text is empty or whitespace-only
+  if (!ocrText || !ocrText.trim()) {
+    console.log('OCR text is empty, skipping parsing');
+    return [];
+  }
+
   // Try AI parsing first if enabled and API key is available
   if (useAI && process.env.OPENAI_API_KEY) {
     try {
@@ -749,13 +757,18 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
           console.log(`OCR extracted text length (inverted): ${invertedOcrText.length} characters`);
         }
         
-        const invertedPlayers = await parseRosterDataWithAI(invertedOcrText, useAI);
-        console.log(`Parsed ${invertedPlayers.length} players from inverted OCR text`);
-        
-        // Merge players from both passes
-        if (invertedPlayers.length > 0) {
-          parsedPlayers = mergeParsedPlayers([parsedPlayers, invertedPlayers]);
-          console.log(`Total unique players after merging: ${parsedPlayers.length}`);
+        // Skip parsing if inverted OCR returned empty text
+        if (!invertedOcrText || !invertedOcrText.trim()) {
+          console.log('Inverted OCR returned empty text, skipping inverted parsing');
+        } else {
+          const invertedPlayers = await parseRosterDataWithAI(invertedOcrText, useAI);
+          console.log(`Parsed ${invertedPlayers.length} players from inverted OCR text`);
+          
+          // Merge players from both passes
+          if (invertedPlayers.length > 0) {
+            parsedPlayers = mergeParsedPlayers([parsedPlayers, invertedPlayers]);
+            console.log(`Total unique players after merging: ${parsedPlayers.length}`);
+          }
         }
       } catch (invertedError) {
         console.error('Inverted image OCR failed, continuing with normal results:', invertedError.message);
