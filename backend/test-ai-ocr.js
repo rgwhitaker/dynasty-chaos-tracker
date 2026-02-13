@@ -64,6 +64,16 @@ J Williams FR (RS) HB 87 Lal 93 90 89 70 80 82 88`,
     expectedCount: 3,
     checkSuffixes: true,
     expectedPositions: ['DT', 'DT', 'WR']
+  },
+  {
+    name: 'Real OCR output - oT misread with defensive stats',
+    input: `NAME YEAR POS vOVR SPD ACC AGI coD STR AWR [41{d PMV FMV
+C.Immediato JR oT 78 64 77 64 56 85 76 76 82 64
+T.Kabeya SO (RS) DT 724 63 73 65 55 84 74 lal 76 62
+J.Gans FR(RS) oT 664 68 79 n 61 79 72 76 74 72
+B.Lawhorn Moore So DT 644 59 68 [LX] 53 81 67 59 72 61`,
+    expectedCount: 4,
+    expectedPositions: ['DT', 'DT', 'DT', 'DT']
   }
 ];
 
