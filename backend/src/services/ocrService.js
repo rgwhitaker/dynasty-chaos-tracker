@@ -18,24 +18,36 @@ const visionClient = process.env.GOOGLE_APPLICATION_CREDENTIALS
 
 /**
  * Preprocess image for better OCR accuracy
+ * Returns paths to both normal and inverted versions to handle
+ * mixed-contrast screenshots (e.g., highlighted rows with white background)
  */
 async function preprocessImage(imagePath) {
   try {
     const outputPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '_processed.png');
+    const invertedPath = imagePath.replace(/\.(png|jpg|jpeg)$/i, '_inverted.png');
     
-    // Remove threshold operation to preserve text on both white and dark backgrounds
-    // The threshold(128) was causing text on white backgrounds to be lost
-    // Grayscale + normalize + sharpen is sufficient for OCR
+    // Create standard processed image
+    // Grayscale + normalize + sharpen is good for OCR
     await sharp(imagePath)
       .grayscale()
       .normalize()
       .sharpen()
       .toFile(outputPath);
 
-    return outputPath;
+    // Create inverted version to capture text on white/highlighted backgrounds
+    // This helps detect the first player row which often has inverted colors
+    // (white background with dark text vs dark background with light text)
+    await sharp(imagePath)
+      .grayscale()
+      .negate()
+      .normalize()
+      .sharpen()
+      .toFile(invertedPath);
+
+    return { normalPath: outputPath, invertedPath };
   } catch (error) {
     console.error('Image preprocessing error:', error);
-    return imagePath; // Return original if preprocessing fails
+    return { normalPath: imagePath, invertedPath: null }; // Return original if preprocessing fails
   }
 }
 
@@ -602,6 +614,47 @@ async function parseRosterDataWithAI(ocrText, useAI = true) {
 }
 
 /**
+ * Merge players from multiple OCR passes, removing duplicates
+ * Keeps the version with more complete data (more attributes)
+ */
+function mergeParsedPlayers(playerSets) {
+  const playerMap = new Map();
+  
+  for (const players of playerSets) {
+    for (const player of players) {
+      // Create a unique key based on name and position
+      // Use empty string as fallback for null/undefined values
+      const firstName = (player.first_name || '').toLowerCase();
+      const lastName = (player.last_name || '').toLowerCase();
+      const position = player.position || '';
+      const key = `${firstName}_${lastName}_${position}`;
+      
+      const existing = playerMap.get(key);
+      if (!existing) {
+        playerMap.set(key, player);
+      } else {
+        // Keep the version with more attributes (more complete data)
+        const existingAttrCount = Object.keys(existing.attributes || {}).length;
+        const newAttrCount = Object.keys(player.attributes || {}).length;
+        
+        if (newAttrCount > existingAttrCount) {
+          // New player has more data, merge attributes
+          const mergedAttrs = { ...existing.attributes, ...player.attributes };
+          playerMap.set(key, { ...player, attributes: mergedAttrs });
+        } else if (existingAttrCount === newAttrCount) {
+          // Same attribute count, merge to get the best of both
+          const mergedAttrs = { ...existing.attributes, ...player.attributes };
+          playerMap.set(key, { ...existing, attributes: mergedAttrs });
+        }
+        // If existing has more attributes, keep it as is
+      }
+    }
+  }
+  
+  return Array.from(playerMap.values());
+}
+
+/**
  * Validate parsed player data
  */
 function validatePlayerData(players) {
@@ -642,43 +695,72 @@ async function processRosterScreenshot(filePath, dynastyId, uploadId, ocrMethod 
       ['processing', uploadId]
     );
 
-    // Preprocess image
-    const processedPath = await preprocessImage(filePath);
+    // Preprocess image - returns both normal and inverted versions
+    const { normalPath, invertedPath } = await preprocessImage(filePath);
     
     await db.query(
       'UPDATE ocr_uploads SET is_preprocessed = TRUE WHERE id = $1',
       [uploadId]
     );
 
-    // Extract text based on method
-    let ocrText;
-    switch (ocrMethod) {
-      case 'textract':
-        ocrText = await extractTextTextract(processedPath);
-        break;
-      case 'google_vision':
-        ocrText = await extractTextGoogleVision(processedPath);
-        break;
-      case 'tesseract':
-      default:
-        ocrText = await extractTextTesseract(processedPath);
-        break;
+    // Helper function to extract text based on method
+    async function extractText(imagePath) {
+      switch (ocrMethod) {
+        case 'textract':
+          return await extractTextTextract(imagePath);
+        case 'google_vision':
+          return await extractTextGoogleVision(imagePath);
+        case 'tesseract':
+        default:
+          return await extractTextTesseract(imagePath);
+      }
     }
 
+    // Extract text from normal processed image
+    let ocrText = await extractText(normalPath);
+    
     // Log extracted text for debugging (only in development)
     if (process.env.NODE_ENV !== 'production') {
-      console.log('OCR extracted text:');
+      console.log('OCR extracted text (normal):');
       console.log('===================');
       console.log(ocrText);
       console.log('===================');
     } else {
-      console.log(`OCR extracted text length: ${ocrText.length} characters`);
+      console.log(`OCR extracted text length (normal): ${ocrText.length} characters`);
     }
 
     // Parse roster data with AI (falls back to regex if AI unavailable)
     const useAI = process.env.USE_AI_OCR !== 'false'; // Default to true unless explicitly disabled
-    const parsedPlayers = await parseRosterDataWithAI(ocrText, useAI);
-    console.log(`Parsed ${parsedPlayers.length} players from OCR text`);
+    let parsedPlayers = await parseRosterDataWithAI(ocrText, useAI);
+    console.log(`Parsed ${parsedPlayers.length} players from normal OCR text`);
+
+    // If inverted image was created, also run OCR on it and merge results
+    // This helps capture text on highlighted/white background rows
+    if (invertedPath) {
+      try {
+        const invertedOcrText = await extractText(invertedPath);
+        
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('OCR extracted text (inverted):');
+          console.log('===================');
+          console.log(invertedOcrText);
+          console.log('===================');
+        } else {
+          console.log(`OCR extracted text length (inverted): ${invertedOcrText.length} characters`);
+        }
+        
+        const invertedPlayers = await parseRosterDataWithAI(invertedOcrText, useAI);
+        console.log(`Parsed ${invertedPlayers.length} players from inverted OCR text`);
+        
+        // Merge players from both passes
+        if (invertedPlayers.length > 0) {
+          parsedPlayers = mergeParsedPlayers([parsedPlayers, invertedPlayers]);
+          console.log(`Total unique players after merging: ${parsedPlayers.length}`);
+        }
+      } catch (invertedError) {
+        console.error('Inverted image OCR failed, continuing with normal results:', invertedError.message);
+      }
+    }
 
     // Check if no players were parsed
     if (parsedPlayers.length === 0) {
@@ -811,6 +893,7 @@ module.exports = {
   parsePlayerDetailScreen,
   isPlayerDetailScreen,
   validatePlayerData,
+  mergeParsedPlayers,
   processRosterScreenshot,
   processBatchUpload
 };
