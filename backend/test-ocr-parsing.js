@@ -32,6 +32,7 @@ function correctPosition(position) {
   // Common OCR position misreads - map to correct position
   // Note: Only map OCR errors that are clearly wrong, not legitimate positions
   const positionCorrections = {
+    'OT': 'DT',   // O confused with D
     '0T': 'DT',   // 0 confused with D
     'Dl': 'DT',   // l confused with T
     'D1': 'DT',   // 1 confused with T
@@ -414,6 +415,13 @@ A.Johnson-Lee SO WR 85`,
     input: `12 0T John Smith 85
 15 DT Michael Johnson 82`,
     expected: 2
+  },
+  {
+    name: 'Position correction - OT (O-T) misread as DT',
+    input: `12 OT John Smith 85
+15 OT Michael Johnson 82
+7 DT David Williams 80`,
+    expected: 3
   },
   {
     name: 'Position correction - Dl and D1 misread as DT',

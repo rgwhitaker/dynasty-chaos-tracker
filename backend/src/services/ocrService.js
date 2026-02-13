@@ -126,6 +126,7 @@ function correctPosition(position) {
   // Common OCR position misreads - map to correct position
   // Note: Only map OCR errors that are clearly wrong, not legitimate positions
   const positionCorrections = {
+    'OT': 'DT',   // O confused with D
     '0T': 'DT',   // 0 confused with D
     'Dl': 'DT',   // l confused with T
     'D1': 'DT',   // 1 confused with T
