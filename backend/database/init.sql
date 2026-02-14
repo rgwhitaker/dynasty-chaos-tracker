@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS players (
     dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
     attributes JSONB, -- Flexible storage for all position-specific attributes (55 ratings)
     dealbreakers TEXT[], -- Array of dealbreaker flags
+    transfer_intent BOOLEAN DEFAULT FALSE, -- Player intends to transfer (dealbreaker not met)
     departure_risk DECIMAL(5,2), -- Predicted probability of leaving
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
