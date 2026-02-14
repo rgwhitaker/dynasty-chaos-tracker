@@ -4,7 +4,7 @@
  * Run with: node backend/test-recruiter-hub.js
  */
 
-const { isDraftRisk, isGraduating, hasDealbreakers } = require('./src/services/recruiterHubService');
+const { isDraftRisk, isGraduating, hasDealbreakers, hasTransferIntent } = require('./src/services/recruiterHubService');
 
 console.log('Running Recruiter Hub Service Tests...\n');
 console.log('='.repeat(80));
@@ -148,6 +148,65 @@ if (hasDealbreakers(playerWithNullDealbreakers) === false) {
   failed++;
 }
 
+// Test 3.5: Transfer Intent Detection
+console.log('\n### TEST 3.5: Transfer Intent Detection ###');
+console.log('-'.repeat(80));
+
+const playerWithTransferIntent = {
+  transfer_intent: true,
+  first_name: 'Alex',
+  last_name: 'Transfer'
+};
+
+const playerWithoutTransferIntent = {
+  transfer_intent: false,
+  first_name: 'Ben',
+  last_name: 'Staying'
+};
+
+const playerWithNullTransferIntent = {
+  transfer_intent: null,
+  first_name: 'Carl',
+  last_name: 'Unknown'
+};
+
+const playerWithUndefinedTransferIntent = {
+  first_name: 'Dan',
+  last_name: 'Legacy'
+};
+
+if (hasTransferIntent(playerWithTransferIntent) === true) {
+  console.log('✓ PASSED: Player with transfer intent detected');
+  passed++;
+} else {
+  console.log('✗ FAILED: Player with transfer intent should be flagged');
+  failed++;
+}
+
+if (hasTransferIntent(playerWithoutTransferIntent) === false) {
+  console.log('✓ PASSED: Player without transfer intent not flagged');
+  passed++;
+} else {
+  console.log('✗ FAILED: Player without transfer intent should not be flagged');
+  failed++;
+}
+
+if (hasTransferIntent(playerWithNullTransferIntent) === false) {
+  console.log('✓ PASSED: Player with null transfer intent not flagged');
+  passed++;
+} else {
+  console.log('✗ FAILED: Player with null transfer intent should not be flagged');
+  failed++;
+}
+
+if (hasTransferIntent(playerWithUndefinedTransferIntent) === false) {
+  console.log('✓ PASSED: Player with undefined transfer intent not flagged');
+  passed++;
+} else {
+  console.log('✗ FAILED: Player with undefined transfer intent should not be flagged');
+  failed++;
+}
+
 // Test 4: Combined Risk Scenarios
 console.log('\n### TEST 4: Combined Risk Scenarios ###');
 console.log('-'.repeat(80));
@@ -156,6 +215,7 @@ const multiRiskPlayer = {
   overall_rating: 92,
   year: 'SR',
   dealbreakers: ['Playing Time C'],
+  transfer_intent: true,
   first_name: 'Multi',
   last_name: 'Risk'
 };
@@ -164,12 +224,13 @@ let multiRiskCount = 0;
 if (isDraftRisk(multiRiskPlayer)) multiRiskCount++;
 if (isGraduating(multiRiskPlayer)) multiRiskCount++;
 if (hasDealbreakers(multiRiskPlayer)) multiRiskCount++;
+if (hasTransferIntent(multiRiskPlayer)) multiRiskCount++;
 
-if (multiRiskCount === 3) {
-  console.log('✓ PASSED: Player with multiple risks detected correctly (3 risks)');
+if (multiRiskCount === 4) {
+  console.log('✓ PASSED: Player with multiple risks detected correctly (4 risks)');
   passed++;
 } else {
-  console.log(`✗ FAILED: Expected 3 risks, detected ${multiRiskCount}`);
+  console.log(`✗ FAILED: Expected 4 risks, detected ${multiRiskCount}`);
   failed++;
 }
 
