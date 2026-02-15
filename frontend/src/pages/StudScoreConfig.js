@@ -309,7 +309,6 @@ const StudScoreConfig = () => {
       setError(null);
       await studScoreService.deletePreset(selectedPreset.id);
       setSuccess('Preset deleted successfully!');
-      setSelectedPreset(null);
       await loadPresets();
     } catch (err) {
       setError('Failed to delete preset: ' + (err.response?.data?.error || err.message));
