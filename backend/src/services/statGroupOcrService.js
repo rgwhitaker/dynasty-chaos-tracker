@@ -107,7 +107,7 @@ async function parseStatGroupScreenshot(imagePath, position, archetype) {
 
 The screenshot shows a list of stat groups for a player. Each stat group has:
 1. A name (e.g., "Blocking", "Power", "IQ", "Quickness", "Hands", "Route Running")
-2. A numeric value (0-99) displayed next to the name
+2. A numeric value (0-100) displayed next to the name
 3. A visual bar showing progress blocks (20 blocks per stat group)
 4. Some blocks may be LOCKED/CAPPED (cannot be upgraded) - these are shown with a padlock/lock icon 🔒 or appear grayed out/different from normal blocks
 
@@ -125,7 +125,7 @@ ${ALL_STAT_GROUP_NAMES.join(', ')}
 
 For each stat group visible in the screenshot, extract:
 - The stat group name (must match one of the valid names above, correct any OCR-like misreads)
-- The numeric value displayed (0-99 or 0-100)
+- The numeric value displayed (typically 0-99, occasionally 100 if maxed out)
 - The positions of any CAPPED/LOCKED blocks (if visible) - these are block numbers 1-20 that show a lock icon or appear grayed out
 
 Return ALL stat groups visible in the screenshot, even if some are not in the expected list for this position.`;
@@ -240,9 +240,13 @@ function convertToStatCaps(ocrStatGroups, validGroups) {
     const cappedBlocks = Array.isArray(group.capped_blocks) ? group.capped_blocks : [];
     
     // Validate capped blocks are in valid range (1-20)
-    const validCappedBlocks = cappedBlocks.filter(block => 
-      Number.isInteger(block) && block >= 1 && block <= 20
-    );
+    const validCappedBlocks = cappedBlocks.filter(block => {
+      const isValid = Number.isInteger(block) && block >= 1 && block <= 20;
+      if (!isValid && block !== undefined) {
+        console.log(`Stat Group OCR: Invalid capped block ${block} for "${matchedName}" (must be 1-20)`);
+      }
+      return isValid;
+    });
 
     statCaps[matchedName] = {
       purchased_blocks: purchasedBlocks,
