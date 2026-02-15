@@ -30,6 +30,10 @@ import {
   Chip,
   FormControlLabel,
   Checkbox,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -41,6 +45,8 @@ import {
 } from '@mui/icons-material';
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
+import dynastyService from '../services/dynastyService';
+import studScoreService from '../services/studScoreService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
@@ -103,9 +109,38 @@ const RosterManagement = () => {
   const [deletingPlayer, setDeletingPlayer] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Stud score preset state
+  const [presets, setPresets] = useState([]);
+  const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [presetsLoading, setPresetsLoading] = useState(false);
+  const [presetError, setPresetError] = useState(null);
+
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
   }, [dispatch, dynastyId]);
+
+  // Load presets and dynasty's selected preset
+  useEffect(() => {
+    const loadPresetsAndDynasty = async () => {
+      setPresetsLoading(true);
+      try {
+        // Load all presets
+        const presetsData = await studScoreService.getPresets();
+        setPresets(presetsData);
+
+        // Load dynasty to get selected preset
+        const dynastyData = await dynastyService.getDynasty(dynastyId);
+        setSelectedPresetId(dynastyData.selected_preset_id);
+      } catch (error) {
+        console.error('Error loading presets:', error);
+        setPresetError('Failed to load stud score presets');
+      } finally {
+        setPresetsLoading(false);
+      }
+    };
+
+    loadPresetsAndDynasty();
+  }, [dynastyId]);
 
   // Handle paste events for clipboard images
   useEffect(() => {
@@ -374,6 +409,22 @@ const RosterManagement = () => {
     setDeleteDialogOpen(true);
   };
 
+  const handlePresetChange = async (event) => {
+    const newPresetId = event.target.value === '' ? null : parseInt(event.target.value, 10);
+    
+    try {
+      await dynastyService.updateSelectedPreset(dynastyId, newPresetId);
+      setSelectedPresetId(newPresetId);
+      setPresetError(null);
+      
+      // Optionally refresh player list to recalculate stud scores with new preset
+      dispatch(getPlayers(dynastyId));
+    } catch (error) {
+      console.error('Error updating preset:', error);
+      setPresetError('Failed to update selected preset');
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     setDeleteLoading(true);
     try {
@@ -405,14 +456,43 @@ const RosterManagement = () => {
           <Typography variant="h4" component="h1">
             Roster Management
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate(`/dynasties/${dynastyId}/roster`)}
-          >
-            Back to Roster
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+            <FormControl sx={{ minWidth: 200 }} size="small">
+              <InputLabel id="preset-select-label">Stud Score Preset</InputLabel>
+              <Select
+                labelId="preset-select-label"
+                id="preset-select"
+                value={selectedPresetId === null ? '' : selectedPresetId}
+                label="Stud Score Preset"
+                onChange={handlePresetChange}
+                disabled={presetsLoading || presets.length === 0}
+              >
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {presets.map((preset) => (
+                  <MenuItem key={preset.id} value={preset.id}>
+                    {preset.preset_name}
+                    {preset.is_default && ' (Default)'}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate(`/dynasties/${dynastyId}/roster`)}
+            >
+              Back to Roster
+            </Button>
+          </Box>
         </Box>
+
+        {presetError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {presetError}
+          </Alert>
+        )}
 
         {/* Upload Section */}
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>

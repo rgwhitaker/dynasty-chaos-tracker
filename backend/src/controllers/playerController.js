@@ -43,7 +43,7 @@ const getPlayers = async (req, res) => {
     const playersWithScores = await Promise.all(
       result.rows.map(async (player) => {
         const attributes = ensureAttributesParsed(player);
-        const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player);
+        const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player, dynastyId);
         
         // Parse stat_caps if it's a string
         let statCaps = player.stat_caps;
