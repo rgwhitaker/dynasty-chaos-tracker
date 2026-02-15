@@ -243,7 +243,7 @@ const StudScoreConfig = () => {
           STUD Score Configuration
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Configure how player attributes, development traits, and potential impact STUD scores.
+          Configure how player attributes, development traits, and potential affect STUD scores.
           Set weights at the position level or customize for specific archetypes.
         </Typography>
       </Box>
