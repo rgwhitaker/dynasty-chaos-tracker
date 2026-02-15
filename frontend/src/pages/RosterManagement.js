@@ -1070,6 +1070,8 @@ const RosterManagement = () => {
                       archetype={editFormData.archetype || undefined}
                       statCaps={editFormData.stat_caps || {}}
                       onChange={handleEditStatCapsChange}
+                      dynastyId={dynastyId}
+                      playerId={editingPlayer?.id}
                     />
                   )}
                   {!editFormData.position && (

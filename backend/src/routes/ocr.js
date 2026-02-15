@@ -34,6 +34,7 @@ const upload = multer({
 
 router.post('/upload', authMiddleware, upload.single('screenshot'), ocrController.uploadScreenshot);
 router.post('/upload-batch', authMiddleware, upload.array('screenshots', 10), ocrController.uploadScreenshot);
+router.post('/stat-groups/:playerId', authMiddleware, upload.single('screenshot'), ocrController.uploadStatGroupScreenshot);
 router.get('/status/:uploadId', authMiddleware, ocrController.getUploadStatus);
 
 module.exports = router;

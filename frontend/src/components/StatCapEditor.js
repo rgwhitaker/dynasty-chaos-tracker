@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -6,8 +6,12 @@ import {
   TextField,
   Tooltip,
   Alert,
+  Button,
+  CircularProgress,
 } from '@mui/material';
+import { CloudUpload as CloudUploadIcon } from '@mui/icons-material';
 import { getStatGroupsForPosition } from '../constants/statCaps';
+import playerService from '../services/playerService';
 
 /**
  * StatCapEditor Component
@@ -15,12 +19,19 @@ import { getStatGroupsForPosition } from '../constants/statCaps';
  * 
  * Props:
  * - position: Player position (required)
+ * - archetype: Player archetype for stat group filtering (optional)
  * - statCaps: Current stat caps object
  * - onChange: Callback when stat caps change
  * - readOnly: Whether to display in read-only mode
+ * - dynastyId: Dynasty ID for stat group screenshot upload (optional)
+ * - playerId: Player ID for stat group screenshot upload (optional)
  */
-const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly = false }) => {
+const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly = false, dynastyId, playerId }) => {
   const statGroups = getStatGroupsForPosition(position, archetype);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadSuccess, setUploadSuccess] = useState(null);
+  const fileInputRef = useRef(null);
 
   if (!position || statGroups.length === 0) {
     return (
@@ -91,6 +102,48 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
       },
     };
     onChange(updatedStatCaps);
+  };
+
+  // Handle stat group screenshot upload
+  const handleStatGroupUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!dynastyId || !playerId) {
+      setUploadError('Player must be saved before uploading stat group screenshots');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const result = await playerService.uploadStatGroupScreenshot(
+        dynastyId,
+        playerId,
+        file,
+        position,
+        archetype
+      );
+
+      if (result.stat_caps) {
+        // Merge OCR results with existing stat caps (OCR values take precedence)
+        const mergedStatCaps = { ...statCaps, ...result.stat_caps };
+        onChange(mergedStatCaps);
+        setUploadSuccess('Stat groups updated from screenshot');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to process screenshot';
+      setUploadError(errorMessage);
+      console.error('Stat group upload error:', error);
+    } finally {
+      setUploading(false);
+      // Reset the file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   // Render a single stat group
@@ -213,6 +266,35 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
           : 'Set purchased blocks and click individual blocks to toggle capped status. Purchased blocks must start from block 1.'
         }
       </Typography>
+      {!readOnly && dynastyId && playerId && (
+        <Box sx={{ mb: 2 }}>
+          {uploadError && (
+            <Alert severity="error" sx={{ mb: 1 }} onClose={() => setUploadError(null)}>
+              {uploadError}
+            </Alert>
+          )}
+          {uploadSuccess && (
+            <Alert severity="success" sx={{ mb: 1 }} onClose={() => setUploadSuccess(null)}>
+              {uploadSuccess}
+            </Alert>
+          )}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/jpg"
+            ref={fileInputRef}
+            onChange={handleStatGroupUpload}
+            style={{ display: 'none' }}
+          />
+          <Button
+            variant="outlined"
+            startIcon={uploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? 'Processing...' : 'Upload Stat Group Screenshot'}
+          </Button>
+        </Box>
+      )}
       {statGroups.map(renderStatGroup)}
     </Box>
   );
