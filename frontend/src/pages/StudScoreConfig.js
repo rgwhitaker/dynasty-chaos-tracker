@@ -244,6 +244,14 @@ const StudScoreConfig = () => {
         setSelectedPreset(updatedPreset);
         setDevTraitWeight(updatedPreset.dev_trait_weight || 0.15);
         setPotentialWeight(updatedPreset.potential_weight || 0.15);
+      } else {
+        // Fallback: If the preset was deleted by another process, select default or first preset
+        const fallbackPreset = data.find(p => p.is_default) || data[0];
+        if (fallbackPreset) {
+          setSelectedPreset(fallbackPreset);
+          setDevTraitWeight(fallbackPreset.dev_trait_weight || 0.15);
+          setPotentialWeight(fallbackPreset.potential_weight || 0.15);
+        }
       }
     } catch (err) {
       setError('Failed to save: ' + err.message);
