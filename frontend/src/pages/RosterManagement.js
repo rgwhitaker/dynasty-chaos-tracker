@@ -410,7 +410,7 @@ const RosterManagement = () => {
   };
 
   const handlePresetChange = async (event) => {
-    const newPresetId = event.target.value === '' ? null : parseInt(event.target.value);
+    const newPresetId = event.target.value === '' ? null : parseInt(event.target.value, 10);
     
     try {
       await dynastyService.updateSelectedPreset(dynastyId, newPresetId);

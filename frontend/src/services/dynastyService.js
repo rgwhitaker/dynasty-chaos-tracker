@@ -5,7 +5,7 @@ const getDynasties = async (token) => {
   return response.data;
 };
 
-const getDynasty = async (id, token) => {
+const getDynasty = async (id) => {
   const response = await api.get(`/dynasties/${id}`);
   return response.data;
 };
@@ -20,7 +20,7 @@ const updateDynasty = async (id, data, token) => {
   return response.data;
 };
 
-const updateSelectedPreset = async (id, selectedPresetId, token) => {
+const updateSelectedPreset = async (id, selectedPresetId) => {
   const response = await api.patch(`/dynasties/${id}/preset`, { 
     selected_preset_id: selectedPresetId 
   });
