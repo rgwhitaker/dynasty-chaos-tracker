@@ -57,7 +57,7 @@ The Dynasty Chaos Tracker supports all 55 player ratings from College Football 2
 - **RBF** - Run Block Finesse
 - **LBK** - Lead Block
 - **IBL** - Impact Blocking
-- **RUN** - Run Blocking (general)
+- **RUN** - Throw on the Run
 
 ### Defensive Attributes
 - **TAK** - Tackle
