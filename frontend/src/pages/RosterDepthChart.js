@@ -429,6 +429,23 @@ const RosterDepthChart = () => {
     return result;
   }, [players, unit]);
 
+  // Helper function to get potential percentage display value
+  const getPotentialDisplay = (player) => {
+    // If stat_caps doesn't exist or is empty, return "Unknown"
+    if (!player.stat_caps || typeof player.stat_caps !== 'object' || Object.keys(player.stat_caps).length === 0) {
+      return 'Unknown';
+    }
+
+    // Check if any stat groups have been purchased
+    const summary = getStatCapSummary(player.stat_caps, player.position, player.archetype);
+    if (summary.purchasedBlocks === 0) {
+      return 'Unknown';
+    }
+
+    // Otherwise, return the potential score as a percentage
+    return `${summary.potentialScore}%`;
+  };
+
   // Render a compact player card
   const renderPlayerCard = (player) => {
     if (!player) return null;
@@ -512,6 +529,13 @@ const RosterDepthChart = () => {
               sx={{ height: 18, fontSize: '0.65rem', fontWeight: 'bold', mt: 0.5 }}
             />
           )}
+
+          {/* Potential Percentage */}
+          <Box sx={{ mt: 0.5, textAlign: 'center' }}>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+              Potential: {getPotentialDisplay(player)}
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
     );
