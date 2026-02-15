@@ -26,8 +26,8 @@ import playerService from '../services/playerService';
  * - playerId: Player ID for stat group screenshot upload (optional)
  * - archetype: Player archetype for stat group validation (optional)
  */
-const StatCapEditor = ({ position, statCaps = {}, onChange, readOnly = false, dynastyId, playerId, archetype }) => {
-  const statGroups = getStatGroupsForPosition(position);
+const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly = false, dynastyId, playerId }) => {
+  const statGroups = getStatGroupsForPosition(position, archetype);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
