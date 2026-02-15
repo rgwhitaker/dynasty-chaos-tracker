@@ -320,9 +320,7 @@ const StudScoreConfig = () => {
   // Calculate attribute weight (what's left after dev trait and potential)
   const attributeWeight = (1 - devTraitWeight - potentialWeight) * 100;
   const totalWeight = devTraitWeight + potentialWeight;
-  const hasValidWeights = !isNaN(devTraitWeight) && !isNaN(potentialWeight) && 
-                          devTraitWeight !== null && potentialWeight !== null &&
-                          devTraitWeight !== undefined && potentialWeight !== undefined;
+  const hasValidWeights = Number.isFinite(devTraitWeight) && Number.isFinite(potentialWeight);
   const isWeightValid = totalWeight <= 1;
 
   return (
