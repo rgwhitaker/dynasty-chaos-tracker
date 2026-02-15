@@ -144,7 +144,7 @@ export const getStatCapSummary = (statCaps, position, archetype) => {
 
   const totalBlocks = validGroups.length * 20;
   const availableBlocks = totalBlocks - purchasedBlocks - cappedBlocks;
-  const potentialScore = calculatePotentialScore(statCaps, position);
+  const potentialScore = calculatePotentialScore(statCaps, position, archetype);
 
   return {
     totalGroups: validGroups.length,
