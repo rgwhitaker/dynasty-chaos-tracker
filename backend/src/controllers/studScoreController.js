@@ -1,18 +1,42 @@
 const db = require('../config/database');
+const { DEFAULT_WEIGHTS } = require('../services/studScoreService');
+const { POSITION_ARCHETYPES } = require('../constants/playerAttributes');
 
+/**
+ * Get weights for a specific preset, position, and optionally archetype
+ */
 const getWeights = async (req, res) => {
   try {
-    const { position } = req.query;
+    const { presetId, position, archetype } = req.query;
 
-    let query = 'SELECT * FROM stud_score_weights WHERE user_id = $1';
-    const params = [req.user.id];
+    if (!presetId) {
+      return res.status(400).json({ error: 'presetId is required' });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    let query = 'SELECT * FROM stud_score_weights WHERE preset_id = $1';
+    const params = [presetId];
 
     if (position) {
       query += ' AND position = $2';
       params.push(position);
+      
+      if (archetype) {
+        query += ' AND archetype = $3';
+        params.push(archetype);
+      }
     }
 
-    query += ' ORDER BY position, attribute_name';
+    query += ' ORDER BY position, archetype NULLS FIRST, attribute_name';
 
     const result = await db.query(query, params);
     res.json(result.rows);
@@ -22,17 +46,59 @@ const getWeights = async (req, res) => {
   }
 };
 
+/**
+ * Get default weights for a position/archetype (from DEFAULT_WEIGHTS constant)
+ */
+const getDefaultWeights = async (req, res) => {
+  try {
+    const { position } = req.query;
+
+    if (!position) {
+      return res.json(DEFAULT_WEIGHTS);
+    }
+
+    const weights = DEFAULT_WEIGHTS[position];
+    if (!weights) {
+      return res.status(404).json({ error: 'Position not found' });
+    }
+
+    res.json(weights);
+  } catch (error) {
+    console.error('Get default weights error:', error);
+    res.status(500).json({ error: 'Failed to fetch default weights' });
+  }
+};
+
+/**
+ * Update a weight for a specific preset, position, and optionally archetype
+ */
 const updateWeight = async (req, res) => {
   try {
-    const { position, attributeName, weight } = req.body;
+    const { presetId, position, archetype, attributeName, weight } = req.body;
+
+    if (!presetId || !position || !attributeName || weight === undefined) {
+      return res.status(400).json({ 
+        error: 'presetId, position, attributeName, and weight are required' 
+      });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
 
     const result = await db.query(
-      `INSERT INTO stud_score_weights (user_id, position, attribute_name, weight)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (user_id, position, attribute_name)
-       DO UPDATE SET weight = $4, updated_at = CURRENT_TIMESTAMP
+      `INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (preset_id, position, archetype, attribute_name)
+       DO UPDATE SET weight = $5, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [req.user.id, position, attributeName, weight]
+      [presetId, position, archetype || null, attributeName, weight]
     );
 
     res.json(result.rows[0]);
@@ -42,13 +108,76 @@ const updateWeight = async (req, res) => {
   }
 };
 
+/**
+ * Batch update weights for a position/archetype
+ */
+const batchUpdateWeights = async (req, res) => {
+  try {
+    const { presetId, position, archetype, weights } = req.body;
+
+    if (!presetId || !position || !weights) {
+      return res.status(400).json({ 
+        error: 'presetId, position, and weights are required' 
+      });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    // Delete existing weights for this position/archetype
+    await db.query(
+      'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
+      [presetId, position, archetype || null]
+    );
+
+    // Insert new weights
+    const insertPromises = Object.entries(weights).map(([attr, weight]) => 
+      db.query(
+        'INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight) VALUES ($1, $2, $3, $4, $5)',
+        [presetId, position, archetype || null, attr, weight]
+      )
+    );
+
+    await Promise.all(insertPromises);
+
+    res.json({ message: 'Weights updated successfully' });
+  } catch (error) {
+    console.error('Batch update weights error:', error);
+    res.status(500).json({ error: 'Failed to batch update weights' });
+  }
+};
+
+/**
+ * Reset weights to defaults for a position/archetype
+ */
 const resetWeights = async (req, res) => {
   try {
-    const { position } = req.body;
+    const { presetId, position, archetype } = req.body;
+
+    if (!presetId || !position) {
+      return res.status(400).json({ error: 'presetId and position are required' });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
 
     await db.query(
-      'DELETE FROM stud_score_weights WHERE user_id = $1 AND position = $2',
-      [req.user.id, position]
+      'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
+      [presetId, position, archetype || null]
     );
 
     res.json({ message: 'Weights reset to defaults' });
@@ -58,8 +187,91 @@ const resetWeights = async (req, res) => {
   }
 };
 
+/**
+ * Update preset dev trait and potential weights
+ */
+const updatePresetWeights = async (req, res) => {
+  try {
+    const { presetId } = req.params;
+    const { devTraitWeight, potentialWeight } = req.body;
+
+    if (!presetId) {
+      return res.status(400).json({ error: 'presetId is required' });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    const updates = [];
+    const params = [presetId];
+    let paramCount = 2;
+
+    if (devTraitWeight !== undefined) {
+      updates.push(`dev_trait_weight = $${paramCount}`);
+      params.push(devTraitWeight);
+      paramCount++;
+    }
+
+    if (potentialWeight !== undefined) {
+      updates.push(`potential_weight = $${paramCount}`);
+      params.push(potentialWeight);
+      paramCount++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
+    const result = await db.query(
+      `UPDATE weight_presets SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      params
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update preset weights error:', error);
+    res.status(500).json({ error: 'Failed to update preset weights' });
+  }
+};
+
+/**
+ * Get archetypes for a position
+ */
+const getArchetypes = async (req, res) => {
+  try {
+    const { position } = req.query;
+
+    if (!position) {
+      return res.json(POSITION_ARCHETYPES);
+    }
+
+    const archetypes = POSITION_ARCHETYPES[position];
+    if (!archetypes) {
+      return res.status(404).json({ error: 'Position not found' });
+    }
+
+    res.json(archetypes);
+  } catch (error) {
+    console.error('Get archetypes error:', error);
+    res.status(500).json({ error: 'Failed to fetch archetypes' });
+  }
+};
+
 module.exports = {
   getWeights,
+  getDefaultWeights,
   updateWeight,
+  batchUpdateWeights,
   resetWeights,
+  updatePresetWeights,
+  getArchetypes,
 };
