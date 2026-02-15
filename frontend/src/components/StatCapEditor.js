@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -31,7 +31,50 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [pasteInfo, setPasteInfo] = useState(null);
   const fileInputRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Add paste event listener
+  useEffect(() => {
+    if (readOnly || !dynastyId) return;
+
+    const handlePaste = async (event) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      // Look for image in clipboard
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          event.preventDefault();
+          
+          const blob = item.getAsFile();
+          if (!blob) continue;
+
+          setPasteInfo('Image pasted! Processing...');
+          
+          // Convert blob to file with a timestamp-based name
+          const timestamp = new Date().getTime();
+          const file = new File([blob], `pasted-screenshot-${timestamp}.png`, { type: blob.type });
+          
+          // Process the pasted image using existing upload handler
+          await processScreenshot(file);
+          
+          // Clear paste info after a delay
+          setTimeout(() => setPasteInfo(null), 5000);
+          break;
+        }
+      }
+    };
+
+    // Attach paste listener to the document
+    document.addEventListener('paste', handlePaste);
+
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [readOnly, dynastyId, playerId, position, archetype, statCaps]);
 
   if (!position || statGroups.length === 0) {
     return (
@@ -104,11 +147,8 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
     onChange(updatedStatCaps);
   };
 
-  // Handle stat group screenshot upload
-  const handleStatGroupUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  // Process screenshot (used by both file upload and paste)
+  const processScreenshot = async (file) => {
     if (!dynastyId || !playerId) {
       setUploadError('Player must be saved before uploading stat group screenshots');
       return;
@@ -144,6 +184,14 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  // Handle stat group screenshot upload
+  const handleStatGroupUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    await processScreenshot(file);
   };
 
   // Render a single stat group
@@ -256,7 +304,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
   };
 
   return (
-    <Box>
+    <Box ref={containerRef}>
       <Typography variant="h6" gutterBottom>
         Stat Caps {readOnly ? '' : '(Click blocks to cap/uncap)'}
       </Typography>
@@ -278,9 +326,19 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
               {uploadSuccess}
             </Alert>
           )}
+          {pasteInfo && (
+            <Alert severity="info" sx={{ mb: 1 }} onClose={() => setPasteInfo(null)}>
+              {pasteInfo}
+            </Alert>
+          )}
           {!playerId && (
             <Alert severity="info" sx={{ mb: 1 }}>
               Save the player first, then you can upload stat group screenshots to auto-fill this section.
+            </Alert>
+          )}
+          {playerId && (
+            <Alert severity="info" sx={{ mb: 1 }}>
+              💡 Tip: You can paste screenshots directly using Ctrl+V (Cmd+V on Mac) or click the button below to select a file.
             </Alert>
           )}
           <input
