@@ -29,6 +29,11 @@ import {
 import studScoreService from '../services/studScoreService';
 import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES, PLAYER_RATINGS } from '../constants/playerAttributes';
 
+// Weight range constants
+const MIN_WEIGHT = 0;
+const MAX_WEIGHT = 3;
+const WEIGHT_STEP = 0.1;
+
 // Position groups for better organization
 const POSITION_GROUPS = {
   'Offense - Skill': ['QB', 'HB', 'FB', 'WR', 'TE'],
@@ -543,7 +548,7 @@ const StudScoreConfig = () => {
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
-                            {attr}
+                            {ATTRIBUTE_DISPLAY_NAMES[attr] || attr}
                           </Typography>
                           {isDefault && isEnabled && (
                             <Chip
@@ -559,7 +564,7 @@ const StudScoreConfig = () => {
                           )}
                         </Box>
                         <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.2 }}>
-                          {ATTRIBUTE_DISPLAY_NAMES[attr] || attr}
+                          {attr}
                         </Typography>
                       </CardContent>
                       {isEnabled && (
@@ -580,14 +585,14 @@ const StudScoreConfig = () => {
                             value={weight}
                             onChange={(e) => {
                               const val = parseFloat(e.target.value);
-                              if (!isNaN(val) && val >= 0 && val <= 3) {
+                              if (!isNaN(val) && val >= MIN_WEIGHT && val <= MAX_WEIGHT) {
                                 handleWeightChange(attr, val);
                               }
                             }}
                             inputProps={{
-                              min: 0,
-                              max: 3,
-                              step: 0.1,
+                              min: MIN_WEIGHT,
+                              max: MAX_WEIGHT,
+                              step: WEIGHT_STEP,
                               style: {
                                 textAlign: 'center',
                                 padding: '4px 8px',
