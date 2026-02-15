@@ -153,6 +153,38 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
     onChange(updatedStatCaps);
   };
 
+  // Handle capped blocks change
+  const handleCappedChange = (groupName, value) => {
+    if (readOnly) return;
+    
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue) || numValue < 0 || numValue > 20) return;
+
+    const groupData = getGroupData(groupName);
+    const purchasedBlocks = groupData.purchased_blocks || 0;
+
+    // Ensure purchased + capped doesn't exceed 20
+    if (purchasedBlocks + numValue > 20) return;
+
+    // Generate capped blocks array from the end (blocks 20, 19, 18, etc.)
+    // Only cap blocks that are not purchased
+    const newCappedBlocks = [];
+    let cappedCount = 0;
+    for (let i = 20; i > purchasedBlocks && cappedCount < numValue; i--) {
+      newCappedBlocks.unshift(i);
+      cappedCount++;
+    }
+
+    const updatedStatCaps = {
+      ...statCaps,
+      [groupName]: {
+        ...groupData,
+        capped_blocks: newCappedBlocks,
+      },
+    };
+    onChange(updatedStatCaps);
+  };
+
   // Handle block click to toggle capped status
   const handleBlockClick = (groupName, blockNumber) => {
     if (readOnly) return;
@@ -206,15 +238,26 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
             {groupName}
           </Typography>
           {!readOnly && (
-            <TextField
-              size="small"
-              type="number"
-              label="Purchased"
-              value={purchasedBlocks}
-              onChange={(e) => handlePurchasedChange(groupName, e.target.value)}
-              inputProps={{ min: 0, max: 20, style: { width: '60px' } }}
-              sx={{ width: '120px' }}
-            />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                size="small"
+                type="number"
+                label="Purchased"
+                value={purchasedBlocks}
+                onChange={(e) => handlePurchasedChange(groupName, e.target.value)}
+                inputProps={{ min: 0, max: 20, style: { width: '60px' } }}
+                sx={{ width: '120px' }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Capped"
+                value={cappedBlocks.length}
+                onChange={(e) => handleCappedChange(groupName, e.target.value)}
+                inputProps={{ min: 0, max: 20, style: { width: '60px' } }}
+                sx={{ width: '120px' }}
+              />
+            </Box>
           )}
           {readOnly && (
             <Typography variant="body2" color="text.secondary">
