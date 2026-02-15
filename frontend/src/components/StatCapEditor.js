@@ -22,6 +22,9 @@ import playerService from '../services/playerService';
  * - statCaps: Current stat caps object
  * - onChange: Callback when stat caps change
  * - readOnly: Whether to display in read-only mode
+ * - dynastyId: Dynasty ID for stat group screenshot upload (optional)
+ * - playerId: Player ID for stat group screenshot upload (optional)
+ * - archetype: Player archetype for stat group validation (optional)
  */
 const StatCapEditor = ({ position, statCaps = {}, onChange, readOnly = false, dynastyId, playerId, archetype }) => {
   const statGroups = getStatGroupsForPosition(position);

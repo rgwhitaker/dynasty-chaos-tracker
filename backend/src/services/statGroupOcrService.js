@@ -214,7 +214,7 @@ function convertToStatCaps(ocrStatGroups, validGroups) {
     const value = Math.max(0, Math.min(99, group.value));
 
     // Convert value to purchased blocks (20 blocks per group, value is 0-99)
-    const purchasedBlocks = Math.round((value / 99) * 20);
+    const purchasedBlocks = Math.round((value / 100) * 20);
 
     statCaps[matchedName] = {
       purchased_blocks: purchasedBlocks,
