@@ -245,7 +245,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
                 label="Purchased"
                 value={purchasedBlocks}
                 onChange={(e) => handlePurchasedChange(groupName, e.target.value)}
-                inputProps={{ min: 0, max: 20, style: { width: '60px' } }}
+                inputProps={{ min: 0, max: 20 - cappedBlocks.length, style: { width: '60px' } }}
                 sx={{ width: '120px' }}
               />
               <TextField
@@ -254,7 +254,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
                 label="Capped"
                 value={cappedBlocks.length}
                 onChange={(e) => handleCappedChange(groupName, e.target.value)}
-                inputProps={{ min: 0, max: 20, style: { width: '60px' } }}
+                inputProps={{ min: 0, max: 20 - purchasedBlocks, style: { width: '60px' } }}
                 sx={{ width: '120px' }}
               />
             </Box>
