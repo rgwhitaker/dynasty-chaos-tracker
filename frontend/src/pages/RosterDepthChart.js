@@ -40,7 +40,7 @@ import {
   SwapHoriz as TransferIcon,
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
-import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
+import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
 import playerService from '../services/playerService';
@@ -115,7 +115,6 @@ const RosterDepthChart = () => {
 
   // Add player dialog state
   const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState('');
   const [addPlayerFormData, setAddPlayerFormData] = useState({
     first_name: '',
     last_name: '',
@@ -126,6 +125,7 @@ const RosterDepthChart = () => {
     height: '',
     weight: '',
     dev_trait: '',
+    archetype: '',
     attributes: {},
     stat_caps: {},
   });
@@ -178,6 +178,7 @@ const RosterDepthChart = () => {
         height: selectedPlayer.height || '',
         weight: selectedPlayer.weight || '',
         dev_trait: selectedPlayer.dev_trait || '',
+        archetype: selectedPlayer.archetype || '',
         attributes: selectedPlayer.attributes || {},
         dealbreakers: selectedPlayer.dealbreakers || [],
         stat_caps: selectedPlayer.stat_caps || {},
@@ -230,7 +231,6 @@ const RosterDepthChart = () => {
 
   // Add player dialog handlers
   const handleOpenAddPlayer = (position) => {
-    setSelectedPosition(position);
     setAddPlayerFormData({
       first_name: '',
       last_name: '',
@@ -241,6 +241,7 @@ const RosterDepthChart = () => {
       height: '',
       weight: '',
       dev_trait: '',
+      archetype: '',
       attributes: {},
       stat_caps: {},
     });
@@ -260,6 +261,7 @@ const RosterDepthChart = () => {
       height: '',
       weight: '',
       dev_trait: '',
+      archetype: '',
       attributes: {},
       stat_caps: {},
     });
@@ -267,9 +269,14 @@ const RosterDepthChart = () => {
   };
 
   const handleAddPlayerChange = (e) => {
+    const updates = { [e.target.name]: e.target.value };
+    // Reset archetype when position changes
+    if (e.target.name === 'position') {
+      updates.archetype = '';
+    }
     setAddPlayerFormData({
       ...addPlayerFormData,
-      [e.target.name]: e.target.value,
+      ...updates,
     });
     if (addPlayerError) setAddPlayerError(null);
   };
@@ -332,9 +339,14 @@ const RosterDepthChart = () => {
 
   // Edit player handlers
   const handleEditChange = (e) => {
+    const updates = { [e.target.name]: e.target.value };
+    // Reset archetype when position changes
+    if (e.target.name === 'position') {
+      updates.archetype = '';
+    }
     setEditFormData({
       ...editFormData,
-      [e.target.name]: e.target.value,
+      ...updates,
     });
     if (editError) setEditError(null);
   };
@@ -499,6 +511,16 @@ const RosterDepthChart = () => {
               size="small" 
               color={getDevTraitColor(player.dev_trait)}
               sx={{ height: 18, fontSize: '0.65rem', fontWeight: 'bold', mt: 0.5 }}
+            />
+          )}
+
+          {player.archetype && (
+            <Chip 
+              label={player.archetype} 
+              size="small" 
+              variant="outlined"
+              color="secondary"
+              sx={{ height: 18, fontSize: '0.65rem', mt: 0.5 }}
             />
           )}
 
@@ -711,6 +733,14 @@ const RosterDepthChart = () => {
                     sx={{ fontWeight: 'bold' }}
                   />
                 )}
+                {selectedPlayer.archetype && (
+                  <Chip 
+                    label={selectedPlayer.archetype} 
+                    size="small" 
+                    variant="outlined"
+                    color="secondary"
+                  />
+                )}
               </Box>
             </Box>
           )}
@@ -785,7 +815,7 @@ const RosterDepthChart = () => {
                     Stat Caps Summary
                   </Typography>
                   {(() => {
-                    const summary = getStatCapSummary(selectedPlayer.stat_caps, selectedPlayer.position);
+                    const summary = getStatCapSummary(selectedPlayer.stat_caps, selectedPlayer.position, selectedPlayer.archetype);
                     return (
                       <Grid container spacing={2}>
                         <Grid item xs={6} sm={3}>
@@ -859,6 +889,7 @@ const RosterDepthChart = () => {
                   <Box sx={{ mt: 2 }}>
                     <StatCapEditor
                       position={selectedPlayer.position}
+                      archetype={selectedPlayer.archetype || undefined}
                       statCaps={selectedPlayer.stat_caps}
                       readOnly={true}
                     />
@@ -1091,6 +1122,27 @@ const RosterDepthChart = () => {
                   ))}
                 </TextField>
               </Grid>
+              {addPlayerFormData.position && POSITION_ARCHETYPES[addPlayerFormData.position] && (
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Archetype"
+                    name="archetype"
+                    value={addPlayerFormData.archetype}
+                    onChange={handleAddPlayerChange}
+                  >
+                    <MenuItem value="">
+                      <em>Select an archetype</em>
+                    </MenuItem>
+                    {POSITION_ARCHETYPES[addPlayerFormData.position].map((arch) => (
+                      <MenuItem key={arch} value={arch}>
+                        {arch}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              )}
               
               {/* Player Attributes Section */}
               <Grid item xs={12}>
@@ -1135,6 +1187,7 @@ const RosterDepthChart = () => {
                 {addPlayerFormData.position && (
                   <StatCapEditor
                     position={addPlayerFormData.position}
+                    archetype={addPlayerFormData.archetype || undefined}
                     statCaps={addPlayerFormData.stat_caps}
                     onChange={handleAddPlayerStatCapsChange}
                   />
@@ -1298,6 +1351,26 @@ const RosterDepthChart = () => {
                   ))}
                 </TextField>
               </Grid>
+              {editFormData.position && POSITION_ARCHETYPES[editFormData.position] && (
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="Archetype"
+                    name="archetype"
+                    value={editFormData.archetype || ''}
+                    onChange={handleEditChange}
+                    SelectProps={{ native: true }}
+                  >
+                    <option value="">Select an archetype</option>
+                    {POSITION_ARCHETYPES[editFormData.position].map((arch) => (
+                      <option key={arch} value={arch}>
+                        {arch}
+                      </option>
+                    ))}
+                  </TextField>
+                </Grid>
+              )}
               
               {/* Transfer Intent */}
               <Grid item xs={12}>
@@ -1363,6 +1436,7 @@ const RosterDepthChart = () => {
                 {editFormData.position && (
                   <StatCapEditor
                     position={editFormData.position}
+                    archetype={editFormData.archetype || undefined}
                     statCaps={editFormData.stat_caps || {}}
                     onChange={handleEditStatCapsChange}
                   />
