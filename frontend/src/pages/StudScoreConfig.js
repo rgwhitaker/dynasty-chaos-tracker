@@ -69,6 +69,7 @@ const StudScoreConfig = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasPresetWeightChanges, setHasPresetWeightChanges] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [newPresetDescription, setNewPresetDescription] = useState('');
@@ -137,6 +138,7 @@ const StudScoreConfig = () => {
       setWeights(fullWeights);
       setEnabledAttributes(enabled);
       setHasChanges(false);
+      setHasPresetWeightChanges(false);
     } catch (err) {
       setError('Failed to load weights: ' + err.message);
     } finally {
@@ -229,6 +231,7 @@ const StudScoreConfig = () => {
 
       setSuccess('Configuration saved successfully!');
       setHasChanges(false);
+      setHasPresetWeightChanges(false);
       
       // Reload presets to get updated values
       await loadPresets();
@@ -376,6 +379,8 @@ const StudScoreConfig = () => {
               setSelectedPreset(preset);
               setDevTraitWeight(preset.dev_trait_weight || 0.15);
               setPotentialWeight(preset.potential_weight || 0.15);
+              setHasChanges(false);
+              setHasPresetWeightChanges(false);
             }}
             label="Preset"
           >
@@ -437,6 +442,7 @@ const StudScoreConfig = () => {
               onChange={(e, value) => {
                 setDevTraitWeight(value);
                 setHasChanges(true);
+                setHasPresetWeightChanges(true);
               }}
               min={0}
               max={0.5}
@@ -463,6 +469,7 @@ const StudScoreConfig = () => {
               onChange={(e, value) => {
                 setPotentialWeight(value);
                 setHasChanges(true);
+                setHasPresetWeightChanges(true);
               }}
               min={0}
               max={0.5}
@@ -569,7 +576,7 @@ const StudScoreConfig = () => {
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={loading || !hasChanges || !isWeightValid}
+              disabled={loading || !hasChanges || (hasPresetWeightChanges && !isWeightValid)}
             >
               Save Changes
             </Button>
