@@ -31,7 +31,7 @@ const PLAYER_RATINGS = [
   'SAC',   // Short Accuracy
   'MAC',   // Medium Accuracy
   'DAC',   // Deep Accuracy
-  'RUN',   // Run Blocking
+  'RUN',   // Throw on the Run
   'TUP',   // Throw Under Pressure
   'BSK',   // Break Sack
   'PAC',   // Play Action
@@ -179,7 +179,7 @@ const ATTRIBUTE_DISPLAY_NAMES = {
   SAC: 'Short Accuracy',
   MAC: 'Medium Accuracy',
   DAC: 'Deep Accuracy',
-  RUN: 'Run Blocking',
+  RUN: 'Throw on the Run',
   TUP: 'Throw Under Pressure',
   BSK: 'Break Sack',
   PAC: 'Play Action',

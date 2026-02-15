@@ -90,7 +90,7 @@ Enter individual player ratings. All fields are optional. Values should be betwe
    - RBF - Run Block Finesse
    - LBK - Lead Block
    - IBL - Impact Blocking
-   - RUN - Run Blocking
+   - RUN - Throw on the Run
 
 7. **Defense Attributes ▼**
    - TAK - Tackle
