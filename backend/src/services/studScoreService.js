@@ -96,46 +96,90 @@ const DEFAULT_WEIGHTS = {
  * @param {number} userId - User ID for custom weights
  * @param {object} player - Player object with attributes
  * @param {number} presetId - Optional preset ID for specific weight scheme
- * @returns {number} Calculated stud score
+ * @returns {object} Object containing base stud score and final adjusted score
  */
 async function calculateStudScore(userId, player, presetId = null) {
   try {
     let weights;
+    let preset;
 
     if (presetId) {
-      // Get weights from specific preset
+      // Get preset info for dev trait and potential weights
+      const presetResult = await db.query(
+        'SELECT * FROM weight_presets WHERE id = $1',
+        [presetId]
+      );
+      preset = presetResult.rows[0];
+
+      // Get weights from specific preset, prioritizing archetype-specific weights
       const result = await db.query(
-        'SELECT attribute_name, weight FROM stud_score_weights WHERE preset_id = $1 AND position = $2',
+        `SELECT attribute_name, weight, archetype 
+         FROM stud_score_weights 
+         WHERE preset_id = $1 AND position = $2 
+         ORDER BY archetype DESC NULLS LAST`,
         [presetId, player.position]
       );
+      
       weights = {};
       result.rows.forEach(row => {
-        weights[row.attribute_name] = parseFloat(row.weight);
+        // Priority: archetype-specific weights override position defaults
+        // 1. If row is for this specific archetype, always use it
+        // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
+        if (row.archetype === player.archetype) {
+          // Exact archetype match - highest priority
+          weights[row.attribute_name] = parseFloat(row.weight);
+        } else if (row.archetype === null && !weights[row.attribute_name]) {
+          // Position default - only use if we don't already have an archetype-specific weight
+          weights[row.attribute_name] = parseFloat(row.weight);
+        }
       });
     } else {
       // Get user's default preset weights
       const presetResult = await db.query(
-        `SELECT ssw.attribute_name, ssw.weight 
-         FROM stud_score_weights ssw
-         JOIN weight_presets wp ON ssw.preset_id = wp.id
-         WHERE wp.user_id = $1 AND wp.is_default = TRUE AND ssw.position = $2`,
+        `SELECT wp.*, ssw.attribute_name, ssw.weight, ssw.archetype
+         FROM weight_presets wp
+         LEFT JOIN stud_score_weights ssw ON wp.id = ssw.preset_id AND ssw.position = $2
+         WHERE wp.user_id = $1 AND wp.is_default = TRUE
+         ORDER BY ssw.archetype DESC NULLS LAST`,
         [userId, player.position]
       );
       
       if (presetResult.rows.length > 0) {
+        preset = {
+          dev_trait_weight: presetResult.rows[0].dev_trait_weight,
+          potential_weight: presetResult.rows[0].potential_weight
+        };
         weights = {};
         presetResult.rows.forEach(row => {
-          weights[row.attribute_name] = parseFloat(row.weight);
+          if (row.attribute_name) {
+            // Priority: archetype-specific weights override position defaults
+            // 1. If row is for this specific archetype, always use it
+            // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
+            if (row.archetype === player.archetype) {
+              // Exact archetype match - highest priority
+              weights[row.attribute_name] = parseFloat(row.weight);
+            } else if (row.archetype === null && !weights[row.attribute_name]) {
+              // Position default - only use if we don't already have an archetype-specific weight
+              weights[row.attribute_name] = parseFloat(row.weight);
+            }
+          }
         });
       } else {
         // Use default weights
         weights = DEFAULT_WEIGHTS[player.position] || {};
+        preset = {
+          dev_trait_weight: 0.15,
+          potential_weight: 0.15
+        };
       }
     }
 
     if (Object.keys(weights).length === 0) {
       // Fallback to overall rating if no weights defined
-      return player.overall_rating || 0;
+      return {
+        baseScore: player.overall_rating || 0,
+        studScore: player.overall_rating || 0
+      };
     }
 
     // Calculate weighted score
@@ -152,13 +196,57 @@ async function calculateStudScore(userId, player, presetId = null) {
       }
     }
 
-    // Return normalized score (0-100 scale)
-    return totalWeight > 0 ? Math.round((totalWeightedValue / totalWeight) * 10) / 10 : 0;
+    // Calculate base score (normalized to 0-100 scale)
+    const baseScore = totalWeight > 0 ? Math.round((totalWeightedValue / totalWeight) * 10) / 10 : 0;
+
+    // Calculate adjusted score with dev trait and potential
+    const devTraitWeight = preset.dev_trait_weight || 0.15;
+    const potentialWeight = preset.potential_weight || 0.15;
+    
+    // Dev trait bonus: Elite=15, Star=10, Impact=5, Normal=0
+    const devTraitBonus = getDevTraitBonus(player.dev_trait);
+    
+    // Calculate potential score (0-100 based on stat caps)
+    const potentialScore = player.stat_caps 
+      ? calculatePotentialScore(player.stat_caps, player.position, player.archetype)
+      : 100;
+
+    // Final STUD score formula:
+    // Base attributes weight + Dev trait impact + Potential impact
+    const attributeWeight = 1 - devTraitWeight - potentialWeight;
+    const studScore = (baseScore * attributeWeight) + 
+                      (devTraitBonus * devTraitWeight) + 
+                      (potentialScore * potentialWeight);
+
+    return {
+      baseScore: Math.round(baseScore * 10) / 10,
+      studScore: Math.round(studScore * 10) / 10,
+      devTraitBonus,
+      potentialScore
+    };
 
   } catch (error) {
     console.error('Calculate stud score error:', error);
-    return player.overall_rating || 0; // Fallback to overall rating
+    return {
+      baseScore: player.overall_rating || 0,
+      studScore: player.overall_rating || 0
+    };
   }
+}
+
+/**
+ * Get dev trait bonus value
+ * @param {string} devTrait - Development trait (Elite, Star, Impact, Normal)
+ * @returns {number} Bonus value (0-100 scale)
+ */
+function getDevTraitBonus(devTrait) {
+  const bonuses = {
+    'Elite': 100,
+    'Star': 85,
+    'Impact': 70,
+    'Normal': 55
+  };
+  return bonuses[devTrait] || 55;
 }
 
 /**
@@ -204,23 +292,10 @@ async function getOrCreateDefaultPreset(userId) {
   }
 }
 
-/**
- * Calculate adjusted stud score that factors in potential
- * @param {number} studScore - Current stud score
- * @param {number} potentialScore - Potential score (0-100)
- * @param {number} potentialWeight - Weight for potential (0-1), default 0.3
- * @returns {number} Adjusted stud score
- */
-function calculateAdjustedStudScore(studScore, potentialScore, potentialWeight = 0.3) {
-  const currentWeight = 1 - potentialWeight;
-  const adjustedScore = (studScore * currentWeight) + (potentialScore * potentialWeight);
-  return Math.round(adjustedScore * 10) / 10;
-}
-
 module.exports = {
   calculateStudScore,
   getOrCreateDefaultPreset,
   calculatePotentialScore,
-  calculateAdjustedStudScore,
+  getDevTraitBonus,
   DEFAULT_WEIGHTS
 };
