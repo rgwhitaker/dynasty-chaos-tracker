@@ -2,7 +2,7 @@
 
 ## Overview
 
-The stat cap tracking system is a comprehensive feature that captures player potential in College Football 25/26. Each player has position-specific stat groups with 20 upgrade blocks each. Some blocks are permanently capped (cannot be upgraded), and tracking both caps and current progress is essential for evaluating player potential alongside the stud score.
+The stat cap tracking system is a comprehensive feature that captures player potential in College Football 26. Each player has position-specific stat groups with 20 upgrade blocks each. Some blocks are permanently capped (cannot be upgraded), and tracking both caps and current progress is essential for evaluating player potential alongside the stud score.
 
 ## Architecture
 

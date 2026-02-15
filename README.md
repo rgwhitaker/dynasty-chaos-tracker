@@ -1,8 +1,8 @@
 # Dynasty Chaos Tracker
 
-A web application for managing College Football 25 dynasty mode rosters. Import player data via screenshot OCR, track player attributes and development potential, manage depth charts, and analyze recruiting needs.
+A web application for managing College Football 26 dynasty mode rosters. Import player data via screenshot OCR, track player attributes and development potential, manage depth charts, and analyze recruiting needs.
 
-> **Note:** This is an independent fan-made tool to help manage your dynasty mode experience. It is not affiliated with or endorsed by EA Sports or College Football 25.
+> **Note:** This is an independent fan-made tool to help manage your dynasty mode experience. It is not affiliated with or endorsed by EA Sports or College Football 26.
 
 ## What Does This App Do?
 

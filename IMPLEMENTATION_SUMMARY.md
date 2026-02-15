@@ -1,7 +1,7 @@
 # Stat Cap Tracking System - Implementation Summary
 
 ## Overview
-Successfully implemented a comprehensive stat cap tracking system for College Football 25/26 dynasty mode. The system enables users to track player potential through position-specific stat groups with visual block-based UI.
+Successfully implemented a comprehensive stat cap tracking system for College Football 26 dynasty mode. The system enables users to track player potential through position-specific stat groups with visual block-based UI.
 
 ## Files Created
 
