@@ -43,7 +43,7 @@ const getPlayers = async (req, res) => {
     const playersWithScores = await Promise.all(
       result.rows.map(async (player) => {
         const attributes = ensureAttributesParsed(player);
-        const studScore = await studScoreService.calculateStudScore(req.user.id, player);
+        const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player);
         
         // Parse stat_caps if it's a string
         let statCaps = player.stat_caps;
@@ -57,15 +57,15 @@ const getPlayers = async (req, res) => {
         
         // Calculate potential score
         const potentialScore = calculatePotentialScore(statCaps, player.position, player.archetype);
-        const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
         
         return { 
           ...player, 
           attributes, 
           stat_caps: statCaps,
-          stud_score: studScore,
+          stud_score: studScoreResult.studScore,
+          base_score: studScoreResult.baseScore,
           potential_score: potentialScore,
-          adjusted_stud_score: adjustedStudScore,
+          adjusted_stud_score: studScoreResult.studScore,
         };
       })
     );
