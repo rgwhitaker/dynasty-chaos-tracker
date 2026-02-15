@@ -37,6 +37,7 @@ import {
   EmojiEvents as TrophyIcon,
   TrendingDown as TrendingDownIcon,
   SwapHoriz as TransferIcon,
+  ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import recruiterHubService from '../services/recruiterHubService';
 
@@ -137,9 +138,18 @@ const RecruiterHub = () => {
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4" component="h1">
-          Recruiter Hub
-        </Typography>
+        <Box display="flex" alignItems="center" gap={2}>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate(`/dynasties/${dynastyId}/roster`)}
+          >
+            Back to Roster
+          </Button>
+          <Typography variant="h4" component="h1">
+            Recruiter Hub
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           color="primary"
