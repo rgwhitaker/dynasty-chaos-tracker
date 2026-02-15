@@ -7,12 +7,19 @@ ALTER TABLE stud_score_weights
 ADD COLUMN IF NOT EXISTS archetype VARCHAR(50);
 
 -- Update the unique constraint to include archetype
+-- Drop old constraint if it exists
 ALTER TABLE stud_score_weights
 DROP CONSTRAINT IF EXISTS stud_score_weights_preset_id_position_attribute_name_key;
 
-ALTER TABLE stud_score_weights
-ADD CONSTRAINT stud_score_weights_unique_key 
-UNIQUE(preset_id, position, archetype, attribute_name);
+-- Create a partial unique index for non-null archetypes
+CREATE UNIQUE INDEX IF NOT EXISTS stud_score_weights_archetype_unique 
+ON stud_score_weights(preset_id, position, archetype, attribute_name)
+WHERE archetype IS NOT NULL;
+
+-- Create a separate partial unique index for position defaults (NULL archetype)
+CREATE UNIQUE INDEX IF NOT EXISTS stud_score_weights_position_default_unique 
+ON stud_score_weights(preset_id, position, attribute_name)
+WHERE archetype IS NULL;
 
 COMMENT ON COLUMN stud_score_weights.archetype IS 'Player archetype for this weight (NULL = position default)';
 

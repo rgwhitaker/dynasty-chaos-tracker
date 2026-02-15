@@ -119,13 +119,18 @@ async function calculateStudScore(userId, player, presetId = null) {
          ORDER BY archetype DESC NULLS LAST`,
         [presetId, player.position]
       );
+      
       weights = {};
       result.rows.forEach(row => {
-        // Use archetype-specific weight if it matches, otherwise use position default
-        if (row.archetype === player.archetype || row.archetype === null) {
-          if (!weights[row.attribute_name] || row.archetype === player.archetype) {
-            weights[row.attribute_name] = parseFloat(row.weight);
-          }
+        // Priority: archetype-specific weights override position defaults
+        // 1. If row is for this specific archetype, always use it
+        // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
+        if (row.archetype === player.archetype) {
+          // Exact archetype match - highest priority
+          weights[row.attribute_name] = parseFloat(row.weight);
+        } else if (row.archetype === null && !weights[row.attribute_name]) {
+          // Position default - only use if we don't already have an archetype-specific weight
+          weights[row.attribute_name] = parseFloat(row.weight);
         }
       });
     } else {
@@ -147,11 +152,15 @@ async function calculateStudScore(userId, player, presetId = null) {
         weights = {};
         presetResult.rows.forEach(row => {
           if (row.attribute_name) {
-            // Use archetype-specific weight if it matches, otherwise use position default
-            if (row.archetype === player.archetype || row.archetype === null) {
-              if (!weights[row.attribute_name] || row.archetype === player.archetype) {
-                weights[row.attribute_name] = parseFloat(row.weight);
-              }
+            // Priority: archetype-specific weights override position defaults
+            // 1. If row is for this specific archetype, always use it
+            // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
+            if (row.archetype === player.archetype) {
+              // Exact archetype match - highest priority
+              weights[row.attribute_name] = parseFloat(row.weight);
+            } else if (row.archetype === null && !weights[row.attribute_name]) {
+              // Position default - only use if we don't already have an archetype-specific weight
+              weights[row.attribute_name] = parseFloat(row.weight);
             }
           }
         });

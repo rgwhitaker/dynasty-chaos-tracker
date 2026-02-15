@@ -233,6 +233,8 @@ const StudScoreConfig = () => {
 
   // Calculate attribute weight (what's left after dev trait and potential)
   const attributeWeight = (1 - devTraitWeight - potentialWeight) * 100;
+  const totalWeight = devTraitWeight + potentialWeight;
+  const isWeightValid = totalWeight <= 1;
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -247,6 +249,12 @@ const StudScoreConfig = () => {
       </Box>
 
       {/* Alerts */}
+      {!isWeightValid && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Dev Trait and Potential weights cannot exceed 100% combined. 
+          Current total: {(totalWeight * 100).toFixed(0)}%
+        </Alert>
+      )}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}
@@ -447,7 +455,7 @@ const StudScoreConfig = () => {
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={loading || !hasChanges}
+              disabled={loading || !hasChanges || !isWeightValid}
             >
               Save Changes
             </Button>

@@ -131,23 +131,42 @@ const batchUpdateWeights = async (req, res) => {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
-    // Delete existing weights for this position/archetype
-    await db.query(
-      'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
-      [presetId, position, archetype || null]
-    );
+    // Use a transaction for atomicity and better performance
+    await db.query('BEGIN');
 
-    // Insert new weights
-    const insertPromises = Object.entries(weights).map(([attr, weight]) => 
-      db.query(
-        'INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight) VALUES ($1, $2, $3, $4, $5)',
-        [presetId, position, archetype || null, attr, weight]
-      )
-    );
+    try {
+      // Delete existing weights for this position/archetype
+      await db.query(
+        'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
+        [presetId, position, archetype || null]
+      );
 
-    await Promise.all(insertPromises);
+      // Build multi-row insert statement
+      const weightEntries = Object.entries(weights);
+      if (weightEntries.length > 0) {
+        const values = [];
+        const params = [];
+        let paramIndex = 1;
 
-    res.json({ message: 'Weights updated successfully' });
+        weightEntries.forEach(([attr, weight]) => {
+          values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`);
+          params.push(presetId, position, archetype || null, attr, weight);
+          paramIndex += 5;
+        });
+
+        await db.query(
+          `INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight) 
+           VALUES ${values.join(', ')}`,
+          params
+        );
+      }
+
+      await db.query('COMMIT');
+      res.json({ message: 'Weights updated successfully' });
+    } catch (err) {
+      await db.query('ROLLBACK');
+      throw err;
+    }
   } catch (error) {
     console.error('Batch update weights error:', error);
     res.status(500).json({ error: 'Failed to batch update weights' });
