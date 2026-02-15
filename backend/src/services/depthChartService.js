@@ -34,8 +34,8 @@ async function generateDepthChart(dynastyId, userId) {
       // Calculate stud scores for each player
       const playersWithScores = await Promise.all(
         positionPlayers.map(async (player) => {
-          const studScore = await studScoreService.calculateStudScore(userId, player);
-          return { ...player, studScore };
+          const studScoreResult = await studScoreService.calculateStudScore(userId, player);
+          return { ...player, studScore: studScoreResult.studScore };
         })
       );
 
