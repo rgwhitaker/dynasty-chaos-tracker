@@ -734,7 +734,7 @@ const RosterManagement = () => {
                     <FormControlLabel
                       control={
                         <Checkbox
-                          checked={manualFormData.transfer_intent || false}
+                          checked={manualFormData.transfer_intent}
                           onChange={(e) =>
                             setManualFormData({
                               ...manualFormData,
