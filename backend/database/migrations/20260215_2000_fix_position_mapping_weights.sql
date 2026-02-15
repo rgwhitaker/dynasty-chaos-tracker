@@ -1,6 +1,12 @@
 -- Migration to fix position mapping in stud_score_weights
 -- This migration ensures all specific roster positions have default weights,
 -- not just position groups
+--
+-- NOTE: The position_map and default_weights JSON objects below are a snapshot
+-- of POSITION_GROUP_MAP and DEFAULT_WEIGHTS from backend/src/services/studScoreService.js
+-- as of migration date (2026-02-15). If these values change in the application code,
+-- this migration will continue to work with the historical values, which is correct
+-- for a one-time data fix migration.
 
 DO $$
 DECLARE
@@ -12,7 +18,7 @@ DECLARE
     attr TEXT;
     weight_val DECIMAL(5,2);
 BEGIN
-    -- Define position group mapping
+    -- Define position group mapping (snapshot from POSITION_GROUP_MAP)
     position_map := '{
         "QB": "QB",
         "HB": "RB",
@@ -37,7 +43,7 @@ BEGIN
         "P": "P"
     }'::JSON;
 
-    -- Define default weights
+    -- Define default weights (snapshot from DEFAULT_WEIGHTS)
     default_weights := '{
         "QB": {"THP": 1.5, "SAC": 2.0, "MAC": 2.0, "DAC": 1.8, "TUP": 1.3, "AWR": 1.5, "SPD": 0.8, "AGI": 0.7},
         "RB": {"SPD": 1.8, "ACC": 1.5, "AGI": 1.4, "CAR": 1.3, "BTK": 1.5, "CTH": 0.9, "AWR": 1.0},
@@ -70,6 +76,10 @@ BEGIN
                 FOR attr IN SELECT * FROM json_object_keys(default_weights->position_group) LOOP
                     weight_val := (default_weights->position_group->>attr)::DECIMAL(5,2);
                     
+                    -- Insert default weights for this position
+                    -- ON CONFLICT clause uses partial unique index created in migration 20260215_1900:
+                    -- stud_score_weights_position_default_unique on (preset_id, position, attribute_name)
+                    -- WHERE archetype IS NULL
                     INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight, archetype)
                     VALUES (preset_record.id, roster_position, attr, weight_val, NULL)
                     ON CONFLICT (preset_id, position, attribute_name) 
