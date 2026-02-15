@@ -60,7 +60,7 @@ const getDefaultWeights = async (req, res) => {
     // Map specific position to position group
     const positionGroup = getPositionGroup(position);
     const weights = DEFAULT_WEIGHTS[positionGroup];
-    
+
     if (!weights) {
       return res.status(404).json({ error: 'Position not found' });
     }
