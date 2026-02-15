@@ -266,7 +266,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
           : 'Set purchased blocks and click individual blocks to toggle capped status. Purchased blocks must start from block 1.'
         }
       </Typography>
-      {!readOnly && dynastyId && playerId && (
+      {!readOnly && dynastyId && (
         <Box sx={{ mb: 2 }}>
           {uploadError && (
             <Alert severity="error" sx={{ mb: 1 }} onClose={() => setUploadError(null)}>
@@ -276,6 +276,11 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
           {uploadSuccess && (
             <Alert severity="success" sx={{ mb: 1 }} onClose={() => setUploadSuccess(null)}>
               {uploadSuccess}
+            </Alert>
+          )}
+          {!playerId && (
+            <Alert severity="info" sx={{ mb: 1 }}>
+              Save the player first, then you can upload stat group screenshots to auto-fill this section.
             </Alert>
           )}
           <input
@@ -289,7 +294,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
             variant="outlined"
             startIcon={uploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={uploading || !playerId}
           >
             {uploading ? 'Processing...' : 'Upload Stat Group Screenshot'}
           </Button>
