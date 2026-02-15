@@ -113,7 +113,7 @@ const StudScoreConfig = () => {
 
       // Convert array to object, with archetype-specific weights taking precedence
       // The backend returns both position defaults (archetype IS NULL) and archetype overrides
-      // ordered with archetype-specific weights first (archetype DESC NULLS LAST)
+      // We separate them by checking the archetype field, then merge with overrides taking precedence
       const positionWeights = {};
       const archetypeWeights = {};
       

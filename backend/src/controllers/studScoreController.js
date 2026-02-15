@@ -40,9 +40,9 @@ const getWeights = async (req, res) => {
       }
     }
 
-    // Order by archetype DESC NULLS LAST so archetype-specific weights come first
-    // This allows the frontend to easily override position defaults with archetype-specific values
-    query += ' ORDER BY position, archetype DESC NULLS LAST, attribute_name';
+    // Order by archetype NULLS LAST to group position defaults before archetype overrides
+    // The frontend will separate and merge them appropriately
+    query += ' ORDER BY position, archetype NULLS LAST, attribute_name';
 
     const result = await db.query(query, params);
     res.json(result.rows);
