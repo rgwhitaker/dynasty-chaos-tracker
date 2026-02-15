@@ -436,6 +436,11 @@ const RosterDepthChart = () => {
       return 'Unknown';
     }
 
+    // If position is missing, return "Unknown"
+    if (!player.position) {
+      return 'Unknown';
+    }
+
     // Check if any stat groups have been purchased
     const summary = getStatCapSummary(player.stat_caps, player.position, player.archetype);
     if (summary.purchasedBlocks === 0) {
