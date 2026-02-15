@@ -33,6 +33,8 @@ const getWeights = async (req, res) => {
       if (archetype) {
         query += ' AND archetype = $3';
         params.push(archetype);
+      } else {
+        query += ' AND archetype IS NULL';
       }
     }
 
