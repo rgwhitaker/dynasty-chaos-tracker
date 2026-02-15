@@ -115,7 +115,6 @@ const RosterDepthChart = () => {
 
   // Add player dialog state
   const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState('');
   const [addPlayerFormData, setAddPlayerFormData] = useState({
     first_name: '',
     last_name: '',
@@ -230,7 +229,6 @@ const RosterDepthChart = () => {
 
   // Add player dialog handlers
   const handleOpenAddPlayer = (position) => {
-    setSelectedPosition(position);
     setAddPlayerFormData({
       first_name: '',
       last_name: '',
