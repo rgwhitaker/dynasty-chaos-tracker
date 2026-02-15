@@ -233,8 +233,18 @@ const StudScoreConfig = () => {
       setHasChanges(false);
       setHasPresetWeightChanges(false);
       
-      // Reload presets to get updated values
-      await loadPresets();
+      // Reload presets to get updated values, but preserve the currently selected preset
+      const currentPresetId = selectedPreset.id;
+      const data = await studScoreService.getPresets();
+      setPresets(data);
+      
+      // Re-select the same preset that was just saved
+      const updatedPreset = data.find(p => p.id === currentPresetId);
+      if (updatedPreset) {
+        setSelectedPreset(updatedPreset);
+        setDevTraitWeight(updatedPreset.dev_trait_weight || 0.15);
+        setPotentialWeight(updatedPreset.potential_weight || 0.15);
+      }
     } catch (err) {
       setError('Failed to save: ' + err.message);
     } finally {
