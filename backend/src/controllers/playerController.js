@@ -93,7 +93,7 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      height, weight, dev_trait, attributes, dealbreakers, stat_caps
+      height, weight, dev_trait, attributes, dealbreakers, stat_caps, transfer_intent
     } = req.body;
 
     // Validate stat_caps if provided
@@ -110,13 +110,13 @@ const createPlayer = async (req, res) => {
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, attributes, dealbreakers, stat_caps
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        height, weight, dev_trait, attributes, dealbreakers, stat_caps, transfer_intent
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
         height, weight, dev_trait, JSON.stringify(attributes || {}), dealbreakers || [],
-        JSON.stringify(stat_caps || {})
+        JSON.stringify(stat_caps || {}), transfer_intent || false
       ]
     );
 
@@ -171,7 +171,7 @@ const updatePlayer = async (req, res) => {
 
     const allowedFields = [
       'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating',
-      'height', 'weight', 'dev_trait'
+      'height', 'weight', 'dev_trait', 'transfer_intent'
     ];
 
     for (const field of allowedFields) {

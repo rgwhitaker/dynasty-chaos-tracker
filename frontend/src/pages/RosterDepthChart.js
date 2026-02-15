@@ -27,6 +27,8 @@ import {
   AccordionSummary,
   AccordionDetails,
   Autocomplete,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -35,6 +37,7 @@ import {
   Settings as SettingsIcon,
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
+  SwapHoriz as TransferIcon,
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
 import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS } from '../constants/playerAttributes';
@@ -178,6 +181,7 @@ const RosterDepthChart = () => {
         attributes: selectedPlayer.attributes || {},
         dealbreakers: selectedPlayer.dealbreakers || [],
         stat_caps: selectedPlayer.stat_caps || {},
+        transfer_intent: selectedPlayer.transfer_intent || false,
       });
       setEditDialogOpen(true);
       setEditError(null);
@@ -373,6 +377,7 @@ const RosterDepthChart = () => {
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
         stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
+        transfer_intent: editFormData.transfer_intent || false,
       };
 
       await dispatch(updatePlayer({ 
@@ -495,6 +500,17 @@ const RosterDepthChart = () => {
                 />
               )}
             </Box>
+          )}
+
+          {/* Transfer Intent Indicator */}
+          {player.transfer_intent && (
+            <Chip 
+              icon={<TransferIcon sx={{ fontSize: '0.75rem' }} />}
+              label="Transfer" 
+              size="small" 
+              color="error"
+              sx={{ height: 18, fontSize: '0.65rem', fontWeight: 'bold', mt: 0.5 }}
+            />
           )}
         </CardContent>
       </Card>
@@ -1252,6 +1268,27 @@ const RosterDepthChart = () => {
                     </option>
                   ))}
                 </TextField>
+              </Grid>
+              
+              {/* Transfer Intent */}
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={editFormData.transfer_intent || false}
+                      onChange={(e) => {
+                        setEditFormData({
+                          ...editFormData,
+                          transfer_intent: e.target.checked,
+                        });
+                        if (editError) setEditError(null);
+                      }}
+                      name="transfer_intent"
+                      color="error"
+                    />
+                  }
+                  label="Transfer Intent (dealbreaker not being met)"
+                />
               </Grid>
               
               {/* Player Attributes Section */}

@@ -29,6 +29,8 @@ import {
   CardActions,
   Chip,
   MenuItem,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -280,6 +282,7 @@ const RosterManagement = () => {
       attributes: player.attributes || {},
       dealbreakers: player.dealbreakers || [],
       stat_caps: player.stat_caps || {},
+      transfer_intent: player.transfer_intent || false,
     });
     setEditDialogOpen(true);
     setEditError(null);
@@ -331,6 +334,7 @@ const RosterManagement = () => {
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
         stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
+        transfer_intent: editFormData.transfer_intent || false,
       };
 
       await dispatch(updatePlayer({ 
@@ -943,6 +947,27 @@ const RosterManagement = () => {
                       </option>
                     ))}
                   </TextField>
+                </Grid>
+                
+                {/* Transfer Intent */}
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={editFormData.transfer_intent || false}
+                        onChange={(e) => {
+                          setEditFormData({
+                            ...editFormData,
+                            transfer_intent: e.target.checked,
+                          });
+                          if (editError) setEditError(null);
+                        }}
+                        name="transfer_intent"
+                        color="error"
+                      />
+                    }
+                    label="Transfer Intent (dealbreaker not being met)"
+                  />
                 </Grid>
                 
                 {/* Player Attributes Section */}

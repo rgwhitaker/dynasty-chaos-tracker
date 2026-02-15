@@ -30,11 +30,19 @@ function hasDealbreakers(player) {
 }
 
 /**
+ * Check if a player intends to transfer (dealbreaker not being met)
+ */
+function hasTransferIntent(player) {
+  return player.transfer_intent === true;
+}
+
+/**
  * Get attrition risk breakdown for a single position
  */
 function getPositionAttritionRisk(players) {
   const risks = {
     dealbreakers: [],
+    transferIntent: [],
     draftRisk: [],
     graduating: [],
     total: 0
@@ -45,6 +53,11 @@ function getPositionAttritionRisk(players) {
 
     if (hasDealbreakers(player)) {
       risks.dealbreakers.push(player);
+      playerAtRisk = true;
+    }
+
+    if (hasTransferIntent(player)) {
+      risks.transferIntent.push(player);
       playerAtRisk = true;
     }
 
@@ -66,7 +79,7 @@ function getPositionAttritionRisk(players) {
 
   // Remove duplicates in total count (a player might be in multiple categories)
   const uniqueAtRiskPlayers = new Set();
-  [...risks.dealbreakers, ...risks.draftRisk, ...risks.graduating].forEach(p => {
+  [...risks.dealbreakers, ...risks.transferIntent, ...risks.draftRisk, ...risks.graduating].forEach(p => {
     uniqueAtRiskPlayers.add(p.id);
   });
   risks.total = uniqueAtRiskPlayers.size;
@@ -138,7 +151,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     // Get all players for the dynasty
     const result = await db.query(
       `SELECT id, first_name, last_name, position, jersey_number, year, overall_rating, 
-              attributes, dealbreakers, departure_risk
+              attributes, dealbreakers, departure_risk, transfer_intent
        FROM players 
        WHERE dynasty_id = $1
        ORDER BY position, overall_rating DESC`,
@@ -171,11 +184,19 @@ async function analyzeRosterAttritionRisks(dynastyId) {
         ...recommendations,
         risks: {
           dealbreakersCount: risks.dealbreakers.length,
+          transferIntentCount: risks.transferIntent.length,
           draftRiskCount: risks.draftRisk.length,
           graduatingCount: risks.graduating.length,
           totalAtRisk: risks.total,
           players: {
             dealbreakers: risks.dealbreakers.map(p => ({
+              id: p.id,
+              name: `${p.first_name} ${p.last_name}`,
+              year: p.year,
+              overall: p.overall_rating,
+              dealbreakers: p.dealbreakers
+            })),
+            transferIntent: risks.transferIntent.map(p => ({
               id: p.id,
               name: `${p.first_name} ${p.last_name}`,
               year: p.year,
@@ -204,6 +225,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
       totalPlayers: allPlayers.length,
       totalAtRisk: 0,
       totalDealbreakers: 0,
+      totalTransferIntent: 0,
       totalDraftRisk: 0,
       totalGraduating: 0,
       criticalPositions: 0,
@@ -213,6 +235,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     Object.values(positionAnalysis).forEach(pos => {
       overallStats.totalAtRisk += pos.risks.totalAtRisk;
       overallStats.totalDealbreakers += pos.risks.dealbreakersCount;
+      overallStats.totalTransferIntent += pos.risks.transferIntentCount;
       overallStats.totalDraftRisk += pos.risks.draftRiskCount;
       overallStats.totalGraduating += pos.risks.graduatingCount;
       if (pos.status === 'CRITICAL') overallStats.criticalPositions++;
@@ -269,5 +292,6 @@ module.exports = {
   analyzeRosterAttritionRisks,
   isDraftRisk,
   isGraduating,
-  hasDealbreakers
+  hasDealbreakers,
+  hasTransferIntent
 };

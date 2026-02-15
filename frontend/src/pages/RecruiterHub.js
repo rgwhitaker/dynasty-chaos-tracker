@@ -36,6 +36,7 @@ import {
   School as SchoolIcon,
   EmojiEvents as TrophyIcon,
   TrendingDown as TrendingDownIcon,
+  SwapHoriz as TransferIcon,
 } from '@mui/icons-material';
 import recruiterHubService from '../services/recruiterHubService';
 
@@ -305,6 +306,25 @@ const RecruiterHub = () => {
                 </Box>
               )}
 
+              {positionAnalysis[expandedPosition].risks.players.transferIntent && positionAnalysis[expandedPosition].risks.players.transferIntent.length > 0 && (
+                <Box mb={2}>
+                  <Typography variant="subtitle2" color="error" gutterBottom>
+                    <TransferIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 0.5 }} />
+                    Transfer Intent ({positionAnalysis[expandedPosition].risks.transferIntentCount})
+                  </Typography>
+                  <List dense>
+                    {positionAnalysis[expandedPosition].risks.players.transferIntent.map((player) => (
+                      <ListItem key={player.id}>
+                        <ListItemText
+                          primary={player.name}
+                          secondary={`${player.year} | OVR: ${player.overall}${player.dealbreakers ? ` | Dealbreakers: ${player.dealbreakers.join(', ')}` : ''}`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
+
               {positionAnalysis[expandedPosition].risks.players.draftRisk.length > 0 && (
                 <Box mb={2}>
                   <Typography variant="subtitle2" color="warning.main" gutterBottom>
@@ -405,6 +425,13 @@ const RecruiterHub = () => {
                 <ListItemText
                   primary="Dealbreaker Risks"
                   secondary={overallStats.totalDealbreakers}
+                />
+              </ListItem>
+              <Divider />
+              <ListItem>
+                <ListItemText
+                  primary="Transfer Intent"
+                  secondary={overallStats.totalTransferIntent}
                 />
               </ListItem>
               <Divider />
