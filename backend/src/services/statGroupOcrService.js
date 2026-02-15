@@ -108,9 +108,14 @@ async function parseStatGroupScreenshot(imagePath, position, archetype) {
 The screenshot shows a list of stat groups for a player. Each stat group has:
 1. A name (e.g., "Blocking", "Power", "IQ", "Quickness", "Hands", "Route Running")
 2. A numeric value (0-99) displayed next to the name
-3. A visual bar showing progress blocks
+3. A visual bar showing progress blocks (20 blocks per stat group)
+4. Some blocks may be LOCKED/CAPPED (cannot be upgraded) - these are shown with a padlock/lock icon 🔒 or appear grayed out/different from normal blocks
 
-IMPORTANT: One of the stat groups typically has a LIGHT/WHITE background with BLACK text (inverted contrast compared to the others which have dark backgrounds with light text). I am providing two versions of the image - a normal version and an inverted version - so you can read text from both contrast styles. Use whichever version makes each stat group's text clearest.
+IMPORTANT VISUAL DETAILS:
+- One of the stat groups typically has a LIGHT/WHITE background with BLACK text (inverted contrast compared to the others which have dark backgrounds with light text)
+- I am providing two versions of the image - a normal version and an inverted version - so you can read text from both contrast styles
+- Use whichever version makes each stat group's text clearest
+- LOOK CAREFULLY for locked/capped blocks - they typically have a lock icon 🔒 or appear visually different (grayed out, striped, or with different shading)
 
 The valid stat group names for this player's position (${position}) are:
 ${validGroups.map((g, i) => `${i + 1}. ${g}`).join('\n')}
@@ -120,7 +125,8 @@ ${ALL_STAT_GROUP_NAMES.join(', ')}
 
 For each stat group visible in the screenshot, extract:
 - The stat group name (must match one of the valid names above, correct any OCR-like misreads)
-- The numeric value displayed (0-99)
+- The numeric value displayed (0-99 or 0-100)
+- The positions of any CAPPED/LOCKED blocks (if visible) - these are block numbers 1-20 that show a lock icon or appear grayed out
 
 Return ALL stat groups visible in the screenshot, even if some are not in the expected list for this position.`;
 
@@ -155,6 +161,11 @@ Return ALL stat groups visible in the screenshot, even if some are not in the ex
                   properties: {
                     name: { type: 'string' },
                     value: { type: 'integer' },
+                    capped_blocks: {
+                      type: 'array',
+                      items: { type: 'integer' },
+                      description: 'Array of block numbers (1-20) that are locked/capped',
+                    },
                   },
                   required: ['name', 'value'],
                   additionalProperties: false,
@@ -193,9 +204,11 @@ Return ALL stat groups visible in the screenshot, even if some are not in the ex
 
 /**
  * Convert OCR-extracted stat group values to stat_caps format
- * The numeric value represents the stat group's current rating (0-99)
- * Each stat group has 20 upgrade blocks, so purchased_blocks = Math.round(value / 5)
- * @param {array} ocrStatGroups - Array of { name, value } from OCR
+ * The numeric value represents the stat group's current rating (0-99 or 0-100)
+ * Each stat group has 20 upgrade blocks
+ * - For values 0-99: purchased_blocks = Math.floor(value / 5), giving 0-19 blocks
+ * - For value 100: purchased_blocks = 20
+ * @param {array} ocrStatGroups - Array of { name, value, capped_blocks? } from OCR
  * @param {array} validGroups - Array of valid group names for the position
  * @returns {object} stat_caps object compatible with the player model
  */
@@ -210,15 +223,30 @@ function convertToStatCaps(ocrStatGroups, validGroups) {
       continue;
     }
 
-    // Clamp value to valid range
-    const value = Math.max(0, Math.min(99, group.value));
+    // Clamp value to valid range (0-100)
+    const value = Math.max(0, Math.min(100, group.value));
 
-    // Convert value to purchased blocks (20 blocks per group, value is 0-99)
-    const purchasedBlocks = Math.round((value / 100) * 20);
+    // Convert value to purchased blocks
+    // Values 0-99 map to 0-19 blocks (each block = 5 points)
+    // Value 100 maps to 20 blocks (full)
+    let purchasedBlocks;
+    if (value === 100) {
+      purchasedBlocks = 20;
+    } else {
+      purchasedBlocks = Math.floor(value / 5);
+    }
+
+    // Extract capped blocks from OCR (if provided)
+    const cappedBlocks = Array.isArray(group.capped_blocks) ? group.capped_blocks : [];
+    
+    // Validate capped blocks are in valid range (1-20)
+    const validCappedBlocks = cappedBlocks.filter(block => 
+      Number.isInteger(block) && block >= 1 && block <= 20
+    );
 
     statCaps[matchedName] = {
       purchased_blocks: purchasedBlocks,
-      capped_blocks: [],
+      capped_blocks: validCappedBlocks,
     };
   }
 
