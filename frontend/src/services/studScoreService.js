@@ -95,7 +95,7 @@ export const getArchetypes = async (position) => {
   return response.data;
 };
 
-export default {
+const studScoreServiceAPI = {
   getPresets,
   createPreset,
   updatePreset,
@@ -106,3 +106,5 @@ export default {
   resetWeights,
   getArchetypes
 };
+
+export default studScoreServiceAPI;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem,
   Slider,
-  TextField,
   Alert,
   CircularProgress,
   Card,
@@ -20,17 +19,14 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import {
   RestartAlt as ResetIcon,
   Save as SaveIcon,
-  Add as AddIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
 import studScoreService from '../services/studScoreService';
-import { ROSTER_POSITIONS, POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
 
 // Position groups for better organization
 const POSITION_GROUPS = {
@@ -61,27 +57,6 @@ const StudScoreConfig = () => {
   const [success, setSuccess] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load presets on mount
-  useEffect(() => {
-    loadPresets();
-  }, []);
-
-  // Load weights when preset/position/archetype changes
-  useEffect(() => {
-    if (selectedPreset && selectedPosition) {
-      loadWeights();
-    }
-  }, [selectedPreset, selectedPosition, selectedArchetype, configLevel]);
-
-  // Load archetypes when position changes
-  useEffect(() => {
-    if (selectedPosition) {
-      loadArchetypes();
-      setSelectedArchetype(null);
-      setConfigLevel('position');
-    }
-  }, [selectedPosition]);
-
   const loadPresets = async () => {
     try {
       setLoading(true);
@@ -102,7 +77,7 @@ const StudScoreConfig = () => {
     }
   };
 
-  const loadWeights = async () => {
+  const loadWeights = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -138,9 +113,9 @@ const StudScoreConfig = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPosition, configLevel, selectedArchetype, selectedPreset]);
 
-  const loadArchetypes = async () => {
+  const loadArchetypes = useCallback(async () => {
     try {
       const data = await studScoreService.getArchetypes(selectedPosition);
       setArchetypes(data || []);
@@ -148,7 +123,28 @@ const StudScoreConfig = () => {
       console.error('Failed to load archetypes:', err);
       setArchetypes(POSITION_ARCHETYPES[selectedPosition] || []);
     }
-  };
+  }, [selectedPosition]);
+
+  // Load presets on mount
+  useEffect(() => {
+    loadPresets();
+  }, []);
+
+  // Load weights when preset/position/archetype changes
+  useEffect(() => {
+    if (selectedPreset && selectedPosition) {
+      loadWeights();
+    }
+  }, [selectedPreset, selectedPosition, selectedArchetype, configLevel, loadWeights]);
+
+  // Load archetypes when position changes
+  useEffect(() => {
+    if (selectedPosition) {
+      loadArchetypes();
+      setSelectedArchetype(null);
+      setConfigLevel('position');
+    }
+  }, [selectedPosition, loadArchetypes]);
 
   const handleWeightChange = (attribute, value) => {
     setWeights(prev => ({
