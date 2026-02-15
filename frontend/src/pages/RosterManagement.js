@@ -85,6 +85,7 @@ const RosterManagement = () => {
     attributes: {},
     dealbreakers: [],
     stat_caps: {},
+    transfer_intent: false,
   });
   const [manualError, setManualError] = useState(null);
   const [manualSuccess, setManualSuccess] = useState(null);
@@ -259,6 +260,7 @@ const RosterManagement = () => {
         attributes: {},
         dealbreakers: [],
         stat_caps: {},
+        transfer_intent: false,
       });
       // Refresh the player list immediately since manual entry is synchronous
       dispatch(getPlayers(dynastyId));
@@ -727,6 +729,25 @@ const RosterManagement = () => {
                     )}
                   </Grid>
                   
+                  {/* Transfer Intent */}
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={manualFormData.transfer_intent}
+                          onChange={(e) =>
+                            setManualFormData({
+                              ...manualFormData,
+                              transfer_intent: e.target.checked,
+                            })
+                          }
+                          name="transfer_intent"
+                        />
+                      }
+                      label="Transfer Intent (dealbreaker not being met)"
+                    />
+                  </Grid>
+                  
                   <Grid item xs={12}>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                       <Button
@@ -747,6 +768,7 @@ const RosterManagement = () => {
                             attributes: {},
                             dealbreakers: [],
                             stat_caps: {},
+                            transfer_intent: false,
                           });
                           setManualError(null);
                           setManualSuccess(null);
