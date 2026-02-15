@@ -41,12 +41,31 @@ const uploadScreenshots = async (dynastyId, files, ocrMethod = 'tesseract') => {
   return response.data;
 };
 
+const uploadStatGroupScreenshot = async (dynastyId, playerId, file, position, archetype) => {
+  const formData = new FormData();
+  formData.append('screenshot', file);
+  formData.append('position', position);
+  if (archetype) {
+    formData.append('archetype', archetype);
+  }
+
+  const response = await api.post(
+    `/dynasties/${dynastyId}/ocr/stat-groups/${playerId}`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }
+  );
+  return response.data;
+};
+
 const playerService = {
   getPlayers,
   createPlayer,
   updatePlayer,
   deletePlayer,
   uploadScreenshots,
+  uploadStatGroupScreenshot,
 };
 
 export default playerService;

@@ -1,4 +1,5 @@
 const ocrService = require('../services/ocrService');
+const statGroupOcrService = require('../services/statGroupOcrService');
 const db = require('../config/database');
 
 const uploadScreenshot = async (req, res) => {
@@ -85,7 +86,58 @@ const getUploadStatus = async (req, res) => {
   }
 };
 
+const uploadStatGroupScreenshot = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const { dynastyId, playerId } = req.params;
+    const { position, archetype } = req.body;
+
+    if (!position) {
+      return res.status(400).json({ error: 'Player position is required' });
+    }
+
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    // Verify player exists in this dynasty
+    const playerCheck = await db.query(
+      'SELECT * FROM players WHERE id = $1 AND dynasty_id = $2',
+      [playerId, dynastyId]
+    );
+
+    if (playerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    // Process stat group screenshot
+    const statCaps = await statGroupOcrService.parseStatGroupScreenshot(
+      req.file.path,
+      position,
+      archetype || undefined
+    );
+
+    res.json({
+      message: 'Stat group screenshot processed successfully',
+      stat_caps: statCaps,
+    });
+  } catch (error) {
+    console.error('Stat group OCR error:', error);
+    res.status(500).json({ error: 'Failed to process stat group screenshot' });
+  }
+};
+
 module.exports = {
   uploadScreenshot,
   getUploadStatus,
+  uploadStatGroupScreenshot,
 };
