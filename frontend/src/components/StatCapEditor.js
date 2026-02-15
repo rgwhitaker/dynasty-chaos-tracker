@@ -169,7 +169,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
     // Generate capped blocks array from the end (blocks 20, 19, 18, etc.)
     // Only cap blocks that are not purchased
     const newCappedBlocks = [];
-    for (let i = 20; i > 20 - numValue && i > purchasedBlocks; i--) {
+    for (let i = 20; newCappedBlocks.length < numValue && i > purchasedBlocks; i--) {
       newCappedBlocks.push(i);
     }
     // Reverse to get ascending order [18, 19, 20] instead of [20, 19, 18]
