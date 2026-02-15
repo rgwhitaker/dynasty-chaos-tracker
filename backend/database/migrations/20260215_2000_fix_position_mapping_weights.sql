@@ -76,15 +76,18 @@ BEGIN
                 FOR attr IN SELECT * FROM json_object_keys(default_weights->position_group) LOOP
                     weight_val := (default_weights->position_group->>attr)::DECIMAL(5,2);
                     
-                    -- Insert default weights for this position
-                    -- ON CONFLICT clause uses partial unique index created in migration 20260215_1900:
-                    -- stud_score_weights_position_default_unique on (preset_id, position, attribute_name)
-                    -- WHERE archetype IS NULL
-                    INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight, archetype)
-                    VALUES (preset_record.id, roster_position, attr, weight_val, NULL)
-                    ON CONFLICT (preset_id, position, attribute_name) 
-                    WHERE archetype IS NULL
-                    DO NOTHING;
+                    -- Insert default weights if they don't already exist
+                    -- Manually check existence because ON CONFLICT doesn't work well with partial unique indexes
+                    IF NOT EXISTS (
+                        SELECT 1 FROM stud_score_weights
+                        WHERE preset_id = preset_record.id
+                        AND position = roster_position
+                        AND attribute_name = attr
+                        AND archetype IS NULL
+                    ) THEN
+                        INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight, archetype)
+                        VALUES (preset_record.id, roster_position, attr, weight_val, NULL);
+                    END IF;
                 END LOOP;
             END IF;
         END LOOP;
