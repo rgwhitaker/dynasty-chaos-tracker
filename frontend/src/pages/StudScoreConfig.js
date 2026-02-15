@@ -111,11 +111,24 @@ const StudScoreConfig = () => {
         archetype
       );
 
-      // Convert array to object
-      const weightsObj = {};
+      // Convert array to object, with archetype-specific weights taking precedence
+      // The backend returns both position defaults (archetype IS NULL) and archetype overrides
+      // ordered with archetype-specific weights first (archetype DESC NULLS LAST)
+      const positionWeights = {};
+      const archetypeWeights = {};
+      
       data.forEach(w => {
-        weightsObj[w.attribute_name] = parseFloat(w.weight);
+        if (w.archetype === null) {
+          // Position default weight
+          positionWeights[w.attribute_name] = parseFloat(w.weight);
+        } else {
+          // Archetype-specific weight (override)
+          archetypeWeights[w.attribute_name] = parseFloat(w.weight);
+        }
       });
+
+      // Merge: archetype weights override position weights
+      const weightsObj = { ...positionWeights, ...archetypeWeights };
 
       // Determine active weights (custom or defaults)
       const activeWeights = Object.keys(weightsObj).length === 0 ? { ...defaults } : weightsObj;
