@@ -94,7 +94,7 @@ Enter individual player ratings. All fields are optional. Values should be betwe
 
 7. **Defense Attributes ▼**
    - TAK - Tackle
-   - POW - Power Moves
+   - POW - Hit Power
    - BSH - Block Shedding
    - FMV - Finesse Moves
    - PMV - Power Moves

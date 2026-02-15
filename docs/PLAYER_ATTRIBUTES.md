@@ -61,7 +61,7 @@ The Dynasty Chaos Tracker supports all 55 player ratings from College Football 2
 
 ### Defensive Attributes
 - **TAK** - Tackle
-- **POW** - Power Moves
+- **POW** - Hit Power
 - **BSH** - Block Shedding
 - **FMV** - Finesse Moves
 - **PMV** - Power Moves (Defensive)

@@ -45,7 +45,7 @@ const PLAYER_RATINGS = [
   'IBL',   // Impact Blocking
   'PRC',   // Play Recognition
   'TAK',   // Tackle
-  'POW',   // Power Moves
+  'POW',   // Hit Power
   'BSH',   // Block Shedding
   'FMV',   // Finesse Moves
   'PMV',   // Power Moves (Defensive)
@@ -193,7 +193,7 @@ const ATTRIBUTE_DISPLAY_NAMES = {
   IBL: 'Impact Blocking',
   PRC: 'Play Recognition',
   TAK: 'Tackle',
-  POW: 'Power Moves',
+  POW: 'Hit Power',
   BSH: 'Block Shedding',
   FMV: 'Finesse Moves',
   PMV: 'Power Moves',
