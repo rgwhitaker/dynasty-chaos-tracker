@@ -57,27 +57,6 @@ const StudScoreConfig = () => {
   const [success, setSuccess] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Load presets on mount
-  useEffect(() => {
-    loadPresets();
-  }, []);
-
-  // Load weights when preset/position/archetype changes
-  useEffect(() => {
-    if (selectedPreset && selectedPosition) {
-      loadWeights();
-    }
-  }, [selectedPreset, selectedPosition, selectedArchetype, configLevel, loadWeights]);
-
-  // Load archetypes when position changes
-  useEffect(() => {
-    if (selectedPosition) {
-      loadArchetypes();
-      setSelectedArchetype(null);
-      setConfigLevel('position');
-    }
-  }, [selectedPosition, loadArchetypes]);
-
   const loadPresets = async () => {
     try {
       setLoading(true);
@@ -145,6 +124,27 @@ const StudScoreConfig = () => {
       setArchetypes(POSITION_ARCHETYPES[selectedPosition] || []);
     }
   }, [selectedPosition]);
+
+  // Load presets on mount
+  useEffect(() => {
+    loadPresets();
+  }, []);
+
+  // Load weights when preset/position/archetype changes
+  useEffect(() => {
+    if (selectedPreset && selectedPosition) {
+      loadWeights();
+    }
+  }, [selectedPreset, selectedPosition, selectedArchetype, configLevel, loadWeights]);
+
+  // Load archetypes when position changes
+  useEffect(() => {
+    if (selectedPosition) {
+      loadArchetypes();
+      setSelectedArchetype(null);
+      setConfigLevel('position');
+    }
+  }, [selectedPosition, loadArchetypes]);
 
   const handleWeightChange = (attribute, value) => {
     setWeights(prev => ({
