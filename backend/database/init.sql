@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS players (
     height VARCHAR(10), -- Height (e.g., "6'2\"")
     weight INTEGER, -- Weight in pounds
     dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
+    archetype VARCHAR(50), -- Player archetype (e.g., Pocket Passer, Dual Threat, Pure Power)
     attributes JSONB, -- Flexible storage for all position-specific attributes (55 ratings)
     dealbreakers TEXT[], -- Array of dealbreaker flags
     transfer_intent BOOLEAN DEFAULT FALSE, -- Player intends to transfer (dealbreaker not met)

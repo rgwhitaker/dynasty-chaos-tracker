@@ -20,8 +20,8 @@ import { getStatGroupsForPosition } from '../constants/statCaps';
  * - onChange: Callback when stat caps change
  * - readOnly: Whether to display in read-only mode
  */
-const StatCapEditor = ({ position, statCaps = {}, onChange, readOnly = false }) => {
-  const statGroups = getStatGroupsForPosition(position);
+const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly = false }) => {
+  const statGroups = getStatGroupsForPosition(position, archetype);
 
   if (!position || statGroups.length === 0) {
     return (

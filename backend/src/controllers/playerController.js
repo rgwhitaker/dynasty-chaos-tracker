@@ -56,7 +56,7 @@ const getPlayers = async (req, res) => {
         }
         
         // Calculate potential score
-        const potentialScore = calculatePotentialScore(statCaps, player.position);
+        const potentialScore = calculatePotentialScore(statCaps, player.position, player.archetype);
         const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
         
         return { 
@@ -93,12 +93,12 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      height, weight, dev_trait, attributes, dealbreakers, stat_caps, transfer_intent
+      height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent
     } = req.body;
 
     // Validate stat_caps if provided
     if (stat_caps && position) {
-      const validation = validateStatCaps(position, stat_caps);
+      const validation = validateStatCaps(position, stat_caps, archetype);
       if (!validation.isValid) {
         return res.status(400).json({ 
           error: 'Invalid stat caps data', 
@@ -110,12 +110,12 @@ const createPlayer = async (req, res) => {
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, attributes, dealbreakers, stat_caps, transfer_intent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, JSON.stringify(attributes || {}), dealbreakers || [],
+        height, weight, dev_trait, archetype || null, JSON.stringify(attributes || {}), dealbreakers || [],
         JSON.stringify(stat_caps || {}), transfer_intent || false
       ]
     );
@@ -134,7 +134,7 @@ const createPlayer = async (req, res) => {
       }
     }
     
-    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position);
+    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position, player.archetype);
     const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
 
     res.status(201).json({ 
@@ -171,7 +171,7 @@ const updatePlayer = async (req, res) => {
 
     const allowedFields = [
       'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating',
-      'height', 'weight', 'dev_trait', 'transfer_intent'
+      'height', 'weight', 'dev_trait', 'archetype', 'transfer_intent'
     ];
 
     for (const field of allowedFields) {
@@ -203,8 +203,13 @@ const updatePlayer = async (req, res) => {
         [playerId]
       )).rows[0]?.position;
 
+      const archetype = req.body.archetype !== undefined ? req.body.archetype : (await db.query(
+        'SELECT archetype FROM players WHERE id = $1',
+        [playerId]
+      )).rows[0]?.archetype;
+
       if (position && req.body.stat_caps) {
-        const validation = validateStatCaps(position, req.body.stat_caps);
+        const validation = validateStatCaps(position, req.body.stat_caps, archetype);
         if (!validation.isValid) {
           return res.status(400).json({ 
             error: 'Invalid stat caps data', 
@@ -248,7 +253,7 @@ const updatePlayer = async (req, res) => {
       }
     }
     
-    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position);
+    const potentialScore = calculatePotentialScore(parsedStatCaps, player.position, player.archetype);
     const adjustedStudScore = studScoreService.calculateAdjustedStudScore(studScore, potentialScore);
 
     res.json({ 
