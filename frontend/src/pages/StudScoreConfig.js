@@ -20,11 +20,17 @@ import {
   IconButton,
   Tooltip,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import {
   RestartAlt as ResetIcon,
   Save as SaveIcon,
   Info as InfoIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 import studScoreService from '../services/studScoreService';
 import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES, PLAYER_RATINGS } from '../constants/playerAttributes';
@@ -63,6 +69,9 @@ const StudScoreConfig = () => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newPresetName, setNewPresetName] = useState('');
+  const [newPresetDescription, setNewPresetDescription] = useState('');
 
   const loadPresets = async () => {
     try {
@@ -264,6 +273,51 @@ const StudScoreConfig = () => {
     }
   };
 
+  const handleCreatePreset = async () => {
+    if (!newPresetName.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const newPreset = await studScoreService.createPreset({
+        preset_name: newPresetName.trim(),
+        description: newPresetDescription.trim() || null,
+      });
+      setCreateDialogOpen(false);
+      setNewPresetName('');
+      setNewPresetDescription('');
+      setSuccess('Preset created successfully!');
+      await loadPresets();
+      setSelectedPreset(newPreset);
+      setDevTraitWeight(newPreset.dev_trait_weight || 0.15);
+      setPotentialWeight(newPreset.potential_weight || 0.15);
+    } catch (err) {
+      setError('Failed to create preset: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePreset = async () => {
+    if (!selectedPreset) return;
+    if (!window.confirm(`Delete preset "${selectedPreset.preset_name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await studScoreService.deletePreset(selectedPreset.id);
+      setSuccess('Preset deleted successfully!');
+      setSelectedPreset(null);
+      await loadPresets();
+    } catch (err) {
+      setError('Failed to delete preset: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculate attribute weight (what's left after dev trait and potential)
   const attributeWeight = (1 - devTraitWeight - potentialWeight) * 100;
   const totalWeight = devTraitWeight + potentialWeight;
@@ -334,6 +388,24 @@ const StudScoreConfig = () => {
             ))}
           </Select>
         </FormControl>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            startIcon={<AddIcon />}
+            variant="outlined"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            New Preset
+          </Button>
+          <Button
+            startIcon={<DeleteIcon />}
+            variant="outlined"
+            color="error"
+            onClick={handleDeletePreset}
+            disabled={!selectedPreset || presets.length <= 1}
+          >
+            Delete Preset
+          </Button>
+        </Box>
       </Paper>
 
       {/* STUD Score Components */}
@@ -632,6 +704,39 @@ const StudScoreConfig = () => {
           You have unsaved changes. Click "Save Changes" to apply your configuration.
         </Alert>
       )}
+
+      {/* Create Preset Dialog */}
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Create New Preset</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Preset Name"
+            fullWidth
+            value={newPresetName}
+            onChange={(e) => setNewPresetName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Description (optional)"
+            fullWidth
+            multiline
+            rows={2}
+            value={newPresetDescription}
+            onChange={(e) => setNewPresetDescription(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setCreateDialogOpen(false); setNewPresetName(''); setNewPresetDescription(''); }}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreatePreset} variant="contained" disabled={!newPresetName.trim()}>
+            Create
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
