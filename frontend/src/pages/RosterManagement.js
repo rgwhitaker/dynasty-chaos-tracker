@@ -41,7 +41,7 @@ import {
 } from '@mui/icons-material';
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
-import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
 
@@ -81,6 +81,7 @@ const RosterManagement = () => {
     height: '',
     weight: '',
     dev_trait: '',
+    archetype: '',
     attributes: {},
     dealbreakers: [],
     stat_caps: {},
@@ -185,9 +186,14 @@ const RosterManagement = () => {
   };
 
   const handleManualChange = (e) => {
+    const updates = { [e.target.name]: e.target.value };
+    // Reset archetype when position changes
+    if (e.target.name === 'position') {
+      updates.archetype = '';
+    }
     setManualFormData({
       ...manualFormData,
-      [e.target.name]: e.target.value,
+      ...updates,
     });
     if (manualError) setManualError(null);
   };
@@ -249,6 +255,7 @@ const RosterManagement = () => {
         height: '',
         weight: '',
         dev_trait: '',
+        archetype: '',
         attributes: {},
         dealbreakers: [],
         stat_caps: {},
@@ -278,6 +285,7 @@ const RosterManagement = () => {
       height: player.height || '',
       weight: player.weight || '',
       dev_trait: player.dev_trait || '',
+      archetype: player.archetype || '',
       attributes: player.attributes || {},
       dealbreakers: player.dealbreakers || [],
       stat_caps: player.stat_caps || {},
@@ -288,9 +296,14 @@ const RosterManagement = () => {
   };
 
   const handleEditChange = (e) => {
+    const updates = { [e.target.name]: e.target.value };
+    // Reset archetype when position changes
+    if (e.target.name === 'position') {
+      updates.archetype = '';
+    }
     setEditFormData({
       ...editFormData,
-      [e.target.name]: e.target.value,
+      ...updates,
     });
     if (editError) setEditError(null);
   };
@@ -638,6 +651,26 @@ const RosterManagement = () => {
                       ))}
                     </TextField>
                   </Grid>
+                  {manualFormData.position && POSITION_ARCHETYPES[manualFormData.position] && (
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        fullWidth
+                        select
+                        label="Archetype"
+                        name="archetype"
+                        value={manualFormData.archetype}
+                        onChange={handleManualChange}
+                        SelectProps={{ native: true }}
+                      >
+                        <option value="">Select an archetype</option>
+                        {POSITION_ARCHETYPES[manualFormData.position].map((arch) => (
+                          <option key={arch} value={arch}>
+                            {arch}
+                          </option>
+                        ))}
+                      </TextField>
+                    </Grid>
+                  )}
                   
                   {/* Player Attributes Section */}
                   <Grid item xs={12}>
@@ -682,6 +715,7 @@ const RosterManagement = () => {
                     {manualFormData.position && (
                       <StatCapEditor
                         position={manualFormData.position}
+                        archetype={manualFormData.archetype || undefined}
                         statCaps={manualFormData.stat_caps}
                         onChange={handleStatCapsChange}
                       />
@@ -709,6 +743,7 @@ const RosterManagement = () => {
                             height: '',
                             weight: '',
                             dev_trait: '',
+                            archetype: '',
                             attributes: {},
                             dealbreakers: [],
                             stat_caps: {},
@@ -947,6 +982,26 @@ const RosterManagement = () => {
                     ))}
                   </TextField>
                 </Grid>
+                {editFormData.position && POSITION_ARCHETYPES[editFormData.position] && (
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      select
+                      label="Archetype"
+                      name="archetype"
+                      value={editFormData.archetype || ''}
+                      onChange={handleEditChange}
+                      SelectProps={{ native: true }}
+                    >
+                      <option value="">Select an archetype</option>
+                      {POSITION_ARCHETYPES[editFormData.position].map((arch) => (
+                        <option key={arch} value={arch}>
+                          {arch}
+                        </option>
+                      ))}
+                    </TextField>
+                  </Grid>
+                )}
                 
                 {/* Transfer Intent */}
                 <Grid item xs={12}>
@@ -1012,6 +1067,7 @@ const RosterManagement = () => {
                   {editFormData.position && (
                     <StatCapEditor
                       position={editFormData.position}
+                      archetype={editFormData.archetype || undefined}
                       statCaps={editFormData.stat_caps || {}}
                       onChange={handleEditStatCapsChange}
                     />
