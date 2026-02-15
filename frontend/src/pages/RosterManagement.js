@@ -718,6 +718,7 @@ const RosterManagement = () => {
                         archetype={manualFormData.archetype || undefined}
                         statCaps={manualFormData.stat_caps}
                         onChange={handleStatCapsChange}
+                        dynastyId={dynastyId}
                       />
                     )}
                     {!manualFormData.position && (

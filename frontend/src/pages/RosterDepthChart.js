@@ -1190,6 +1190,7 @@ const RosterDepthChart = () => {
                     archetype={addPlayerFormData.archetype || undefined}
                     statCaps={addPlayerFormData.stat_caps}
                     onChange={handleAddPlayerStatCapsChange}
+                    dynastyId={dynastyId}
                   />
                 )}
                 {!addPlayerFormData.position && (
@@ -1439,6 +1440,8 @@ const RosterDepthChart = () => {
                     archetype={editFormData.archetype || undefined}
                     statCaps={editFormData.stat_caps || {}}
                     onChange={handleEditStatCapsChange}
+                    dynastyId={dynastyId}
+                    playerId={editingPlayer?.id}
                   />
                 )}
                 {!editFormData.position && (
