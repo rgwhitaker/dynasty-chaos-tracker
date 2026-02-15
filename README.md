@@ -1,13 +1,15 @@
 # Dynasty Chaos Tracker
 
-A web application for managing College Football 25/26 dynasty mode rosters. Import player data via screenshot OCR, track player attributes and development potential, manage depth charts, and analyze recruiting needs.
+A web application for managing College Football 25 dynasty mode rosters. Import player data via screenshot OCR, track player attributes and development potential, manage depth charts, and analyze recruiting needs.
+
+> **Note:** This is an independent fan-made tool to help manage your dynasty mode experience. It is not affiliated with or endorsed by EA Sports or College Football 25.
 
 ## What Does This App Do?
 
 Dynasty Chaos Tracker helps you manage your College Football dynasty by:
 
 1. **Importing Rosters** - Upload screenshots of in-game roster screens and the app automatically extracts player data using OCR (Optical Character Recognition)
-2. **Managing Players** - View and edit all player information including 55+ attributes, physical stats, development traits, and archetype
+2. **Managing Players** - View and edit all player information including 55 in-game ratings, physical stats (height/weight), development traits, and archetype
 3. **Tracking Development** - Monitor player potential with the stat cap tracking system that shows which attributes can still be upgraded
 4. **Building Depth Charts** - Automatically generate depth charts based on player ratings, or manually organize your lineup
 5. **Analyzing Recruiting Needs** - Get insights on which positions need recruits based on graduation, transfer risk, and draft declarations
@@ -22,8 +24,10 @@ Dynasty Chaos Tracker helps you manage your College Football dynasty by:
   - AI post-processing corrects common OCR errors
   - Manual correction interface for validation
 - **Manual Entry**: Add and edit players manually with comprehensive forms
-- **All 55 Player Attributes**: Track every rating from College Football 25/26 (OVR, SPD, ACC, AGI, COD, STR, AWR, CAR, BCV, BTK, TRK, SFA, SPM, JKM, CTH, CIT, SPC, SRR, MRR, DRR, RLS, JMP, THP, SAC, MAC, DAC, RUN, TUP, BSK, PAC, PBK, PBP, PBF, RBK, RBP, RBF, LBK, IBL, PRC, TAK, POW, BSH, FMV, PMV, PUR, MCV, ZCV, PRS, RET, KPW, KAC, STA, TGH, INJ, LSP)
-- **Physical Attributes**: Height, weight, and development trait (Normal/Impact/Star/Elite)
+- **Complete Player Tracking**: Track all 55 in-game ratings plus physical attributes and development traits
+  - All position-specific ratings (speed, strength, awareness, catching, blocking, tackling, etc.)
+  - Physical stats: Height and weight
+  - Development trait: Normal, Impact, Star, or Elite
 - **Player Archetypes**: Track player archetype (e.g., Pocket Passer, Dual Threat, Pure Power)
 
 ### Player Development Tracking
@@ -245,7 +249,7 @@ This application is actively being developed. Core features are functional:
 - ✅ User authentication (email/password, Google OAuth, Twitter OAuth)
 - ✅ Multi-dynasty management
 - ✅ AI-powered OCR roster imports
-- ✅ Comprehensive player attribute tracking (all 55 ratings)
+- ✅ Comprehensive player tracking (55 in-game ratings + physical attributes + dev traits)
 - ✅ Stat cap tracking system with visual editor
 - ✅ Depth chart generation and customization
 - ✅ Recruiter Hub with attrition analysis
