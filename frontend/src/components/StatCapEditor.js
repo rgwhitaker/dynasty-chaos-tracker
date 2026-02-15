@@ -33,7 +33,6 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [pasteInfo, setPasteInfo] = useState(null);
   const fileInputRef = useRef(null);
-  const containerRef = useRef(null);
 
   // Process screenshot (used by both file upload and paste)
   const processScreenshot = useCallback(async (file) => {
@@ -304,7 +303,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
   };
 
   return (
-    <Box ref={containerRef}>
+    <Box>
       <Typography variant="h6" gutterBottom>
         Stat Caps {readOnly ? '' : '(Click blocks to cap/uncap)'}
       </Typography>
