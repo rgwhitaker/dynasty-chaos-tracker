@@ -1,236 +1,137 @@
 # Dynasty Chaos Tracker
 
-Dynasty Chaos Tracker is a comprehensive web application for College Football 26 dynasty mode management. Upload in-game roster screenshots for automatic OCR import, track player attributes with custom weighting systems, generate automated depth charts, and manage recruiting with ML-powered predictions.
+A web application for managing College Football 25/26 dynasty mode rosters. Import player data via screenshot OCR, track player attributes and development potential, manage depth charts, and analyze recruiting needs.
 
-## Features
+## What Does This App Do?
 
-### Epic 1: User Authentication & Profile Management
-- ✅ Email/password registration and login
-- ✅ Google OAuth integration
-- ✅ Twitter OAuth support (configured via environment variables)
-- ✅ Multiple dynasties per user with full metadata tracking
-- ✅ Season year and week tracking
+Dynasty Chaos Tracker helps you manage your College Football dynasty by:
 
-### Epic 2: Roster Import & Data Entry
-- ✅ **Multi-provider OCR**: Tesseract.js, AWS Textract, Google Cloud Vision
-- ✅ **Batch Upload**: Process multiple screenshots at once
-- ✅ **Image Preprocessing**: Automatic sharpening, normalization, and thresholding
-- ✅ **Validation System**: Error detection with manual correction support
-- ✅ **JSONB Attributes**: Flexible storage for all 55 CFB26 player ratings
-- ✅ **Complete Player Attributes**: All 55 ratings (OVR, SPD, ACC, AGI, COD, STR, AWR, CAR, BCV, BTK, TRK, SFA, SPM, JKM, CTH, CIT, SPC, SRR, MRR, DRR, RLS, JMP, THP, SAC, MAC, DAC, RUN, TUP, BSK, PAC, PBK, PBP, PBF, RBK, RBP, RBF, LBK, IBL, PRC, TAK, POW, BSH, FMV, PMV, PUR, MCV, ZCV, PRS, RET, KPW, KAC, STA, TGH, INJ, LSP), Height, Weight, and Dev Trait (Normal/Impact/Star/Elite)
-- ✅ **Manual CRUD**: Full forms with autocomplete for manual entry
-- ✅ **Version Tracking**: Season progression with roster snapshots
+1. **Importing Rosters** - Upload screenshots of in-game roster screens and the app automatically extracts player data using OCR (Optical Character Recognition)
+2. **Managing Players** - View and edit all player information including 55+ attributes, physical stats, development traits, and archetype
+3. **Tracking Development** - Monitor player potential with the stat cap tracking system that shows which attributes can still be upgraded
+4. **Building Depth Charts** - Automatically generate depth charts based on player ratings, or manually organize your lineup
+5. **Analyzing Recruiting Needs** - Get insights on which positions need recruits based on graduation, transfer risk, and draft declarations
+6. **Managing Recruits** - Track recruiting targets with dealbreaker preferences and commitment predictions
 
-### Epic 3: Attribute Tracking & Customization
-- ✅ **Dynamic Attributes**: JSONB storage supports all 55 position-specific attributes
-- ✅ **Custom Weighting**: User-defined weights (0-100%) per position
-- ✅ **Stud Score Engine**: Weighted sum formula with preset management
-- ✅ **Multiple Presets**: Save and load different schemes (e.g., "Run-Heavy Offense", "Air Raid")
-- ✅ **Stat Cap Tracking**: Visual tracking of player potential with 20-block upgrade system per stat group
-  - Position-specific stat groups (6-7 groups per position)
-  - Track purchased blocks and capped (unavailable) blocks
-  - Potential Score: 0-100 based on available upgrade capacity
-  - Adjusted Stud Score: Combines current performance with potential
-  - Interactive visual editor with color-coded blocks
-- ✅ **Dealbreaker Tracking**: Player and recruit dealbreaker flags
-- ✅ **Departure Predictions**: ML-powered analytics for identifying players likely to leave
+## Key Features
 
-### Epic 4: Depth Chart Management
-- ✅ **Auto-Generation**: Depth charts based on calculated Stud Scores
-- ✅ **Manual Overrides**: Drag-to-reorder with override flags
-- ✅ **Export Options**: PDF and CSV export
-- ✅ **Shareable Links**: Generate time-limited public links
-- 🔄 D3.js visual depth chart (frontend visualization in progress)
+### Roster Management
+- **AI-Powered OCR Import**: Upload roster screenshots and let AI extract player data automatically
+  - Supports multiple OCR providers (Tesseract, AWS Textract, Google Vision, OpenAI GPT-4o-mini)
+  - Batch upload multiple screenshots at once
+  - AI post-processing corrects common OCR errors
+  - Manual correction interface for validation
+- **Manual Entry**: Add and edit players manually with comprehensive forms
+- **All 55 Player Attributes**: Track every rating from College Football 25/26 (OVR, SPD, ACC, AGI, COD, STR, AWR, CAR, BCV, BTK, TRK, SFA, SPM, JKM, CTH, CIT, SPC, SRR, MRR, DRR, RLS, JMP, THP, SAC, MAC, DAC, RUN, TUP, BSK, PAC, PBK, PBP, PBF, RBK, RBP, RBF, LBK, IBL, PRC, TAK, POW, BSH, FMV, PMV, PUR, MCV, ZCV, PRS, RET, KPW, KAC, STA, TGH, INJ, LSP)
+- **Physical Attributes**: Height, weight, and development trait (Normal/Impact/Star/Elite)
+- **Player Archetypes**: Track player archetype (e.g., Pocket Passer, Dual Threat, Pure Power)
 
-### Epic 5: Recruiting & Predictions
-- ✅ **Recruiter Hub**: Comprehensive dashboard analyzing roster retention risks and recruiting needs
-  - Dealbreaker risk tracking (players with dissatisfaction flags)
-  - Draft risk identification (OVR >= 87 upperclassmen)
+### Player Development Tracking
+- **Stat Cap System**: Visual tracking of upgrade potential for each player
+  - 20-block upgrade system per stat group
+  - Color-coded display: purchased blocks, available blocks, capped blocks
+  - Potential Score (0-100%) shows remaining development capacity
+  - Adjusted Stud Score combines current ratings with future potential
+- **Position-Specific Groups**: Each position has 6-7 stat groups (e.g., QB has Accuracy, Power, Mobility)
+- **Transfer Intent Flags**: Track which players are unhappy and may transfer
+
+### Depth Charts
+- **Auto-Generation**: Generate depth charts automatically using player ratings
+- **Custom Weighting**: Define your own rating weights per position (e.g., prioritize speed for WRs)
+- **Manual Override**: Drag and drop to reorder the depth chart manually
+- **Export**: Download as PDF or CSV
+- **Shareable Links**: Generate public links to share your depth chart
+
+### Recruiter Hub
+- **Attrition Analysis**: Identifies players at risk of leaving
+  - Draft risk (upperclassmen with OVR >= 87)
   - Graduation tracking (seniors and grad students)
-  - Position-by-position recruiting recommendations
-  - Drilldown views with specific player details
-- ✅ **Gap Analysis**: Automatic recruiting needs based on roster composition
-- ✅ **Dealbreaker Forecasting**: Match recruit preferences to your dynasty
-- ✅ **Priority Scoring**: ML-based recruit ranking
-- ✅ **Commitment Predictions**: Probability calculations
-- ✅ **Email Notifications**: Reminders and alerts for recruiting season
+  - Transfer risk (players with dealbreaker flags)
+- **Position Needs**: Recommends which positions need recruits
+- **Drilldown Views**: See specific players in each risk category
 
-### Epic 6: Analytics & Visualizations
-- ✅ **Backend Analytics**: Full data aggregation and calculations
-- 🔄 Chart.js dashboards (frontend components in progress)
-- 🔄 Position strength heatmaps (frontend visualization in progress)
-- ✅ **Season Tracking**: Full backend support for progression
-- ✅ **Community Features**: Share dynasties with public/private links
+### Recruiting Management
+- **Recruit Tracking**: Manage your recruiting board with stars, ratings, and physical attributes
+- **Dealbreaker Matching**: Track recruit preferences and see how they fit your dynasty
+- **Priority Scoring**: AI-powered ranking of recruits based on need and quality
+- **Commitment Predictions**: Probability calculations for landing recruits
 
-### Epic 7: Admin & Maintenance
-- ✅ **Data Export**: Full roster dumps and backups
-- 🔄 Admin panel (frontend interface in progress)
+### Multi-Dynasty Support
+- **Multiple Saves**: Manage multiple dynasty saves in one account
+- **Season Tracking**: Track season year and current week
+- **Roster Versions**: Save roster snapshots as seasons progress
 
-## Tech Stack
+### User Management
+- **Email/Password**: Standard account creation
+- **Google OAuth**: Sign in with your Google account
+- **Twitter OAuth**: Sign in with your Twitter account
+
+## Technology Stack
 
 ### Backend
-- **Runtime**: Node.js 18+ with Express.js
-- **Database**: PostgreSQL 15 with JSONB support
-- **Authentication**: JWT + Passport.js (Local, Google OAuth, Twitter OAuth)
-- **OCR**: Tesseract.js, AWS Textract, Google Cloud Vision
-- **Image Processing**: Sharp for preprocessing
-- **File Upload**: Multer with optional S3 support
-- **Notifications**: Nodemailer for email alerts
-- **Export**: PDFKit and CSV-Writer
-- **Caching**: Redis-ready (Bull queue integration)
-- **Monitoring**: Sentry error tracking
+- Node.js + Express.js
+- PostgreSQL 15 (with JSONB for flexible player attributes)
+- JWT + Passport.js authentication (local, Google OAuth, Twitter OAuth)
+- OCR: Tesseract.js, AWS Textract, Google Cloud Vision, OpenAI GPT-4o-mini
+- Image processing with Sharp
+- PDF/CSV export with PDFKit and CSV-Writer
 
 ### Frontend
-- **Framework**: React 18 with functional components and hooks
-- **State Management**: Redux Toolkit
-- **UI Library**: Material-UI (MUI) v5
-- **Routing**: React Router v6
-- **Charts**: Chart.js with react-chartjs-2
-- **Visualizations**: D3.js for depth charts
-- **Forms**: Formik with Yup validation
-- **File Upload**: React-Dropzone
+- React 18 with Material-UI (MUI) v5
+- Redux Toolkit for state management
+- React Router v6
+- Chart.js for visualizations
+- Formik + Yup for forms and validation
+- React-Dropzone for file uploads
 
-### DevOps
-- **Containerization**: Docker with multi-stage builds
-- **Orchestration**: Docker Compose
-- **Web Server**: Nginx (production frontend)
-- **Deployment**: Ready for AWS/GCP/Azure
-- **CI/CD**: Docker-ready for automated pipelines
-
-## Project Structure
-
-```
-dynasty-chaos-tracker/
-├── backend/
-│   ├── database/
-│   │   └── init.sql                 # PostgreSQL schema
-│   ├── src/
-│   │   ├── config/                  # DB and auth configuration
-│   │   │   ├── database.js
-│   │   │   └── passport.js
-│   │   ├── controllers/             # Request handlers
-│   │   │   ├── authController.js
-│   │   │   ├── playerController.js
-│   │   │   ├── depthChartController.js
-│   │   │   ├── ocrController.js
-│   │   │   ├── recruitingController.js
-│   │   │   └── studScoreController.js
-│   │   ├── middleware/              # Auth and error handling
-│   │   ├── models/                  # Data models (optional)
-│   │   ├── routes/                  # API routes
-│   │   │   ├── auth.js
-│   │   │   ├── dynasties.js
-│   │   │   ├── players.js
-│   │   │   ├── ocr.js
-│   │   │   ├── depthChart.js
-│   │   │   ├── recruiting.js
-│   │   │   └── studScore.js
-│   │   ├── services/                # Business logic
-│   │   │   ├── ocrService.js        # Multi-provider OCR
-│   │   │   ├── studScoreService.js  # Weighted scoring
-│   │   │   ├── depthChartService.js
-│   │   │   ├── recruitingService.js # ML predictions
-│   │   │   ├── notificationService.js
-│   │   │   └── exportService.js     # PDF/CSV export
-│   │   ├── utils/                   # Helper functions
-│   │   └── server.js                # Express app entry
-│   ├── uploads/                     # Screenshot storage
-│   ├── package.json
-│   └── Dockerfile
-├── frontend/
-│   ├── public/
-│   │   ├── index.html
-│   │   └── manifest.json
-│   ├── src/
-│   │   ├── components/              # Reusable UI components
-│   │   │   ├── Layout.js
-│   │   │   └── PrivateRoute.js
-│   │   ├── pages/                   # Route pages
-│   │   │   ├── Login.js
-│   │   │   ├── Register.js
-│   │   │   ├── Dashboard.js
-│   │   │   ├── DynastyList.js
-│   │   │   ├── RosterManagement.js
-│   │   │   ├── DepthChart.js
-│   │   │   ├── Recruiting.js
-│   │   │   └── StudScoreConfig.js
-│   │   ├── store/                   # Redux store
-│   │   │   ├── index.js
-│   │   │   └── slices/
-│   │   │       ├── authSlice.js
-│   │   │       ├── dynastySlice.js
-│   │   │       ├── playerSlice.js
-│   │   │       └── recruitingSlice.js
-│   │   ├── services/                # API clients
-│   │   │   ├── api.js
-│   │   │   ├── authService.js
-│   │   │   ├── dynastyService.js
-│   │   │   ├── playerService.js
-│   │   │   └── recruitingService.js
-│   │   ├── App.js
-│   │   ├── index.js
-│   │   └── theme.js                 # MUI theme config
-│   ├── package.json
-│   ├── Dockerfile
-│   └── nginx.conf
-├── .env.example                     # Environment template
-├── .gitignore
-├── docker-compose.yml
-└── README.md
-```
+### Deployment
+- Docker + Docker Compose for containerization
+- Nginx web server
+- Ready for cloud deployment (AWS, GCP, Azure)
 
 ## Getting Started
 
-### Prerequisites
+### Quick Start with Docker (Recommended)
+
+1. **Clone and configure**
+   ```bash
+   git clone https://github.com/rgwhitaker/dynasty-chaos-tracker.git
+   cd dynasty-chaos-tracker
+   cp .env.example .env
+   ```
+
+2. **Edit `.env` file** with your settings:
+   - Database credentials (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB)
+   - JWT secrets (JWT_SECRET, SESSION_SECRET)
+   - Optional: OAuth credentials for Google/Twitter login
+   - Optional: OCR API keys (AWS, Google Cloud, OpenAI)
+
+3. **Start the application**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access the app**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:3001
+   - Database: localhost:5432
+
+### Local Development (Without Docker)
+
+**Prerequisites:**
 - Node.js 18+
 - PostgreSQL 15+
-- Docker & Docker Compose (optional but recommended)
-
-### Environment Setup
-
-1. **Clone the repository**
-```bash
-git clone https://github.com/rgwhitaker/dynasty-chaos-tracker.git
-cd dynasty-chaos-tracker
-```
-
-2. **Configure environment variables**
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-Required environment variables:
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
-- `JWT_SECRET`, `SESSION_SECRET`
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (for OAuth)
-- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (for Textract)
-- `GOOGLE_APPLICATION_CREDENTIALS` (for Vision API)
-
-### Running with Docker (Recommended)
-
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
-```
-
-Access:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
-- PostgreSQL: localhost:5432
-
-### Running Locally (Development)
 
 **Backend:**
 ```bash
 cd backend
 npm install
+
+# Set up database
+createdb dynasty_tracker
+psql -d dynasty_tracker -f database/init.sql
+
+# Start dev server
 npm run dev
 ```
 
@@ -241,102 +142,118 @@ npm install
 npm start
 ```
 
-### Database Setup
+### Environment Configuration
 
-The database schema is automatically initialized via Docker. For manual setup:
+The application works out of the box with default settings. For full functionality, configure these optional services:
 
-```bash
-psql -U dynasty_user -d dynasty_tracker -f backend/database/init.sql
-```
+**OCR Services** (for screenshot imports):
+- **Tesseract.js**: Built-in, no configuration needed
+- **OpenAI GPT-4o-mini**: Add `OPENAI_API_KEY` for improved accuracy
+- **AWS Textract**: Add `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`
+- **Google Cloud Vision**: Add `GOOGLE_APPLICATION_CREDENTIALS` path
 
-## API Endpoints
+**OAuth Login** (optional):
+- **Google**: Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+- **Twitter**: Add `TWITTER_CONSUMER_KEY` and `TWITTER_CONSUMER_SECRET`
 
-### Authentication
-- `POST /api/auth/register` - Create account
-- `POST /api/auth/login` - Login
-- `GET /api/auth/google` - Google OAuth
-- `GET /api/auth/twitter` - Twitter OAuth
+See `.env.example` for all configuration options.
 
-### Dynasties
-- `GET /api/dynasties` - List user's dynasties
-- `POST /api/dynasties` - Create dynasty
-- `PUT /api/dynasties/:id` - Update dynasty
-- `DELETE /api/dynasties/:id` - Delete dynasty
+## How to Use
 
-### Roster Management
-- `GET /api/dynasties/:id/players` - List players
-- `POST /api/dynasties/:id/players` - Add player
-- `PUT /api/dynasties/:id/players/:playerId` - Update player
-- `DELETE /api/dynasties/:id/players/:playerId` - Delete player
+### 1. Create Your Dynasty
+- Sign up for an account (email/password or OAuth)
+- Create a new dynasty with your team name, school, conference, and season info
 
-### OCR Import
-- `POST /api/dynasties/:id/ocr/upload` - Single screenshot
-- `POST /api/dynasties/:id/ocr/upload-batch` - Multiple screenshots
-- `GET /api/dynasties/:id/ocr/status/:uploadId` - Check status
+### 2. Import Your Roster
+- Navigate to Roster Management
+- Upload screenshots of your in-game roster screens
+- The app will automatically extract player data using OCR
+- Review and correct any errors in the validation screen
+- Players are imported with all attributes automatically
 
-### Depth Chart
-- `GET /api/dynasties/:id/depth-chart` - Get depth chart
-- `POST /api/dynasties/:id/depth-chart/generate` - Auto-generate
-- `PUT /api/dynasties/:id/depth-chart` - Manual update
-- `GET /api/dynasties/:id/depth-chart/export/pdf` - Export PDF
-- `GET /api/dynasties/:id/depth-chart/export/csv` - Export CSV
-- `POST /api/dynasties/:id/depth-chart/share` - Generate share link
+### 3. Track Player Development
+- View your roster with all player ratings
+- Edit player stat caps to track upgrade potential
+- See which players have the most room to grow
+- Monitor transfer intent flags for players who might leave
 
-### Recruiting
-- `GET /api/dynasties/:id/recruiting` - List recruits
-- `GET /api/dynasties/:id/recruiting/targets` - Get priority targets
-- `POST /api/dynasties/:id/recruiting` - Add recruit
+### 4. Manage Your Depth Chart
+- View auto-generated depth charts based on ratings
+- Customize rating weights for each position
+- Manually reorder players as needed
+- Export and share your depth chart
 
-### Recruiter Hub
-- `GET /api/dynasties/:id/recruiter-hub` - Analyze roster attrition risks and recruiting needs
+### 5. Plan Your Recruiting
+- Use the Recruiter Hub to see which players are leaving
+- Identify position needs based on graduation and transfers
+- Add recruits to your board with ratings and preferences
+- Track dealbreakers to find recruits that fit your dynasty
 
-### Stud Score
-- `GET /api/stud-score/presets` - List weight presets
-- `POST /api/stud-score/presets` - Create preset
-- `GET /api/stud-score/weights` - Get weights
-- `PUT /api/stud-score/weights` - Update weight
+## Common Workflows
 
-## Player Attributes
+### Importing a Full Roster
+1. Take screenshots of each position group in-game
+2. Go to Roster Management → OCR Import
+3. Upload all screenshots at once (batch upload)
+4. Wait for processing (AI extracts player data)
+5. Review validation results
+6. Fix any incorrect data
+7. Confirm import
 
-The Dynasty Chaos Tracker supports all 55 player ratings from College Football 26, plus physical attributes (Height & Weight) and Development Trait (Normal/Impact/Star/Elite).
+### Building a Custom Depth Chart
+1. Go to Stud Score Configuration
+2. Create a new weight preset (e.g., "Speed Focused")
+3. Adjust attribute weights for each position
+4. Save the preset
+5. Go to Depth Chart → Generate
+6. Select your custom preset
+7. Review and make manual adjustments if needed
+8. Export as PDF or share via link
 
-For a comprehensive list of all player attributes, see [PLAYER_ATTRIBUTES.md](docs/PLAYER_ATTRIBUTES.md).
+### Analyzing Recruiting Needs
+1. Go to Recruiter Hub
+2. Review players at risk of leaving:
+   - Draft declarations (high-rated upperclassmen)
+   - Transfers (dealbreaker issues)
+   - Graduations (seniors)
+3. Check position-by-position recommendations
+4. Add priority recruits to your board
+5. Track their commitment status
 
-## Key Features Explained
+## Additional Documentation
 
-### OCR Import Flow
-1. User uploads screenshot(s)
-2. System preprocesses images (grayscale, sharpen, threshold)
-3. OCR engine extracts text (Tesseract/Textract/Vision)
-4. Parser extracts player data
-5. Validation checks for errors
-6. Manual correction interface if needed
-7. Bulk import to database
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Detailed deployment guide for production environments
+- **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Stat cap tracking system implementation details
+- **[AI_OCR_SUMMARY.md](AI_OCR_SUMMARY.md)** - AI-powered OCR post-processing documentation
+- **[MIGRATION_FLOW_DIAGRAM.md](MIGRATION_FLOW_DIAGRAM.md)** - Database migration workflow
 
-### Stud Score Calculation
-```
-StudScore = Σ(AttributeValue × Weight) / ΣWeights
-```
-- User defines weights per position per attribute
-- System normalizes to 0-100 scale
-- Multiple presets for different schemes
-- Used for depth chart auto-generation
+## Screenshots & Demo
 
-### Recruiting Predictions
-- **Commitment Probability**: Based on stars, status, historical data
-- **Dealbreaker Fit**: Matches recruit preferences to dynasty characteristics
-- **Priority Score**: Combines need, quality, and fit
-- **Gap Analysis**: Identifies positions needing recruits based on graduation
+*Screenshots coming soon - this is an active development project*
 
 ## Contributing
 
-This is a demonstration project implementing comprehensive requirements for CFB 26 dynasty management. Feel free to fork and extend!
+This is a personal project for managing College Football dynasty mode. Feel free to fork and customize for your own needs!
 
 ## License
 
 MIT
 
-## Acknowledgments
+## Project Status
 
-Built to address the need for powerful dynasty mode management tools for College Football 26 players.
+This application is actively being developed. Core features are functional:
+- ✅ User authentication (email/password, Google OAuth, Twitter OAuth)
+- ✅ Multi-dynasty management
+- ✅ AI-powered OCR roster imports
+- ✅ Comprehensive player attribute tracking (all 55 ratings)
+- ✅ Stat cap tracking system with visual editor
+- ✅ Depth chart generation and customization
+- ✅ Recruiter Hub with attrition analysis
+- ✅ Recruiting management
+
+Some features are still in development or planned for future releases. Check the issues page for current work and planned enhancements.
+
+## Support
+
+For bugs or feature requests, please [open an issue](https://github.com/rgwhitaker/dynasty-chaos-tracker/issues) on GitHub.
 
