@@ -309,14 +309,18 @@ async function getOrCreateDefaultPreset(userId) {
 
     const preset = result.rows[0];
 
-    // Insert default weights for all positions
-    for (const [position, weights] of Object.entries(DEFAULT_WEIGHTS)) {
-      for (const [attr, weight] of Object.entries(weights)) {
-        await db.query(
-          `INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight)
-           VALUES ($1, $2, $3, $4)`,
-          [preset.id, position, attr, weight]
-        );
+    // Insert default weights for all specific roster positions
+    // Map each roster position to its group and insert the group's weights
+    for (const [rosterPosition, positionGroup] of Object.entries(POSITION_GROUP_MAP)) {
+      const weights = DEFAULT_WEIGHTS[positionGroup];
+      if (weights) {
+        for (const [attr, weight] of Object.entries(weights)) {
+          await db.query(
+            `INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight)
+             VALUES ($1, $2, $3, $4)`,
+            [preset.id, rosterPosition, attr, weight]
+          );
+        }
       }
     }
 
