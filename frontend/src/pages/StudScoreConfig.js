@@ -19,6 +19,7 @@ import {
   Chip,
   IconButton,
   Tooltip,
+  TextField,
 } from '@mui/material';
 import {
   RestartAlt as ResetIcon,
@@ -26,7 +27,12 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import studScoreService from '../services/studScoreService';
-import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES } from '../constants/playerAttributes';
+import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES, PLAYER_RATINGS } from '../constants/playerAttributes';
+
+// Weight range constants
+const MIN_WEIGHT = 0;
+const MAX_WEIGHT = 3;
+const WEIGHT_STEP = 0.1;
 
 // Position groups for better organization
 const POSITION_GROUPS = {
@@ -46,6 +52,7 @@ const StudScoreConfig = () => {
   const [selectedArchetype, setSelectedArchetype] = useState(null);
   const [configLevel, setConfigLevel] = useState('position'); // 'position' or 'archetype'
   const [weights, setWeights] = useState({});
+  const [enabledAttributes, setEnabledAttributes] = useState({});
   const [defaultWeights, setDefaultWeights] = useState({});
   const [devTraitWeight, setDevTraitWeight] = useState(0.15);
   const [potentialWeight, setPotentialWeight] = useState(0.15);
@@ -100,13 +107,26 @@ const StudScoreConfig = () => {
         weightsObj[w.attribute_name] = parseFloat(w.weight);
       });
 
-      // If no custom weights, use defaults
-      if (Object.keys(weightsObj).length === 0) {
-        setWeights({ ...defaults });
-      } else {
-        setWeights(weightsObj);
-      }
-      
+      // Determine active weights (custom or defaults)
+      const activeWeights = Object.keys(weightsObj).length === 0 ? { ...defaults } : weightsObj;
+
+      // Build full weights and enabled state for all attributes
+      const fullWeights = {};
+      const enabled = {};
+      // Exclude OVR from config - it's a computed rating, not a raw attribute
+      const configurableRatings = PLAYER_RATINGS.filter(r => r !== 'OVR');
+      configurableRatings.forEach(attr => {
+        if (activeWeights[attr] !== undefined) {
+          fullWeights[attr] = activeWeights[attr];
+          enabled[attr] = true;
+        } else {
+          fullWeights[attr] = 1;
+          enabled[attr] = false;
+        }
+      });
+
+      setWeights(fullWeights);
+      setEnabledAttributes(enabled);
       setHasChanges(false);
     } catch (err) {
       setError('Failed to load weights: ' + err.message);
@@ -155,6 +175,15 @@ const StudScoreConfig = () => {
     setSuccess(null);
   };
 
+  const handleToggleAttribute = (attribute) => {
+    setEnabledAttributes(prev => ({
+      ...prev,
+      [attribute]: !prev[attribute]
+    }));
+    setHasChanges(true);
+    setSuccess(null);
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
@@ -162,12 +191,20 @@ const StudScoreConfig = () => {
       
       const archetype = configLevel === 'archetype' ? selectedArchetype : null;
       
+      // Only save enabled attributes
+      const enabledWeights = {};
+      Object.entries(weights).forEach(([attr, weight]) => {
+        if (enabledAttributes[attr]) {
+          enabledWeights[attr] = weight;
+        }
+      });
+
       // Save attribute weights
       await studScoreService.batchUpdateWeights(
         selectedPreset.id,
         selectedPosition,
         archetype,
-        weights
+        enabledWeights
       );
 
       // Save preset-level weights if they changed
@@ -444,7 +481,7 @@ const StudScoreConfig = () => {
 
       {/* Attribute Weights */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <Typography variant="h6">
             Attribute Weights
           </Typography>
@@ -467,6 +504,9 @@ const StudScoreConfig = () => {
             </Button>
           </Box>
         </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Click an attribute to include or exclude it from the STUD score. Adjust the weight below each to increase or decrease its importance.
+        </Typography>
 
         <Divider sx={{ mb: 3 }} />
 
@@ -476,51 +516,108 @@ const StudScoreConfig = () => {
           </Box>
         ) : (
           <Grid container spacing={2}>
-            {Object.keys(weights).length === 0 && Object.keys(defaultWeights).length === 0 ? (
+            {Object.keys(weights).length === 0 ? (
               <Grid item xs={12}>
                 <Typography color="text.secondary" align="center">
-                  No attributes configured for this position. Using overall rating as fallback.
+                  No attributes available for this position.
                 </Typography>
               </Grid>
             ) : (
               Object.entries(weights).map(([attr, weight]) => {
-                const isDefault = weight === defaultWeights[attr];
+                const isEnabled = enabledAttributes[attr];
+                const isDefault = defaultWeights[attr] !== undefined;
                 return (
-                  <Grid item xs={12} sm={6} md={4} key={attr}>
-                    <Card variant={isDefault ? "outlined" : "elevation"}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                  <Grid item xs={6} sm={4} md={3} lg={2} key={attr}>
+                    <Card
+                      variant={isEnabled ? "elevation" : "outlined"}
+                      sx={{
+                        cursor: 'pointer',
+                        bgcolor: isEnabled ? 'primary.main' : 'action.disabledBackground',
+                        color: isEnabled ? 'primary.contrastText' : 'text.disabled',
+                        opacity: isEnabled ? 1 : 0.6,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          opacity: isEnabled ? 0.9 : 0.8,
+                          transform: 'scale(1.02)',
+                        },
+                      }}
+                    >
+                      <CardContent
+                        sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}
+                        onClick={() => handleToggleAttribute(attr)}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
                             {ATTRIBUTE_DISPLAY_NAMES[attr] || attr}
                           </Typography>
-                          {!isDefault && (
-                            <Chip 
-                              label="Custom" 
-                              size="small" 
-                              color="primary" 
-                              variant="outlined"
+                          {isDefault && isEnabled && (
+                            <Chip
+                              label="Default"
+                              size="small"
+                              sx={{
+                                height: 18,
+                                fontSize: '0.6rem',
+                                bgcolor: 'rgba(255,255,255,0.2)',
+                                color: 'inherit',
+                              }}
                             />
                           )}
                         </Box>
-                        <Slider
-                          value={weight}
-                          onChange={(e, value) => handleWeightChange(attr, value)}
-                          min={0}
-                          max={3}
-                          step={0.1}
-                          marks={[
-                            { value: 0, label: '0' },
-                            { value: 1.5, label: '1.5' },
-                            { value: 3, label: '3' },
-                          ]}
-                          valueLabelDisplay="auto"
-                        />
-                        {defaultWeights[attr] && (
-                          <Typography variant="caption" color="text.secondary">
-                            Default: {defaultWeights[attr]}
-                          </Typography>
-                        )}
+                        <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.2 }}>
+                          {attr}
+                        </Typography>
                       </CardContent>
+                      {isEnabled && (
+                        <Box
+                          sx={{
+                            px: 1.5,
+                            pb: 1.5,
+                            pt: 0,
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Divider sx={{ mb: 1, borderColor: 'rgba(255,255,255,0.3)' }} />
+                          <Typography variant="caption" sx={{ color: 'primary.contrastText', display: 'block', mb: 0.5 }}>
+                            Weight
+                          </Typography>
+                          <TextField
+                            type="number"
+                            value={weight}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val) && val >= MIN_WEIGHT && val <= MAX_WEIGHT) {
+                                handleWeightChange(attr, val);
+                              }
+                            }}
+                            inputProps={{
+                              min: MIN_WEIGHT,
+                              max: MAX_WEIGHT,
+                              step: WEIGHT_STEP,
+                              style: {
+                                textAlign: 'center',
+                                padding: '4px 8px',
+                                color: 'inherit',
+                              },
+                            }}
+                            size="small"
+                            sx={{
+                              width: '100%',
+                              '& .MuiOutlinedInput-root': {
+                                color: 'inherit',
+                                '& fieldset': {
+                                  borderColor: 'rgba(255,255,255,0.4)',
+                                },
+                                '&:hover fieldset': {
+                                  borderColor: 'rgba(255,255,255,0.6)',
+                                },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: 'rgba(255,255,255,0.8)',
+                                },
+                              },
+                            }}
+                          />
+                        </Box>
+                      )}
                     </Card>
                   </Grid>
                 );
