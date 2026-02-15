@@ -31,14 +31,18 @@ const getWeights = async (req, res) => {
       params.push(position);
       
       if (archetype) {
-        query += ' AND archetype = $3';
+        // When archetype is specified, get both position defaults and archetype overrides
+        // Archetype overrides will take precedence in the frontend
+        query += ' AND (archetype IS NULL OR archetype = $3)';
         params.push(archetype);
       } else {
         query += ' AND archetype IS NULL';
       }
     }
 
-    query += ' ORDER BY position, archetype NULLS FIRST, attribute_name';
+    // Order by archetype NULLS LAST to group position defaults before archetype overrides
+    // The frontend will separate and merge them appropriately
+    query += ' ORDER BY position, archetype NULLS LAST, attribute_name';
 
     const result = await db.query(query, params);
     res.json(result.rows);
