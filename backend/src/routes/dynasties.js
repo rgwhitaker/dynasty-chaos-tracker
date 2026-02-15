@@ -16,6 +16,23 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Get a specific dynasty
+router.get('/:id', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch dynasty' });
+  }
+});
+
 // Create dynasty
 router.post('/', authMiddleware, async (req, res) => {
   try {
@@ -52,6 +69,47 @@ router.put('/:id', authMiddleware, async (req, res) => {
     res.json(result.rows[0]);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update dynasty' });
+  }
+});
+
+// Update selected stud score preset for a dynasty
+router.patch('/:id/preset', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { selected_preset_id } = req.body;
+    
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [id, req.user.id]
+    );
+    
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+    
+    // If preset_id is provided, verify it belongs to the user
+    if (selected_preset_id !== null) {
+      const presetCheck = await db.query(
+        'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+        [selected_preset_id, req.user.id]
+      );
+      
+      if (presetCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Preset not found' });
+      }
+    }
+    
+    // Update the dynasty's selected preset
+    const result = await db.query(
+      'UPDATE dynasties SET selected_preset_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING *',
+      [selected_preset_id, id, req.user.id]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update preset error:', error);
+    res.status(500).json({ error: 'Failed to update selected preset' });
   }
 });
 

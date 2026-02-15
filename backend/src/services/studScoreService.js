@@ -129,13 +129,25 @@ const DEFAULT_WEIGHTS = {
  * Calculate Stud Score for a player based on weights
  * @param {number} userId - User ID for custom weights
  * @param {object} player - Player object with attributes
- * @param {number} presetId - Optional preset ID for specific weight scheme
+ * @param {number} dynastyId - Dynasty ID to get selected preset
  * @returns {object} Object containing base stud score and final adjusted score
  */
-async function calculateStudScore(userId, player, presetId = null) {
+async function calculateStudScore(userId, player, dynastyId = null) {
   try {
     let weights;
     let preset;
+    let presetId = null;
+
+    // If dynastyId is provided, get the selected preset for the dynasty
+    if (dynastyId) {
+      const dynastyResult = await db.query(
+        'SELECT selected_preset_id FROM dynasties WHERE id = $1',
+        [dynastyId]
+      );
+      if (dynastyResult.rows.length > 0 && dynastyResult.rows[0].selected_preset_id) {
+        presetId = dynastyResult.rows[0].selected_preset_id;
+      }
+    }
 
     if (presetId) {
       // Get preset info for dev trait and potential weights
