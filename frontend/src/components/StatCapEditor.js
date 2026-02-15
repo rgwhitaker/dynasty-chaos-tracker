@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -31,7 +31,88 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
+  const [pasteInfo, setPasteInfo] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Process screenshot (used by both file upload and paste)
+  const processScreenshot = useCallback(async (file) => {
+    if (!dynastyId || !playerId) {
+      setUploadError('Player must be saved before uploading stat group screenshots');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const result = await playerService.uploadStatGroupScreenshot(
+        dynastyId,
+        playerId,
+        file,
+        position,
+        archetype
+      );
+
+      if (result.stat_caps) {
+        // Merge OCR results with existing stat caps (OCR values take precedence)
+        const mergedStatCaps = { ...statCaps, ...result.stat_caps };
+        onChange(mergedStatCaps);
+        setUploadSuccess('Stat groups updated from screenshot');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || 'Failed to process screenshot';
+      setUploadError(errorMessage);
+      console.error('Stat group upload error:', error);
+    } finally {
+      setUploading(false);
+      // Reset the file input so the same file can be re-selected
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, [dynastyId, playerId, position, archetype, statCaps, onChange]);
+
+  // Add paste event listener
+  useEffect(() => {
+    if (readOnly || !dynastyId) return;
+
+    const handlePaste = async (event) => {
+      const items = event.clipboardData?.items;
+      if (!items) return;
+
+      // Look for image in clipboard
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.indexOf('image') !== -1) {
+          event.preventDefault();
+          
+          const blob = item.getAsFile();
+          if (!blob) continue;
+
+          setPasteInfo('Image pasted! Processing...');
+          
+          // Convert blob to file with a timestamp-based name
+          const timestamp = new Date().getTime();
+          const file = new File([blob], `pasted-screenshot-${timestamp}.png`, { type: blob.type });
+          
+          // Process the pasted image using existing upload handler
+          await processScreenshot(file);
+          
+          // Clear paste info after a delay
+          setTimeout(() => setPasteInfo(null), 5000);
+          break;
+        }
+      }
+    };
+
+    // Attach paste listener to the document
+    document.addEventListener('paste', handlePaste);
+
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [readOnly, dynastyId, processScreenshot]);
 
   if (!position || statGroups.length === 0) {
     return (
@@ -109,41 +190,7 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!dynastyId || !playerId) {
-      setUploadError('Player must be saved before uploading stat group screenshots');
-      return;
-    }
-
-    setUploading(true);
-    setUploadError(null);
-    setUploadSuccess(null);
-
-    try {
-      const result = await playerService.uploadStatGroupScreenshot(
-        dynastyId,
-        playerId,
-        file,
-        position,
-        archetype
-      );
-
-      if (result.stat_caps) {
-        // Merge OCR results with existing stat caps (OCR values take precedence)
-        const mergedStatCaps = { ...statCaps, ...result.stat_caps };
-        onChange(mergedStatCaps);
-        setUploadSuccess('Stat groups updated from screenshot');
-      }
-    } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Failed to process screenshot';
-      setUploadError(errorMessage);
-      console.error('Stat group upload error:', error);
-    } finally {
-      setUploading(false);
-      // Reset the file input so the same file can be re-selected
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
+    await processScreenshot(file);
   };
 
   // Render a single stat group
@@ -278,9 +325,19 @@ const StatCapEditor = ({ position, archetype, statCaps = {}, onChange, readOnly 
               {uploadSuccess}
             </Alert>
           )}
+          {pasteInfo && (
+            <Alert severity="info" sx={{ mb: 1 }} onClose={() => setPasteInfo(null)}>
+              {pasteInfo}
+            </Alert>
+          )}
           {!playerId && (
             <Alert severity="info" sx={{ mb: 1 }}>
               Save the player first, then you can upload stat group screenshots to auto-fill this section.
+            </Alert>
+          )}
+          {playerId && (
+            <Alert severity="info" sx={{ mb: 1 }}>
+              💡 Tip: You can paste screenshots directly using Ctrl+V (Cmd+V on Mac) or click the button below to select a file.
             </Alert>
           )}
           <input
