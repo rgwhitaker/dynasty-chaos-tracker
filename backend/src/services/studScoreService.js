@@ -2,6 +2,40 @@ const db = require('../config/database');
 const { PLAYER_RATINGS } = require('../constants/playerAttributes');
 const { calculatePotentialScore } = require('../constants/statCaps');
 
+// Position group mapping - maps specific roster positions to generic position groups
+const POSITION_GROUP_MAP = {
+  QB: 'QB',
+  HB: 'RB',
+  FB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  LT: 'OL',
+  LG: 'OL',
+  C: 'OL',
+  RG: 'OL',
+  RT: 'OL',
+  LEDG: 'DL',
+  REDG: 'DL',
+  DT: 'DL',
+  SAM: 'LB',
+  MIKE: 'LB',
+  WILL: 'LB',
+  CB: 'DB',
+  FS: 'DB',
+  SS: 'DB',
+  K: 'K',
+  P: 'P'
+};
+
+/**
+ * Get the position group for a specific roster position
+ * @param {string} position - Roster position (e.g., 'HB', 'LT', 'CB')
+ * @returns {string} Position group (e.g., 'RB', 'OL', 'DB')
+ */
+function getPositionGroup(position) {
+  return POSITION_GROUP_MAP[position] || position;
+}
+
 // Default attribute weights by position (using CFB26 attribute abbreviations)
 const DEFAULT_WEIGHTS = {
   QB: {
@@ -165,8 +199,9 @@ async function calculateStudScore(userId, player, presetId = null) {
           }
         });
       } else {
-        // Use default weights
-        weights = DEFAULT_WEIGHTS[player.position] || {};
+        // Use default weights - map position to position group
+        const positionGroup = getPositionGroup(player.position);
+        weights = DEFAULT_WEIGHTS[positionGroup] || {};
         preset = {
           dev_trait_weight: 0.15,
           potential_weight: 0.15
@@ -297,5 +332,6 @@ module.exports = {
   getOrCreateDefaultPreset,
   calculatePotentialScore,
   getDevTraitBonus,
-  DEFAULT_WEIGHTS
+  DEFAULT_WEIGHTS,
+  getPositionGroup
 };

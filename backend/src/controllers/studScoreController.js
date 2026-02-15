@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { DEFAULT_WEIGHTS } = require('../services/studScoreService');
+const { DEFAULT_WEIGHTS, getPositionGroup } = require('../services/studScoreService');
 const { POSITION_ARCHETYPES } = require('../constants/playerAttributes');
 
 /**
@@ -57,7 +57,10 @@ const getDefaultWeights = async (req, res) => {
       return res.json(DEFAULT_WEIGHTS);
     }
 
-    const weights = DEFAULT_WEIGHTS[position];
+    // Map specific position to position group
+    const positionGroup = getPositionGroup(position);
+    const weights = DEFAULT_WEIGHTS[positionGroup];
+
     if (!weights) {
       return res.status(404).json({ error: 'Position not found' });
     }

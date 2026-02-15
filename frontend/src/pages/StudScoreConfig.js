@@ -264,8 +264,18 @@ const StudScoreConfig = () => {
 
       {/* Preset Selection */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          Weight Preset
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6" sx={{ mb: 0 }}>
+            Weight Preset
+          </Typography>
+          <Tooltip title="Weight presets allow you to save different configurations for evaluating players. You can create multiple presets to compare different evaluation strategies.">
+            <IconButton size="small" sx={{ ml: 1 }}>
+              <InfoIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Select a preset to configure how player attributes are weighted in STUD score calculations.
         </Typography>
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Preset</InputLabel>
