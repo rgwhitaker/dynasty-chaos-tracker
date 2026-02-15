@@ -21,7 +21,6 @@ import {
   ToggleButton,
   Paper,
   TextField,
-  MenuItem,
   Divider,
   Accordion,
   AccordionSummary,
@@ -1040,11 +1039,13 @@ const RosterDepthChart = () => {
                   value={addPlayerFormData.position}
                   onChange={handleAddPlayerChange}
                   required
+                  SelectProps={{ native: true }}
                 >
+                  <option value="" disabled>Select a position</option>
                   {POSITIONS.map((pos) => (
-                    <MenuItem key={pos} value={pos}>
+                    <option key={pos} value={pos}>
                       {pos}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
@@ -1067,11 +1068,13 @@ const RosterDepthChart = () => {
                   name="year"
                   value={addPlayerFormData.year}
                   onChange={handleAddPlayerChange}
+                  SelectProps={{ native: true }}
                 >
+                  <option value="">Select a year</option>
                   {YEARS.map((year) => (
-                    <MenuItem key={year} value={year}>
+                    <option key={year} value={year}>
                       {year}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
@@ -1114,11 +1117,13 @@ const RosterDepthChart = () => {
                   name="dev_trait"
                   value={addPlayerFormData.dev_trait}
                   onChange={handleAddPlayerChange}
+                  SelectProps={{ native: true }}
                 >
+                  <option value="">Select a dev trait</option>
                   {DEV_TRAITS.map((trait) => (
-                    <MenuItem key={trait} value={trait}>
+                    <option key={trait} value={trait}>
                       {trait}
-                    </MenuItem>
+                    </option>
                   ))}
                 </TextField>
               </Grid>
@@ -1131,14 +1136,13 @@ const RosterDepthChart = () => {
                     name="archetype"
                     value={addPlayerFormData.archetype}
                     onChange={handleAddPlayerChange}
+                    SelectProps={{ native: true }}
                   >
-                    <MenuItem value="">
-                      <em>Select an archetype</em>
-                    </MenuItem>
+                    <option value="">Select an archetype</option>
                     {POSITION_ARCHETYPES[addPlayerFormData.position].map((arch) => (
-                      <MenuItem key={arch} value={arch}>
+                      <option key={arch} value={arch}>
                         {arch}
-                      </MenuItem>
+                      </option>
                     ))}
                   </TextField>
                 </Grid>
