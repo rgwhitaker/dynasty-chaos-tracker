@@ -17,6 +17,14 @@ export const createPreset = async (preset) => {
 };
 
 /**
+ * Delete a weight preset
+ */
+export const deletePreset = async (presetId) => {
+  const response = await api.delete(`/stud-score/presets/${presetId}`);
+  return response.data;
+};
+
+/**
  * Update preset dev trait and potential weights
  */
 export const updatePreset = async (presetId, updates) => {
@@ -98,6 +106,7 @@ export const getArchetypes = async (position) => {
 const studScoreServiceAPI = {
   getPresets,
   createPreset,
+  deletePreset,
   updatePreset,
   getWeights,
   getDefaultWeights,
