@@ -64,6 +64,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       }
 
       // Create new user
+      // NOTE: Google OAuth registration bypasses invite code validation.
+      // This is a known limitation. For stricter access control, consider:
+      // - Disabling OAuth registration entirely
+      // - Implementing a separate OAuth invite flow
+      // - Requiring manual admin approval for OAuth users
+      // TODO: Consider adding invite code validation for OAuth if needed
       result = await db.query(
         'INSERT INTO users (email, google_id, display_name) VALUES ($1, $2, $3) RETURNING *',
         [email, profile.id, profile.displayName]

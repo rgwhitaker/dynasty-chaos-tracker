@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Container,
   Box,
@@ -9,17 +9,33 @@ import {
   Typography,
   Link,
   Paper,
+  Alert,
 } from '@mui/material';
-import { register } from '../store/slices/authSlice';
+import { register, reset } from '../store/slices/authSlice';
 
 const Register = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     displayName: '',
+    inviteCode: '',
   });
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const { user, isLoading, isError, isSuccess, message } = useSelector(
+    (state) => state.auth
+  );
+
+  useEffect(() => {
+    if (isSuccess && user) {
+      navigate('/dashboard');
+    }
+
+    return () => {
+      dispatch(reset());
+    };
+  }, [user, isSuccess, navigate, dispatch]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -28,7 +44,6 @@ const Register = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     dispatch(register(formData));
-    navigate('/dashboard');
   };
 
   return (
@@ -45,6 +60,11 @@ const Register = () => {
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             Create Account
           </Typography>
+          {isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {message}
+            </Alert>
+          )}
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
               margin="normal"
@@ -79,13 +99,26 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
             />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="inviteCode"
+              label="Invite Code"
+              type="password"
+              id="inviteCode"
+              value={formData.inviteCode}
+              onChange={handleChange}
+              helperText="Enter the invite code provided by the app owner"
+            />
             <Button
               type="submit"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
+              disabled={isLoading}
             >
-              Sign Up
+              {isLoading ? 'Signing Up...' : 'Sign Up'}
             </Button>
             <Box sx={{ textAlign: 'center' }}>
               <Link href="/login" variant="body2">
