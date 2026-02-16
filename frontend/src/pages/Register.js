@@ -101,7 +101,6 @@ const Register = () => {
             />
             <TextField
               margin="normal"
-              required
               fullWidth
               name="inviteCode"
               label="Invite Code"
@@ -109,7 +108,7 @@ const Register = () => {
               id="inviteCode"
               value={formData.inviteCode}
               onChange={handleChange}
-              helperText="Enter the invite code provided by the app owner"
+              helperText="Enter the invite code if required by the app owner"
             />
             <Button
               type="submit"

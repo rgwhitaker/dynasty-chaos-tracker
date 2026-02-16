@@ -7,6 +7,9 @@ const register = async (req, res) => {
     const { email, password, displayName, inviteCode } = req.body;
 
     // Validate invite code if INVITE_CODE env var is set
+    // Note: Consider implementing rate limiting on this endpoint to prevent
+    // brute force attacks on the invite code. This can be done with middleware
+    // like express-rate-limit at the application level.
     if (process.env.INVITE_CODE && process.env.INVITE_CODE.trim() !== '') {
       if (!inviteCode || inviteCode !== process.env.INVITE_CODE) {
         return res.status(403).json({ error: 'Invalid invite code' });
