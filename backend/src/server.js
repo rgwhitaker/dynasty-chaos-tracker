@@ -69,7 +69,7 @@ async function startServer() {
     await migrationRunner.runMigrations();
     
     // Start the server
-    app.listen(PORT, () => {
+    app.listen(PORT, '::', () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     });
