@@ -151,6 +151,18 @@ const RosterDepthChart = () => {
     loadDefaultPreset();
   }, [dispatch, dynastyId]);
 
+  const loadDefaultPreset = async () => {
+    try {
+      const presets = await studScoreService.getPresets();
+      const defaultPreset = presets.find(p => p.is_default);
+      if (defaultPreset) {
+        setDefaultPreset(defaultPreset);
+      }
+    } catch (error) {
+      console.error('Failed to load default preset:', error);
+    }
+  };
+
   // Load weights when selectedPlayer changes
   useEffect(() => {
     const loadWeightsForPlayer = async (player) => {
@@ -186,45 +198,29 @@ const RosterDepthChart = () => {
     }
   }, [selectedPlayer, defaultPreset]);
 
-  const loadDefaultPreset = async () => {
-    try {
-      const presets = await studScoreService.getPresets();
-      const defaultPreset = presets.find(p => p.is_default);
-      if (defaultPreset) {
-        setDefaultPreset(defaultPreset);
-      }
-    } catch (error) {
-      console.error('Failed to load default preset:', error);
-    }
-  };
-
   // Load weights when position/archetype changes in add player form
   useEffect(() => {
-    const loadWeightsForPositionArchetype = async (position, archetype) => {
-      if (!position || !defaultPreset) return;
-
-      try {
-        const weights = await studScoreService.getWeights(
-          defaultPreset.id,
-          position,
-          archetype || null
-        );
-        
-        const key = `${position}-${archetype || 'default'}`;
-        setPresetWeights(prev => ({
-          ...prev,
-          [key]: weights
-        }));
-      } catch (error) {
-        console.error('Failed to load weights for position/archetype:', error);
-      }
-    };
-
     if (addPlayerDialogOpen && addPlayerFormData.position && defaultPreset) {
       const key = `${addPlayerFormData.position}-${addPlayerFormData.archetype || 'default'}`;
       setPresetWeights(prev => {
         if (!prev[key]) {
-          loadWeightsForPositionArchetype(addPlayerFormData.position, addPlayerFormData.archetype);
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                addPlayerFormData.position,
+                addPlayerFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
         }
         return prev;
       });
@@ -233,31 +229,27 @@ const RosterDepthChart = () => {
 
   // Load weights when position/archetype changes in edit form
   useEffect(() => {
-    const loadWeightsForPositionArchetype = async (position, archetype) => {
-      if (!position || !defaultPreset) return;
-
-      try {
-        const weights = await studScoreService.getWeights(
-          defaultPreset.id,
-          position,
-          archetype || null
-        );
-        
-        const key = `${position}-${archetype || 'default'}`;
-        setPresetWeights(prev => ({
-          ...prev,
-          [key]: weights
-        }));
-      } catch (error) {
-        console.error('Failed to load weights for position/archetype:', error);
-      }
-    };
-
     if (editDialogOpen && editFormData.position && defaultPreset) {
       const key = `${editFormData.position}-${editFormData.archetype || 'default'}`;
       setPresetWeights(prev => {
         if (!prev[key]) {
-          loadWeightsForPositionArchetype(editFormData.position, editFormData.archetype);
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                editFormData.position,
+                editFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
         }
         return prev;
       });

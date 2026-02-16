@@ -155,31 +155,27 @@ const RosterManagement = () => {
 
   // Load weights when position/archetype changes in manual form
   useEffect(() => {
-    const loadWeightsForPositionArchetype = async (position, archetype) => {
-      if (!position || !defaultPreset) return;
-
-      try {
-        const weights = await studScoreService.getWeights(
-          defaultPreset.id,
-          position,
-          archetype || null
-        );
-        
-        const key = `${position}-${archetype || 'default'}`;
-        setPresetWeights(prev => ({
-          ...prev,
-          [key]: weights
-        }));
-      } catch (error) {
-        console.error('Failed to load weights for position/archetype:', error);
-      }
-    };
-
     if (showManualForm && manualFormData.position && defaultPreset) {
       const key = `${manualFormData.position}-${manualFormData.archetype || 'default'}`;
       setPresetWeights(prev => {
         if (!prev[key]) {
-          loadWeightsForPositionArchetype(manualFormData.position, manualFormData.archetype);
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                manualFormData.position,
+                manualFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
         }
         return prev;
       });
@@ -188,31 +184,27 @@ const RosterManagement = () => {
 
   // Load weights when position/archetype changes in edit form
   useEffect(() => {
-    const loadWeightsForPositionArchetype = async (position, archetype) => {
-      if (!position || !defaultPreset) return;
-
-      try {
-        const weights = await studScoreService.getWeights(
-          defaultPreset.id,
-          position,
-          archetype || null
-        );
-        
-        const key = `${position}-${archetype || 'default'}`;
-        setPresetWeights(prev => ({
-          ...prev,
-          [key]: weights
-        }));
-      } catch (error) {
-        console.error('Failed to load weights for position/archetype:', error);
-      }
-    };
-
     if (editDialogOpen && editFormData.position && defaultPreset) {
       const key = `${editFormData.position}-${editFormData.archetype || 'default'}`;
       setPresetWeights(prev => {
         if (!prev[key]) {
-          loadWeightsForPositionArchetype(editFormData.position, editFormData.archetype);
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                editFormData.position,
+                editFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
         }
         return prev;
       });
