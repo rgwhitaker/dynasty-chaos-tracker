@@ -69,6 +69,11 @@ Dynasty Chaos Tracker helps you manage your College Football dynasty by:
 - **Email/Password**: Standard account creation
 - **Google OAuth**: Sign in with your Google account
 - **Twitter OAuth**: Sign in with your Twitter account
+- **Invite Code Protection**: Optionally restrict registration to invited users only
+  - Set the `INVITE_CODE` environment variable to enable this feature
+  - Share the code with friends you want to invite
+  - If not set, registration is open to anyone
+  - Note: OAuth registration currently bypasses invite code validation
 
 ## Technology Stack
 
@@ -159,6 +164,12 @@ The application works out of the box with default settings. For full functionali
 **OAuth Login** (optional):
 - **Google**: Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
 - **Twitter**: Add `TWITTER_CONSUMER_KEY` and `TWITTER_CONSUMER_SECRET`
+
+**Access Control** (optional):
+- **Invite Code**: Set `INVITE_CODE` to restrict email/password registration to invited users only
+  - When set, users must provide the correct invite code during registration
+  - If not set or empty, registration is open to anyone
+  - Note: OAuth registration currently bypasses this check
 
 See `.env.example` for all configuration options.
 
