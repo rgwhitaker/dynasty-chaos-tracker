@@ -50,6 +50,7 @@ import studScoreService from '../services/studScoreService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
+import { filterRelevantAttributes } from '../utils/presetAttributeHelper';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -114,6 +115,10 @@ const RosterManagement = () => {
   const [selectedPresetId, setSelectedPresetId] = useState(null);
   const [presetsLoading, setPresetsLoading] = useState(false);
   const [presetError, setPresetError] = useState(null);
+  
+  // Preset weights state
+  const [presetWeights, setPresetWeights] = useState({});
+  const [defaultPreset, setDefaultPreset] = useState(null);
 
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
@@ -128,6 +133,12 @@ const RosterManagement = () => {
         const presetsData = await studScoreService.getPresets();
         setPresets(presetsData);
 
+        // Find default preset
+        const defaultPreset = presetsData.find(p => p.is_default);
+        if (defaultPreset) {
+          setDefaultPreset(defaultPreset);
+        }
+
         // Load dynasty to get selected preset
         const dynastyData = await dynastyService.getDynasty(dynastyId);
         setSelectedPresetId(dynastyData.selected_preset_id);
@@ -141,6 +152,64 @@ const RosterManagement = () => {
 
     loadPresetsAndDynasty();
   }, [dynastyId]);
+
+  // Load weights when position/archetype changes in manual form
+  useEffect(() => {
+    if (showManualForm && manualFormData.position && defaultPreset) {
+      const key = `${manualFormData.position}-${manualFormData.archetype || 'default'}`;
+      setPresetWeights(prev => {
+        if (!prev[key]) {
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                manualFormData.position,
+                manualFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
+        }
+        return prev;
+      });
+    }
+  }, [showManualForm, manualFormData.position, manualFormData.archetype, defaultPreset]);
+
+  // Load weights when position/archetype changes in edit form
+  useEffect(() => {
+    if (editDialogOpen && editFormData.position && defaultPreset) {
+      const key = `${editFormData.position}-${editFormData.archetype || 'default'}`;
+      setPresetWeights(prev => {
+        if (!prev[key]) {
+          // Load weights asynchronously
+          (async () => {
+            try {
+              const weights = await studScoreService.getWeights(
+                defaultPreset.id,
+                editFormData.position,
+                editFormData.archetype || null
+              );
+              
+              setPresetWeights(prevWeights => ({
+                ...prevWeights,
+                [key]: weights
+              }));
+            } catch (error) {
+              console.error('Failed to load weights for position/archetype:', error);
+            }
+          })();
+        }
+        return prev;
+      });
+    }
+  }, [editDialogOpen, editFormData.position, editFormData.archetype, defaultPreset]);
 
   // Handle paste events for clipboard images
   useEffect(() => {
@@ -761,34 +830,49 @@ const RosterManagement = () => {
                       Player Attributes (Optional)
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      Enter individual player ratings. All fields are optional. Values should be between 40-99.
+                      {manualFormData.position && manualFormData.archetype
+                        ? `Showing attributes relevant to ${manualFormData.position} - ${manualFormData.archetype} based on your default preset.`
+                        : manualFormData.position
+                        ? `Showing attributes relevant to ${manualFormData.position} based on your default preset.`
+                        : 'Enter individual player ratings. All fields are optional.'} Values should be between 40-99.
                     </Typography>
                     
-                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
-                      <Accordion key={category} sx={{ mb: 1 }}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography>{category} Attributes</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <Grid container spacing={2}>
-                            {attributes.map((attr) => (
-                              <Grid item xs={6} sm={4} md={3} key={attr}>
-                                <TextField
-                                  fullWidth
-                                  label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
-                                  name={attr}
-                                  type="number"
-                                  value={manualFormData.attributes[attr] || ''}
-                                  onChange={handleAttributeChange}
-                                  inputProps={{ min: 40, max: 99 }}
-                                  size="small"
-                                />
-                              </Grid>
-                            ))}
-                          </Grid>
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
+                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => {
+                      // Filter attributes based on preset weights if available
+                      const key = `${manualFormData.position}-${manualFormData.archetype || 'default'}`;
+                      const weights = presetWeights[key];
+                      const filteredAttributes = weights
+                        ? filterRelevantAttributes(attributes, weights)
+                        : attributes;
+                      
+                      if (filteredAttributes.length === 0) return null;
+
+                      return (
+                        <Accordion key={category} sx={{ mb: 1 }}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography>{category} Attributes</Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <Grid container spacing={2}>
+                              {filteredAttributes.map((attr) => (
+                                <Grid item xs={6} sm={4} md={3} key={attr}>
+                                  <TextField
+                                    fullWidth
+                                    label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                    name={attr}
+                                    type="number"
+                                    value={manualFormData.attributes[attr] || ''}
+                                    onChange={handleAttributeChange}
+                                    inputProps={{ min: 40, max: 99 }}
+                                    size="small"
+                                  />
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </AccordionDetails>
+                        </Accordion>
+                      );
+                    })}
                   </Grid>
                   
                   {/* Stat Caps Section */}
@@ -1134,34 +1218,49 @@ const RosterManagement = () => {
                     Player Attributes (Optional)
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Update individual player ratings. Values should be between 40-99.
+                    {editFormData.position && editFormData.archetype
+                      ? `Showing attributes relevant to ${editFormData.position} - ${editFormData.archetype} based on your default preset.`
+                      : editFormData.position
+                      ? `Showing attributes relevant to ${editFormData.position} based on your default preset.`
+                      : 'Update individual player ratings.'} Values should be between 40-99.
                   </Typography>
                   
-                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
-                    <Accordion key={category} sx={{ mb: 1 }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography>{category} Attributes</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Grid container spacing={2}>
-                          {attributes.map((attr) => (
-                            <Grid item xs={6} sm={4} md={3} key={attr}>
-                              <TextField
-                                fullWidth
-                                label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
-                                name={attr}
-                                type="number"
-                                value={editFormData.attributes?.[attr] || ''}
-                                onChange={handleEditAttributeChange}
-                                inputProps={{ min: 40, max: 99 }}
-                                size="small"
-                              />
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => {
+                    // Filter attributes based on preset weights if available
+                    const key = `${editFormData.position}-${editFormData.archetype || 'default'}`;
+                    const weights = presetWeights[key];
+                    const filteredAttributes = weights
+                      ? filterRelevantAttributes(attributes, weights)
+                      : attributes;
+                    
+                    if (filteredAttributes.length === 0) return null;
+
+                    return (
+                      <Accordion key={category} sx={{ mb: 1 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography>{category} Attributes</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Grid container spacing={2}>
+                            {filteredAttributes.map((attr) => (
+                              <Grid item xs={6} sm={4} md={3} key={attr}>
+                                <TextField
+                                  fullWidth
+                                  label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                  name={attr}
+                                  type="number"
+                                  value={editFormData.attributes?.[attr] || ''}
+                                  onChange={handleEditAttributeChange}
+                                  inputProps={{ min: 40, max: 99 }}
+                                  size="small"
+                                />
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </AccordionDetails>
+                      </Accordion>
+                    );
+                  })}
                 </Grid>
                 
                 {/* Stat Caps Section */}
