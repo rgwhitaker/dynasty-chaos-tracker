@@ -31,6 +31,7 @@ import {
   Info as InfoIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 import studScoreService from '../services/studScoreService';
 import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES, PLAYER_RATINGS } from '../constants/playerAttributes';
@@ -73,6 +74,12 @@ const StudScoreConfig = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [newPresetDescription, setNewPresetDescription] = useState('');
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copySourcePosition, setCopySourcePosition] = useState('QB');
+  const [copySourceConfigLevel, setCopySourceConfigLevel] = useState('position');
+  const [copySourceArchetype, setCopySourceArchetype] = useState(null);
+  const [copySourceArchetypes, setCopySourceArchetypes] = useState([]);
+  const [copyLoading, setCopyLoading] = useState(false);
 
   const loadPresets = async () => {
     try {
@@ -304,6 +311,85 @@ const StudScoreConfig = () => {
       setSelectedArchetype(null);
     } else if (level === 'archetype' && archetypes.length > 0) {
       setSelectedArchetype(archetypes[0]);
+    }
+  };
+
+  const handleOpenCopyDialog = () => {
+    setCopySourcePosition('QB');
+    setCopySourceConfigLevel('position');
+    setCopySourceArchetype(null);
+    setCopySourceArchetypes(POSITION_ARCHETYPES['QB'] || []);
+    setCopyDialogOpen(true);
+  };
+
+  const handleCopySourcePositionChange = (position) => {
+    setCopySourcePosition(position);
+    const archs = POSITION_ARCHETYPES[position] || [];
+    setCopySourceArchetypes(archs);
+    setCopySourceArchetype(archs.length > 0 ? archs[0] : null);
+    if (archs.length === 0) {
+      setCopySourceConfigLevel('position');
+    }
+  };
+
+  const handleCopyFrom = async () => {
+    try {
+      setCopyLoading(true);
+      setError(null);
+
+      const archetype = copySourceConfigLevel === 'archetype' ? copySourceArchetype : null;
+
+      // Load default weights for the source position (for reference)
+      const defaults = await studScoreService.getDefaultWeights(copySourcePosition);
+
+      // Load user's custom weights for the source position/archetype
+      const data = await studScoreService.getWeights(
+        selectedPreset.id,
+        copySourcePosition,
+        archetype
+      );
+
+      // Parse the source weights (same logic as loadWeights)
+      const positionWeights = {};
+      const archetypeWeights = {};
+      data.forEach(w => {
+        if (w.archetype === null) {
+          positionWeights[w.attribute_name] = parseFloat(w.weight);
+        } else {
+          archetypeWeights[w.attribute_name] = parseFloat(w.weight);
+        }
+      });
+
+      const sourceWeights = { ...positionWeights, ...archetypeWeights };
+      const activeWeights = Object.keys(sourceWeights).length === 0 ? { ...defaults } : sourceWeights;
+
+      // Apply source weights to current config
+      const configurableRatings = PLAYER_RATINGS.filter(r => r !== 'OVR');
+      const fullWeights = {};
+      const enabled = {};
+      configurableRatings.forEach(attr => {
+        if (activeWeights[attr] !== undefined) {
+          fullWeights[attr] = activeWeights[attr];
+          enabled[attr] = true;
+        } else {
+          fullWeights[attr] = 1;
+          enabled[attr] = false;
+        }
+      });
+
+      setWeights(fullWeights);
+      setEnabledAttributes(enabled);
+      setHasChanges(true);
+      setCopyDialogOpen(false);
+
+      const sourceLabel = archetype
+        ? `${copySourcePosition} / ${archetype}`
+        : copySourcePosition;
+      setSuccess(`Copied weights from ${sourceLabel}. Click "Save Changes" to apply.`);
+    } catch (err) {
+      setError('Failed to copy weights: ' + err.message);
+    } finally {
+      setCopyLoading(false);
     }
   };
 
@@ -597,6 +683,14 @@ const StudScoreConfig = () => {
           </Typography>
           <Box>
             <Button
+              startIcon={<CopyIcon />}
+              onClick={handleOpenCopyDialog}
+              disabled={loading || !selectedPreset}
+              sx={{ mr: 1 }}
+            >
+              Copy From
+            </Button>
+            <Button
               startIcon={<ResetIcon />}
               onClick={handleReset}
               disabled={loading || Object.keys(weights).length === 0}
@@ -772,6 +866,84 @@ const StudScoreConfig = () => {
           </Button>
           <Button onClick={handleCreatePreset} variant="contained" disabled={!newPresetName.trim()}>
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Copy From Dialog */}
+      <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Copy Weights From Another Position/Archetype</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Select a source position and optionally an archetype to copy its attribute selections and weights into the current configuration.
+          </Typography>
+          <FormControl fullWidth sx={{ mb: 2, mt: 1 }}>
+            <InputLabel>Source Position</InputLabel>
+            <Select
+              value={copySourcePosition}
+              onChange={(e) => handleCopySourcePositionChange(e.target.value)}
+              label="Source Position"
+            >
+              {Object.entries(POSITION_GROUPS).map(([group, positions]) => [
+                <MenuItem disabled key={group} sx={{ fontWeight: 'bold', bgcolor: 'action.hover' }}>
+                  {group}
+                </MenuItem>,
+                ...positions.map(pos => (
+                  <MenuItem key={pos} value={pos} sx={{ pl: 3 }}>
+                    {pos}
+                  </MenuItem>
+                ))
+              ])}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Source Level</InputLabel>
+            <Select
+              value={copySourceConfigLevel}
+              onChange={(e) => {
+                setCopySourceConfigLevel(e.target.value);
+                if (e.target.value === 'position') {
+                  setCopySourceArchetype(null);
+                } else if (copySourceArchetypes.length > 0) {
+                  setCopySourceArchetype(copySourceArchetypes[0]);
+                }
+              }}
+              label="Source Level"
+            >
+              <MenuItem value="position">Position Default</MenuItem>
+              <MenuItem value="archetype" disabled={copySourceArchetypes.length === 0}>
+                Archetype Override
+              </MenuItem>
+            </Select>
+          </FormControl>
+          {copySourceConfigLevel === 'archetype' && (
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Source Archetype</InputLabel>
+              <Select
+                value={copySourceArchetype || ''}
+                onChange={(e) => setCopySourceArchetype(e.target.value)}
+                label="Source Archetype"
+              >
+                {copySourceArchetypes.map(arch => (
+                  <MenuItem key={arch} value={arch}>
+                    {arch}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCopyDialogOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCopyFrom}
+            variant="contained"
+            disabled={copyLoading || (copySourceConfigLevel === 'archetype' && !copySourceArchetype)}
+            startIcon={copyLoading ? <CircularProgress size={16} /> : <CopyIcon />}
+          >
+            Copy
           </Button>
         </DialogActions>
       </Dialog>
