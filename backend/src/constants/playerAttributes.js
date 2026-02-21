@@ -126,7 +126,7 @@ const POSITIONS = ROSTER_POSITIONS;
 // Position archetypes mapping (all known archetypes per position in College Football 26)
 const POSITION_ARCHETYPES = {
   QB: ['Pocket Passer', 'Dual Threat', 'Backfield Creator', 'Pure Runner'],
-  HB: ['Backfield Threat', 'Contact Seeker', 'Balanced', 'East/West Playmaker', 'Elusive Bruiser'],
+  HB: ['Backfield Threat', 'Contact Seeker', 'East/West Playmaker', 'Elusive Bruiser', 'North/South Receiver', 'North/South Blocker'],
   FB: ['Blocking', 'Utility'],
   WR: ['Contested Specialist', 'Elusive Route Runner', 'Gadget', 'Gritty Possession', 'Physical Route Runner', 'Route Artist', 'Speedster'],
   TE: ['Gritty Possession', 'Physical Route Runner', 'Pure Possession', 'Pure Blocker', 'Vertical Threat'],
