@@ -50,6 +50,7 @@ import studScoreService from '../services/studScoreService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
+import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 // Attribute categories for organized display
 const ATTRIBUTE_CATEGORIES = {
@@ -114,6 +115,10 @@ const RosterManagement = () => {
   const [selectedPresetId, setSelectedPresetId] = useState(null);
   const [presetsLoading, setPresetsLoading] = useState(false);
   const [presetError, setPresetError] = useState(null);
+
+  // Get relevant attributes for add and edit forms based on stud score config
+  const addFormStudScoreAttrs = useStudScoreAttributes(dynastyId, manualFormData.position, manualFormData.archetype);
+  const editFormStudScoreAttrs = useStudScoreAttributes(dynastyId, editFormData.position, editFormData.archetype);
 
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
@@ -764,31 +769,37 @@ const RosterManagement = () => {
                       Enter individual player ratings. All fields are optional. Values should be between 40-99.
                     </Typography>
                     
-                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
-                      <Accordion key={category} sx={{ mb: 1 }}>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography>{category} Attributes</Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <Grid container spacing={2}>
-                            {attributes.map((attr) => (
-                              <Grid item xs={6} sm={4} md={3} key={attr}>
-                                <TextField
-                                  fullWidth
-                                  label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
-                                  name={attr}
-                                  type="number"
-                                  value={manualFormData.attributes[attr] || ''}
-                                  onChange={handleAttributeChange}
-                                  inputProps={{ min: 40, max: 99 }}
-                                  size="small"
-                                />
-                              </Grid>
-                            ))}
-                          </Grid>
-                        </AccordionDetails>
-                      </Accordion>
-                    ))}
+                    {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => {
+                      const filteredAttrs = addFormStudScoreAttrs
+                        ? attributes.filter(attr => addFormStudScoreAttrs.has(attr))
+                        : attributes;
+                      if (filteredAttrs.length === 0) return null;
+                      return (
+                        <Accordion key={category} sx={{ mb: 1 }}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography>{category} Attributes</Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <Grid container spacing={2}>
+                              {filteredAttrs.map((attr) => (
+                                <Grid item xs={6} sm={4} md={3} key={attr}>
+                                  <TextField
+                                    fullWidth
+                                    label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                    name={attr}
+                                    type="number"
+                                    value={manualFormData.attributes[attr] || ''}
+                                    onChange={handleAttributeChange}
+                                    inputProps={{ min: 40, max: 99 }}
+                                    size="small"
+                                  />
+                                </Grid>
+                              ))}
+                            </Grid>
+                          </AccordionDetails>
+                        </Accordion>
+                      );
+                    })}
                   </Grid>
                   
                   {/* Stat Caps Section */}
@@ -1137,31 +1148,37 @@ const RosterManagement = () => {
                     Update individual player ratings. Values should be between 40-99.
                   </Typography>
                   
-                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => (
-                    <Accordion key={category} sx={{ mb: 1 }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography>{category} Attributes</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Grid container spacing={2}>
-                          {attributes.map((attr) => (
-                            <Grid item xs={6} sm={4} md={3} key={attr}>
-                              <TextField
-                                fullWidth
-                                label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
-                                name={attr}
-                                type="number"
-                                value={editFormData.attributes?.[attr] || ''}
-                                onChange={handleEditAttributeChange}
-                                inputProps={{ min: 40, max: 99 }}
-                                size="small"
-                              />
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </AccordionDetails>
-                    </Accordion>
-                  ))}
+                  {Object.entries(ATTRIBUTE_CATEGORIES).map(([category, attributes]) => {
+                    const filteredAttrs = editFormStudScoreAttrs
+                      ? attributes.filter(attr => editFormStudScoreAttrs.has(attr))
+                      : attributes;
+                    if (filteredAttrs.length === 0) return null;
+                    return (
+                      <Accordion key={category} sx={{ mb: 1 }}>
+                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                          <Typography>{category} Attributes</Typography>
+                        </AccordionSummary>
+                        <AccordionDetails>
+                          <Grid container spacing={2}>
+                            {filteredAttrs.map((attr) => (
+                              <Grid item xs={6} sm={4} md={3} key={attr}>
+                                <TextField
+                                  fullWidth
+                                  label={`${attr} - ${ATTRIBUTE_DISPLAY_NAMES[attr]}`}
+                                  name={attr}
+                                  type="number"
+                                  value={editFormData.attributes?.[attr] || ''}
+                                  onChange={handleEditAttributeChange}
+                                  inputProps={{ min: 40, max: 99 }}
+                                  size="small"
+                                />
+                              </Grid>
+                            ))}
+                          </Grid>
+                        </AccordionDetails>
+                      </Accordion>
+                    );
+                  })}
                 </Grid>
                 
                 {/* Stat Caps Section */}
