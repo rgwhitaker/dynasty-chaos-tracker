@@ -28,7 +28,8 @@ export function useStudScoreAttributes(dynastyId, position, archetype) {
         setPresetId(dynasty.selected_preset_id || null);
         setPresetLoaded(true);
       }
-    }).catch(() => {
+    }).catch((error) => {
+      console.error('Error loading dynasty preset:', error);
       if (!cancelled) {
         setPresetId(null);
         setPresetLoaded(true);
