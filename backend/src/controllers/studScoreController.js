@@ -301,7 +301,7 @@ const resetAllPresetWeights = async (req, res) => {
         [presetId]
       );
 
-      // Re-insert default weights for all positions
+      // Re-insert default position-level weights (archetype overrides are not included)
       for (const [rosterPosition, positionGroup] of Object.entries(POSITION_GROUP_MAP)) {
         const weights = DEFAULT_WEIGHTS[positionGroup];
         if (weights) {

@@ -111,36 +111,43 @@ const StudScoreConfig = () => {
       const defaults = await studScoreService.getDefaultWeights(selectedPosition, archetype);
       setDefaultWeights(defaults || {});
 
-      // Load user's custom weights
-      const data = await studScoreService.getWeights(
-        selectedPreset.id,
-        selectedPosition,
-        archetype
-      );
+      let activeWeights;
 
-      // The backend returns both position defaults (archetype IS NULL) and archetype overrides.
-      // Separate them so we can decide which set to use based on the config level.
-      const positionWeights = {};
-      const archetypeWeights = {};
-      
-      data.forEach(w => {
-        if (w.archetype === null) {
-          // Position default weight
-          positionWeights[w.attribute_name] = parseFloat(w.weight);
-        } else {
-          // Archetype-specific weight (override)
-          archetypeWeights[w.attribute_name] = parseFloat(w.weight);
-        }
-      });
+      // For the default preset, always show hardcoded defaults
+      if (selectedPreset.is_default) {
+        activeWeights = { ...defaults };
+      } else {
+        // Load user's custom weights
+        const data = await studScoreService.getWeights(
+          selectedPreset.id,
+          selectedPosition,
+          archetype
+        );
 
-      // When archetype-specific weights exist, use only those so that
-      // attributes the user removed are not re-added from position defaults
-      const weightsObj = (configLevel === 'archetype' && Object.keys(archetypeWeights).length > 0)
-        ? archetypeWeights
-        : { ...positionWeights, ...archetypeWeights };
+        // The backend returns both position defaults (archetype IS NULL) and archetype overrides.
+        // Separate them so we can decide which set to use based on the config level.
+        const positionWeights = {};
+        const archetypeWeights = {};
+        
+        data.forEach(w => {
+          if (w.archetype === null) {
+            // Position default weight
+            positionWeights[w.attribute_name] = parseFloat(w.weight);
+          } else {
+            // Archetype-specific weight (override)
+            archetypeWeights[w.attribute_name] = parseFloat(w.weight);
+          }
+        });
 
-      // Determine active weights (custom or defaults)
-      const activeWeights = Object.keys(weightsObj).length === 0 ? { ...defaults } : weightsObj;
+        // When archetype-specific weights exist, use only those so that
+        // attributes the user removed are not re-added from position defaults
+        const weightsObj = (configLevel === 'archetype' && Object.keys(archetypeWeights).length > 0)
+          ? archetypeWeights
+          : { ...positionWeights, ...archetypeWeights };
+
+        // Determine active weights (custom or defaults)
+        activeWeights = Object.keys(weightsObj).length === 0 ? { ...defaults } : weightsObj;
+      }
 
       // Build full weights and enabled state for all attributes
       const fullWeights = {};
