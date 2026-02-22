@@ -22,6 +22,12 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
 } from '@mui/material';
 import {
   Warning as WarningIcon,
@@ -33,6 +39,7 @@ import {
   TrendingDown as TrendingDownIcon,
   SwapHoriz as TransferIcon,
   ArrowBack as ArrowBackIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import recruiterHubService from '../services/recruiterHubService';
 
@@ -43,6 +50,11 @@ const RecruiterHub = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedPosition, setExpandedPosition] = useState(null);
+  const [configOpen, setConfigOpen] = useState(false);
+  const [configValues, setConfigValues] = useState({});
+  const [configDefaults, setConfigDefaults] = useState({});
+  const [configSaving, setConfigSaving] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   useEffect(() => {
     loadAnalysis();
@@ -97,6 +109,45 @@ const RecruiterHub = () => {
     navigate(`/dynasties/${dynastyId}/recruiting`);
   };
 
+  const handleOpenConfig = async () => {
+    try {
+      const data = await recruiterHubService.getConfig(dynastyId);
+      setConfigValues({ ...data.positionTargets });
+      setConfigDefaults(data.defaults);
+      setConfigOpen(true);
+    } catch (err) {
+      console.error('Failed to load config:', err);
+      setSnackbar({ open: true, message: 'Failed to load configuration.', severity: 'error' });
+    }
+  };
+
+  const handleConfigChange = (position, value) => {
+    const parsed = parseInt(value, 10);
+    setConfigValues(prev => ({
+      ...prev,
+      [position]: isNaN(parsed) ? '' : Math.max(0, Math.min(20, parsed))
+    }));
+  };
+
+  const handleResetDefaults = () => {
+    setConfigValues({ ...configDefaults });
+  };
+
+  const handleSaveConfig = async () => {
+    try {
+      setConfigSaving(true);
+      await recruiterHubService.saveConfig(dynastyId, configValues);
+      setConfigOpen(false);
+      setSnackbar({ open: true, message: 'Configuration saved. Refreshing analysis...', severity: 'success' });
+      await loadAnalysis();
+    } catch (err) {
+      console.error('Failed to save config:', err);
+      setSnackbar({ open: true, message: 'Failed to save configuration.', severity: 'error' });
+    } finally {
+      setConfigSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container>
@@ -145,14 +196,23 @@ const RecruiterHub = () => {
             Recruiter Hub
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<PersonSearchIcon />}
-          onClick={handleNavigateToRecruiting}
-        >
-          Go to Recruiting
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            startIcon={<SettingsIcon />}
+            onClick={handleOpenConfig}
+          >
+            Configure Targets
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<PersonSearchIcon />}
+            onClick={handleNavigateToRecruiting}
+          >
+            Go to Recruiting
+          </Button>
+        </Box>
       </Box>
 
       {/* Overview Cards */}
@@ -457,6 +517,59 @@ const RecruiterHub = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Configuration Dialog */}
+      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Configure Target Depths</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Set the target roster depth for each position. This determines when positions are flagged as CRITICAL or WARNING.
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Position</TableCell>
+                  <TableCell align="center">Default</TableCell>
+                  <TableCell align="center">Your Target</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Object.keys(configDefaults).map(position => (
+                  <TableRow key={position}>
+                    <TableCell><strong>{position}</strong></TableCell>
+                    <TableCell align="center">{configDefaults[position]}</TableCell>
+                    <TableCell align="center">
+                      <TextField
+                        type="number"
+                        size="small"
+                        inputProps={{ min: 0, max: 20, style: { textAlign: 'center', width: 60 } }}
+                        value={configValues[position] !== undefined ? configValues[position] : ''}
+                        onChange={(e) => handleConfigChange(position, e.target.value)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleResetDefaults}>Reset to Defaults</Button>
+          <Button onClick={() => setConfigOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveConfig} variant="contained" disabled={configSaving}>
+            {configSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        message={snackbar.message}
+      />
     </Container>
   );
 };
