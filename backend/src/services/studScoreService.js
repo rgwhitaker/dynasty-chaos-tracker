@@ -36,6 +36,95 @@ function getPositionGroup(position) {
   return POSITION_GROUP_MAP[position] || position;
 }
 
+// Shared archetype weights for positions with identical archetype sets
+const OL_ARCHETYPE_WEIGHTS = {
+  'Agile': { AGI: 3, ACC: 2.5, RBK: 2, PBK: 1.5, AWR: 1, STR: 0.5 },
+  'Pass Protector': { PBK: 3, AGI: 2.5, ACC: 2, RBK: 1.5, STR: 1, AWR: 0.5 },
+  'Raw Strength': { RBK: 3, STR: 2.5, PBK: 2, AWR: 1.5, AGI: 1, ACC: 0.5 },
+  'Well Rounded': { STR: 3, PBK: 2.5, RBK: 2, AWR: 1.5, AGI: 1, ACC: 0.5 },
+};
+
+const EDGE_ARCHETYPE_WEIGHTS = {
+  'Edge Setter': { PMV: 3, BSH: 2.5, STR: 2, AWR: 1.5, ACC: 1, FMV: 0.5 },
+  'Power Rusher': { PMV: 3, STR: 2.5, ACC: 2, BSH: 1.5, AWR: 1, FMV: 0.5 },
+  'Pure Power': { STR: 3, FMV: 2.5, BSH: 2, AWR: 1.5, ACC: 1, INJ: 0.5 },
+  'Speed Rusher': { ACC: 3, FMV: 2.5, PMV: 2, BSH: 1.5, STR: 1, AWR: 0.5 },
+};
+
+const LB_ARCHETYPE_WEIGHTS = {
+  'Lurker': { SPD: 3, ZCV: 2.5, BSH: 2, AWR: 1.5, STR: 1, FMV: 0.5 },
+  'Signal Caller': { AWR: 3, BSH: 2.5, STR: 2, SPD: 1.5, ZCV: 1, FMV: 0.5 },
+  'Thumper': { STR: 3, BSH: 2.5, AWR: 2, ACC: 1.5, ZCV: 1, FMV: 0.5 },
+};
+
+const SAFETY_ARCHETYPE_WEIGHTS = {
+  'Coverage Specialist': { SPD: 3, ZCV: 2.5, CTH: 2, PUR: 1.5, STR: 1, MCV: 0.5 },
+  'Box Specialist': { AWR: 3, PUR: 2.5, STR: 2, SPD: 1.5, ZCV: 1, CTH: 0.5 },
+  'Hybrid': { AWR: 3, ZCV: 2.5, SPD: 2, PUR: 1.5, STR: 1, CTH: 0.5 },
+};
+
+// Default archetype-specific weights (weights: 3, 2.5, 2, 1.5, 1, 0.5 by priority)
+const DEFAULT_ARCHETYPE_WEIGHTS = {
+  QB: {
+    'Dual Threat': { SPD: 3, AGI: 2.5, SAC: 2, STR: 1.5, AWR: 1, INJ: 0.5 },
+    'Pure Runner': { SPD: 3, AGI: 2.5, STR: 2, AWR: 1.5, SAC: 1, INJ: 0.5 },
+    'Pocket Passer': { SAC: 3, AWR: 2.5, STR: 2, SPD: 1.5, AGI: 1, INJ: 0.5 },
+    'Backfield Creator': { SAC: 3, AWR: 2.5, AGI: 2, SPD: 1.5, STR: 1, INJ: 0.5 },
+  },
+  HB: {
+    'East/West Playmaker': { SPD: 3, AGI: 2.5, SRR: 2, CTH: 1.5, STR: 1, AWR: 0.5 },
+    'Backfield Threat': { SPD: 3, SRR: 2.5, CTH: 2, AGI: 1.5, STR: 1, AWR: 0.5 },
+    'Elusive Bruiser': { SPD: 3, AGI: 2.5, STR: 2, CTH: 1.5, SRR: 1, AWR: 0.5 },
+    'North/South Blocker': { ACC: 3, STR: 2.5, AGI: 2, CTH: 1.5, SRR: 1, AWR: 0.5 },
+    'Contact Seeker': { ACC: 3, STR: 2.5, AGI: 2, CTH: 1.5, SRR: 1, AWR: 0.5 },
+    'North/South Receiver': { ACC: 3, SRR: 2.5, STR: 2, CTH: 1.5, AGI: 1, AWR: 0.5 },
+  },
+  FB: {
+    'Utility': { LBK: 3, STR: 2.5, ACC: 2, AWR: 1.5, CTH: 1, SRR: 0.5 },
+    'Blocking': { LBK: 3, STR: 2.5, ACC: 2, AWR: 1.5, CTH: 1, SRR: 0.5 },
+  },
+  WR: {
+    'Contested Specialist': { SPD: 3, CTH: 2.5, STR: 2, SRR: 1.5, AGI: 1, AWR: 0.5 },
+    'Speedster': { SPD: 3, SRR: 2.5, CTH: 2, AGI: 1.5, STR: 1, AWR: 0.5 },
+    'Elusive Route Runner': { SPD: 3, SRR: 2.5, AGI: 2, CTH: 1.5, STR: 1, AWR: 0.5 },
+    'Gritty Possession': { SPD: 3, SRR: 2.5, CTH: 2, STR: 1.5, AGI: 1, AWR: 0.5 },
+    'Gadget': { SPD: 3, AGI: 2.5, STR: 2, SRR: 1.5, CTH: 1, AWR: 0.5 },
+    'Route Artist': { SPD: 3, SRR: 2.5, CTH: 2, AGI: 1.5, STR: 1, AWR: 0.5 },
+    'Physical Route Runner': { SPD: 3, SRR: 2.5, STR: 2, CTH: 1.5, AGI: 1, AWR: 0.5 },
+  },
+  TE: {
+    'Gritty Possession': { SPD: 3, SRR: 2.5, CTH: 2, STR: 1.5, AGI: 1, AWR: 0.5 },
+    'Physical Route Runner': { SPD: 3, SRR: 2.5, STR: 2, CTH: 1.5, AGI: 1, AWR: 0.5 },
+    'Pure Possession': { SPD: 3, SRR: 2.5, CTH: 2, IBL: 1.5, STR: 1, AWR: 0.5 },
+    'Pure Blocker': { ACC: 3, IBL: 2.5, STR: 2, AWR: 1.5, CTH: 1, SRR: 0.5 },
+    'Vertical Threat': { SPD: 3, SRR: 2.5, CTH: 2, IBL: 1.5, STR: 1, AWR: 0.5 },
+  },
+  LT: OL_ARCHETYPE_WEIGHTS,
+  LG: OL_ARCHETYPE_WEIGHTS,
+  C: OL_ARCHETYPE_WEIGHTS,
+  RG: OL_ARCHETYPE_WEIGHTS,
+  RT: OL_ARCHETYPE_WEIGHTS,
+  DT: {
+    'Gap Specialist': { BSH: 3, PMV: 2.5, AWR: 2, FMV: 1.5, ACC: 1, STR: 0.5 },
+    'Power Rusher': { STR: 3, BSH: 2.5, PMV: 2, AWR: 1.5, ACC: 1, FMV: 0.5 },
+    'Pure Power': { STR: 3, BSH: 2.5, FMV: 2, AWR: 1.5, ACC: 1, INJ: 0.5 },
+    'Speed Rusher': { ACC: 3, FMV: 2.5, PMV: 2, BSH: 1.5, STR: 1, AWR: 0.5 },
+  },
+  LEDG: EDGE_ARCHETYPE_WEIGHTS,
+  REDG: EDGE_ARCHETYPE_WEIGHTS,
+  SAM: LB_ARCHETYPE_WEIGHTS,
+  MIKE: LB_ARCHETYPE_WEIGHTS,
+  WILL: LB_ARCHETYPE_WEIGHTS,
+  CB: {
+    'Zone': { SPD: 3, ZCV: 2.5, CTH: 2, BSH: 1.5, STR: 1, MCV: 0.5 },
+    'Bump and Run': { SPD: 3, MCV: 2.5, CTH: 2, STR: 1.5, BSH: 1, ZCV: 0.5 },
+    'Boundary': { SPD: 3, MCV: 2.5, STR: 2, BSH: 1.5, CTH: 1, ZCV: 0.5 },
+    'Field': { SPD: 3, ZCV: 2.5, MCV: 2, CTH: 1.5, BSH: 1, STR: 0.5 },
+  },
+  FS: SAFETY_ARCHETYPE_WEIGHTS,
+  SS: SAFETY_ARCHETYPE_WEIGHTS,
+};
+
 // Default attribute weights by position (using CFB26 attribute abbreviations)
 const DEFAULT_WEIGHTS = {
   QB: {
@@ -211,9 +300,13 @@ async function calculateStudScore(userId, player, dynastyId = null) {
           }
         });
       } else {
-        // Use default weights - map position to position group
+        // Use default weights - prefer archetype-specific, then position group
         const positionGroup = getPositionGroup(player.position);
-        weights = DEFAULT_WEIGHTS[positionGroup] || {};
+        if (player.archetype && DEFAULT_ARCHETYPE_WEIGHTS[player.position] && DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype]) {
+          weights = DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype];
+        } else {
+          weights = DEFAULT_WEIGHTS[positionGroup] || {};
+        }
         preset = {
           dev_trait_weight: 0.15,
           potential_weight: 0.15
@@ -349,5 +442,6 @@ module.exports = {
   calculatePotentialScore,
   getDevTraitBonus,
   DEFAULT_WEIGHTS,
+  DEFAULT_ARCHETYPE_WEIGHTS,
   getPositionGroup
 };

@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { DEFAULT_WEIGHTS, getPositionGroup } = require('../services/studScoreService');
+const { DEFAULT_WEIGHTS, DEFAULT_ARCHETYPE_WEIGHTS, getPositionGroup } = require('../services/studScoreService');
 const { POSITION_ARCHETYPES } = require('../constants/playerAttributes');
 
 /**
@@ -57,10 +57,15 @@ const getWeights = async (req, res) => {
  */
 const getDefaultWeights = async (req, res) => {
   try {
-    const { position } = req.query;
+    const { position, archetype } = req.query;
 
     if (!position) {
       return res.json(DEFAULT_WEIGHTS);
+    }
+
+    // Check for archetype-specific defaults first
+    if (archetype && DEFAULT_ARCHETYPE_WEIGHTS[position] && DEFAULT_ARCHETYPE_WEIGHTS[position][archetype]) {
+      return res.json(DEFAULT_ARCHETYPE_WEIGHTS[position][archetype]);
     }
 
     // Map specific position to position group

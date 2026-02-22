@@ -107,11 +107,11 @@ const StudScoreConfig = () => {
       setError(null);
       
       // Load default weights for reference
-      const defaults = await studScoreService.getDefaultWeights(selectedPosition);
+      const archetype = configLevel === 'archetype' ? selectedArchetype : null;
+      const defaults = await studScoreService.getDefaultWeights(selectedPosition, archetype);
       setDefaultWeights(defaults || {});
 
       // Load user's custom weights
-      const archetype = configLevel === 'archetype' ? selectedArchetype : null;
       const data = await studScoreService.getWeights(
         selectedPreset.id,
         selectedPosition,
@@ -342,7 +342,7 @@ const StudScoreConfig = () => {
       const archetype = copySourceConfigLevel === 'archetype' ? copySourceArchetype : null;
 
       // Load default weights for the source position (for reference)
-      const defaults = await studScoreService.getDefaultWeights(copySourcePosition);
+      const defaults = await studScoreService.getDefaultWeights(copySourcePosition, archetype);
 
       // Load user's custom weights for the source position/archetype
       const data = await studScoreService.getWeights(

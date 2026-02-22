@@ -61,7 +61,7 @@ export function useStudScoreAttributes(dynastyId, position, archetype) {
 
         // Fall back to default weights if no custom weights found
         if (attributeNames.size === 0) {
-          const defaults = await studScoreService.getDefaultWeights(position);
+          const defaults = await studScoreService.getDefaultWeights(position, archetype || null);
           if (defaults) {
             Object.keys(defaults).forEach(attr => attributeNames.add(attr));
           }

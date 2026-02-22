@@ -141,7 +141,7 @@ export const POSITION_ARCHETYPES = {
   SAM: ['Lurker', 'Signal Caller', 'Thumper'],
   MIKE: ['Lurker', 'Signal Caller', 'Thumper'],
   WILL: ['Lurker', 'Signal Caller', 'Thumper'],
-  CB: ['Boundary Jammer', 'Blanket Coverage', 'Bump and Run', 'Coverage Specialist'],
+  CB: ['Zone', 'Bump and Run', 'Boundary', 'Field'],
   FS: ['Box Specialist', 'Hybrid', 'Coverage Specialist'],
   SS: ['Box Specialist', 'Hybrid', 'Coverage Specialist'],
   K: ['Accurate', 'Power'],
