@@ -187,20 +187,23 @@ const Recruiting = () => {
             Position Needs Overview
           </Typography>
           <Box display="flex" flexWrap="wrap" gap={1}>
-            {POSITIONS.filter(pos => positionAnalysis[pos] && (positionAnalysis[pos].status === 'CRITICAL' || positionAnalysis[pos].status === 'WARNING')).map(pos => {
-              const a = positionAnalysis[pos];
-              return (
-                <Chip
-                  key={pos}
-                  label={`${pos}: Need ${a.needToRecruit} (${a.projectedCount}/${a.targetDepth})`}
-                  color={a.status === 'CRITICAL' ? 'error' : 'warning'}
-                  variant="outlined"
-                />
-              );
-            })}
-            {POSITIONS.filter(pos => positionAnalysis[pos] && (positionAnalysis[pos].status === 'CRITICAL' || positionAnalysis[pos].status === 'WARNING')).length === 0 && (
-              <Typography color="textSecondary">All positions are adequately staffed.</Typography>
-            )}
+            {(() => {
+              const needPositions = POSITIONS.filter(pos => positionAnalysis[pos] && (positionAnalysis[pos].status === 'CRITICAL' || positionAnalysis[pos].status === 'WARNING'));
+              if (needPositions.length === 0) {
+                return <Typography color="textSecondary">All positions are adequately staffed.</Typography>;
+              }
+              return needPositions.map(pos => {
+                const a = positionAnalysis[pos];
+                return (
+                  <Chip
+                    key={pos}
+                    label={`${pos}: Need ${a.needToRecruit} (${a.projectedCount}/${a.targetDepth})`}
+                    color={a.status === 'CRITICAL' ? 'error' : 'warning'}
+                    variant="outlined"
+                  />
+                );
+              });
+            })()}
           </Box>
         </Paper>
       )}
@@ -214,7 +217,7 @@ const Recruiting = () => {
             </Typography>
             {recruits.length === 0 ? (
               <Alert severity="info">
-                No recruits on your board yet. Click &quot;Add Recruit&quot; to start building your recruiting board.
+                No recruits on your board yet. Click &quot;Add Recruit&quot; to get started.
               </Alert>
             ) : (
               <TableContainer>
