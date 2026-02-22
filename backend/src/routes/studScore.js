@@ -66,6 +66,11 @@ router.delete('/presets/:presetId', authMiddleware, async (req, res) => {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
+    // Prevent deleting the default preset
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot delete the default preset' });
+    }
+
     // Prevent deleting the last preset
     const countResult = await db.query(
       'SELECT COUNT(*) FROM weight_presets WHERE user_id = $1',
@@ -76,19 +81,8 @@ router.delete('/presets/:presetId', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Cannot delete the last preset. You must have at least one preset.' });
     }
 
-    const wasDefault = presetCheck.rows[0].is_default;
-
     // Delete preset (cascade will remove associated weights)
     await db.query('DELETE FROM weight_presets WHERE id = $1', [presetId]);
-
-    // If deleted preset was default, make another one default
-    if (wasDefault) {
-      await db.query(
-        `UPDATE weight_presets SET is_default = TRUE, updated_at = CURRENT_TIMESTAMP
-         WHERE id = (SELECT id FROM weight_presets WHERE user_id = $1 ORDER BY created_at LIMIT 1)`,
-        [req.user.id]
-      );
-    }
 
     res.json({ message: 'Preset deleted successfully' });
   } catch (error) {
@@ -99,6 +93,9 @@ router.delete('/presets/:presetId', authMiddleware, async (req, res) => {
 
 // Update preset (dev trait and potential weights)
 router.put('/presets/:presetId', authMiddleware, studScoreController.updatePresetWeights);
+
+// Reset all weights in a preset to defaults
+router.post('/presets/:presetId/reset', authMiddleware, studScoreController.resetAllPresetWeights);
 
 // Get weights for a preset/position/archetype
 router.get('/weights', authMiddleware, studScoreController.getWeights);

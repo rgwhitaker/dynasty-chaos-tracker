@@ -246,28 +246,52 @@ async function calculateStudScore(userId, player, dynastyId = null) {
       );
       preset = presetResult.rows[0];
 
-      // Get weights from specific preset, prioritizing archetype-specific weights
-      const result = await db.query(
-        `SELECT attribute_name, weight, archetype 
-         FROM stud_score_weights 
-         WHERE preset_id = $1 AND position = $2 
-         ORDER BY archetype DESC NULLS LAST`,
-        [presetId, player.position]
-      );
-      
-      weights = {};
-      result.rows.forEach(row => {
-        // Priority: archetype-specific weights override position defaults
-        // 1. If row is for this specific archetype, always use it
-        // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
-        if (row.archetype === player.archetype) {
-          // Exact archetype match - highest priority
-          weights[row.attribute_name] = parseFloat(row.weight);
-        } else if (row.archetype === null && !weights[row.attribute_name]) {
-          // Position default - only use if we don't already have an archetype-specific weight
-          weights[row.attribute_name] = parseFloat(row.weight);
+      // For default presets, always use hardcoded defaults
+      if (preset && preset.is_default) {
+        const positionGroup = getPositionGroup(player.position);
+        if (player.archetype && DEFAULT_ARCHETYPE_WEIGHTS[player.position] && DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype]) {
+          weights = DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype];
+        } else {
+          weights = DEFAULT_WEIGHTS[positionGroup] || {};
         }
-      });
+        preset = {
+          dev_trait_weight: 0.15,
+          potential_weight: 0.15
+        };
+      } else {
+        // Get weights from specific preset, prioritizing archetype-specific weights
+        const result = await db.query(
+          `SELECT attribute_name, weight, archetype 
+           FROM stud_score_weights 
+           WHERE preset_id = $1 AND position = $2 
+           ORDER BY archetype DESC NULLS LAST`,
+          [presetId, player.position]
+        );
+        
+        weights = {};
+        result.rows.forEach(row => {
+          // Priority: archetype-specific weights override position defaults
+          // 1. If row is for this specific archetype, always use it
+          // 2. If row is a position default (archetype=null) and we don't have this attribute yet, use it
+          if (row.archetype === player.archetype) {
+            // Exact archetype match - highest priority
+            weights[row.attribute_name] = parseFloat(row.weight);
+          } else if (row.archetype === null && !weights[row.attribute_name]) {
+            // Position default - only use if we don't already have an archetype-specific weight
+            weights[row.attribute_name] = parseFloat(row.weight);
+          }
+        });
+
+        // Fallback to hardcoded defaults if no DB weights exist for this position
+        if (Object.keys(weights).length === 0) {
+          const positionGroup = getPositionGroup(player.position);
+          if (player.archetype && DEFAULT_ARCHETYPE_WEIGHTS[player.position] && DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype]) {
+            weights = DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype];
+          } else {
+            weights = DEFAULT_WEIGHTS[positionGroup] || {};
+          }
+        }
+      }
     } else {
       // Get user's default preset weights
       const presetResult = await db.query(
@@ -443,5 +467,6 @@ module.exports = {
   getDevTraitBonus,
   DEFAULT_WEIGHTS,
   DEFAULT_ARCHETYPE_WEIGHTS,
-  getPositionGroup
+  getPositionGroup,
+  POSITION_GROUP_MAP
 };
