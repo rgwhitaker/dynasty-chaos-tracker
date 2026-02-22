@@ -98,6 +98,14 @@ export const resetWeights = async (presetId, position, archetype = null) => {
 };
 
 /**
+ * Reset all weights in a preset to defaults (all positions/archetypes)
+ */
+export const resetAllPresetWeights = async (presetId) => {
+  const response = await api.post(`/stud-score/presets/${presetId}/reset`);
+  return response.data;
+};
+
+/**
  * Get archetypes for a position
  */
 export const getArchetypes = async (position) => {
@@ -117,6 +125,7 @@ const studScoreServiceAPI = {
   updateWeight,
   batchUpdateWeights,
   resetWeights,
+  resetAllPresetWeights,
   getArchetypes
 };
 

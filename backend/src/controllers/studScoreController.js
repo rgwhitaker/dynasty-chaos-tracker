@@ -1,5 +1,5 @@
 const db = require('../config/database');
-const { DEFAULT_WEIGHTS, DEFAULT_ARCHETYPE_WEIGHTS, getPositionGroup } = require('../services/studScoreService');
+const { DEFAULT_WEIGHTS, DEFAULT_ARCHETYPE_WEIGHTS, getPositionGroup, POSITION_GROUP_MAP } = require('../services/studScoreService');
 const { POSITION_ARCHETYPES } = require('../constants/playerAttributes');
 
 /**
@@ -106,6 +106,10 @@ const updateWeight = async (req, res) => {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot modify the default preset' });
+    }
+
     const result = await db.query(
       `INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight)
        VALUES ($1, $2, $3, $4, $5)
@@ -143,6 +147,10 @@ const batchUpdateWeights = async (req, res) => {
 
     if (presetCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot modify the default preset' });
     }
 
     // Use a transaction for atomicity and better performance
@@ -208,15 +216,122 @@ const resetWeights = async (req, res) => {
       return res.status(404).json({ error: 'Preset not found' });
     }
 
-    await db.query(
-      'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
-      [presetId, position, archetype || null]
-    );
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot modify the default preset' });
+    }
 
-    res.json({ message: 'Weights reset to defaults' });
+    await db.query('BEGIN');
+
+    try {
+      // Delete existing custom weights
+      await db.query(
+        'DELETE FROM stud_score_weights WHERE preset_id = $1 AND position = $2 AND archetype IS NOT DISTINCT FROM $3',
+        [presetId, position, archetype || null]
+      );
+
+      // Re-insert default weights so stud score calculation always has data
+      const defaultWeights = (archetype && DEFAULT_ARCHETYPE_WEIGHTS[position] && DEFAULT_ARCHETYPE_WEIGHTS[position][archetype])
+        ? DEFAULT_ARCHETYPE_WEIGHTS[position][archetype]
+        : DEFAULT_WEIGHTS[getPositionGroup(position)];
+
+      if (defaultWeights) {
+        const weightEntries = Object.entries(defaultWeights);
+        if (weightEntries.length > 0) {
+          const values = [];
+          const params = [];
+          let paramIndex = 1;
+          weightEntries.forEach(([attr, weight]) => {
+            values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4})`);
+            params.push(presetId, position, archetype || null, attr, weight);
+            paramIndex += 5;
+          });
+          await db.query(
+            `INSERT INTO stud_score_weights (preset_id, position, archetype, attribute_name, weight) VALUES ${values.join(', ')}`,
+            params
+          );
+        }
+      }
+
+      await db.query('COMMIT');
+      res.json({ message: 'Weights reset to defaults' });
+    } catch (err) {
+      await db.query('ROLLBACK');
+      throw err;
+    }
   } catch (error) {
     console.error('Reset weights error:', error);
     res.status(500).json({ error: 'Failed to reset weights' });
+  }
+};
+
+/**
+ * Reset all weights in a preset to defaults (all positions/archetypes)
+ */
+const resetAllPresetWeights = async (req, res) => {
+  try {
+    const { presetId } = req.params;
+
+    if (!presetId) {
+      return res.status(400).json({ error: 'presetId is required' });
+    }
+
+    // Verify preset belongs to user
+    const presetCheck = await db.query(
+      'SELECT * FROM weight_presets WHERE id = $1 AND user_id = $2',
+      [presetId, req.user.id]
+    );
+
+    if (presetCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot modify the default preset' });
+    }
+
+    await db.query('BEGIN');
+
+    try {
+      // Delete all custom weights for this preset
+      await db.query('DELETE FROM stud_score_weights WHERE preset_id = $1', [presetId]);
+
+      // Reset dev_trait_weight and potential_weight to defaults
+      await db.query(
+        `UPDATE weight_presets SET dev_trait_weight = 0.15, potential_weight = 0.15, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [presetId]
+      );
+
+      // Re-insert default weights for all positions
+      for (const [rosterPosition, positionGroup] of Object.entries(POSITION_GROUP_MAP)) {
+        const weights = DEFAULT_WEIGHTS[positionGroup];
+        if (weights) {
+          const weightEntries = Object.entries(weights);
+          if (weightEntries.length > 0) {
+            const values = [];
+            const params = [];
+            let paramIndex = 1;
+            weightEntries.forEach(([attr, weight]) => {
+              values.push(`($${paramIndex}, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3})`);
+              params.push(presetId, rosterPosition, attr, weight);
+              paramIndex += 4;
+            });
+            await db.query(
+              `INSERT INTO stud_score_weights (preset_id, position, attribute_name, weight) VALUES ${values.join(', ')}`,
+              params
+            );
+          }
+        }
+      }
+
+      await db.query('COMMIT');
+      res.json({ message: 'Preset reset to defaults successfully' });
+    } catch (err) {
+      await db.query('ROLLBACK');
+      throw err;
+    }
+  } catch (error) {
+    console.error('Reset all preset weights error:', error);
+    res.status(500).json({ error: 'Failed to reset preset' });
   }
 };
 
@@ -240,6 +355,10 @@ const updatePresetWeights = async (req, res) => {
 
     if (presetCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Preset not found' });
+    }
+
+    if (presetCheck.rows[0].is_default) {
+      return res.status(403).json({ error: 'Cannot modify the default preset' });
     }
 
     const updates = [];
@@ -305,6 +424,7 @@ module.exports = {
   updateWeight,
   batchUpdateWeights,
   resetWeights,
+  resetAllPresetWeights,
   updatePresetWeights,
   getArchetypes,
 };

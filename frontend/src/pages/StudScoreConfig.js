@@ -439,6 +439,40 @@ const StudScoreConfig = () => {
     }
   };
 
+  const isDefaultPreset = selectedPreset?.is_default === true;
+
+  const handleResetPreset = async () => {
+    if (!selectedPreset) return;
+    if (!window.confirm(`Reset all weights in "${selectedPreset.preset_name}" to defaults? This will reset all positions and archetypes.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await studScoreService.resetAllPresetWeights(selectedPreset.id);
+      setSuccess('Preset reset to defaults successfully!');
+
+      // Reload presets and weights
+      const currentPresetId = selectedPreset.id;
+      const data = await studScoreService.getPresets();
+      setPresets(data);
+
+      const updatedPreset = data.find(p => p.id === currentPresetId);
+      if (updatedPreset) {
+        setSelectedPreset(updatedPreset);
+        setDevTraitWeight(updatedPreset.dev_trait_weight || 0.15);
+        setPotentialWeight(updatedPreset.potential_weight || 0.15);
+      }
+
+      await loadWeights();
+    } catch (err) {
+      setError('Failed to reset preset: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculate attribute weight (what's left after dev trait and potential)
   const hasValidWeights = Number.isFinite(devTraitWeight) && Number.isFinite(potentialWeight);
   const attributeWeight = hasValidWeights ? (1 - devTraitWeight - potentialWeight) * 100 : 70;
@@ -521,15 +555,29 @@ const StudScoreConfig = () => {
             New Preset
           </Button>
           <Button
+            startIcon={<ResetIcon />}
+            variant="outlined"
+            color="warning"
+            onClick={handleResetPreset}
+            disabled={!selectedPreset || isDefaultPreset || loading}
+          >
+            Reset Preset
+          </Button>
+          <Button
             startIcon={<DeleteIcon />}
             variant="outlined"
             color="error"
             onClick={handleDeletePreset}
-            disabled={!selectedPreset || presets.length <= 1}
+            disabled={!selectedPreset || isDefaultPreset || presets.length <= 1}
           >
             Delete Preset
           </Button>
         </Box>
+        {isDefaultPreset && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            The default preset cannot be edited or deleted. Create a new preset to customize weights.
+          </Alert>
+        )}
       </Paper>
 
       {/* STUD Score Components */}
@@ -564,6 +612,7 @@ const StudScoreConfig = () => {
                 setHasChanges(true);
                 setHasPresetWeightChanges(true);
               }}
+              disabled={isDefaultPreset}
               min={0}
               max={0.5}
               step={0.05}
@@ -591,6 +640,7 @@ const StudScoreConfig = () => {
                 setHasChanges(true);
                 setHasPresetWeightChanges(true);
               }}
+              disabled={isDefaultPreset}
               min={0}
               max={0.5}
               step={0.05}
@@ -687,7 +737,7 @@ const StudScoreConfig = () => {
             <Button
               startIcon={<CopyIcon />}
               onClick={handleOpenCopyDialog}
-              disabled={loading || !selectedPreset}
+              disabled={loading || !selectedPreset || isDefaultPreset}
               sx={{ mr: 1 }}
             >
               Copy From
@@ -695,7 +745,7 @@ const StudScoreConfig = () => {
             <Button
               startIcon={<ResetIcon />}
               onClick={handleReset}
-              disabled={loading || Object.keys(weights).length === 0}
+              disabled={loading || isDefaultPreset || Object.keys(weights).length === 0}
               sx={{ mr: 1 }}
             >
               Reset
@@ -704,7 +754,7 @@ const StudScoreConfig = () => {
               variant="contained"
               startIcon={<SaveIcon />}
               onClick={handleSave}
-              disabled={loading || !hasChanges || (hasPresetWeightChanges && !isWeightValid)}
+              disabled={loading || isDefaultPreset || !hasChanges || (hasPresetWeightChanges && !isWeightValid)}
             >
               Save Changes
             </Button>
@@ -737,12 +787,12 @@ const StudScoreConfig = () => {
                     <Card
                       variant={isEnabled ? "elevation" : "outlined"}
                       sx={{
-                        cursor: 'pointer',
+                        cursor: isDefaultPreset ? 'default' : 'pointer',
                         bgcolor: isEnabled ? 'primary.main' : 'action.disabledBackground',
                         color: isEnabled ? 'primary.contrastText' : 'text.disabled',
                         opacity: isEnabled ? 1 : 0.6,
                         transition: 'all 0.2s ease',
-                        '&:hover': {
+                        '&:hover': isDefaultPreset ? {} : {
                           opacity: isEnabled ? 0.9 : 0.8,
                           transform: 'scale(1.02)',
                         },
@@ -750,7 +800,7 @@ const StudScoreConfig = () => {
                     >
                       <CardContent
                         sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}
-                        onClick={() => handleToggleAttribute(attr)}
+                        onClick={() => !isDefaultPreset && handleToggleAttribute(attr)}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.75rem' }}>
@@ -795,6 +845,7 @@ const StudScoreConfig = () => {
                                 handleWeightChange(attr, val);
                               }
                             }}
+                            disabled={isDefaultPreset}
                             inputProps={{
                               min: MIN_WEIGHT,
                               max: MAX_WEIGHT,
