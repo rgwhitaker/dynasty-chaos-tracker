@@ -87,36 +87,89 @@ function getPositionAttritionRisk(players) {
   return risks;
 }
 
+// Default minimum depth per position
+const DEFAULT_MIN_DEPTH = {
+  'QB': 3,
+  'HB': 4,
+  'FB': 2,
+  'WR': 6,
+  'TE': 3,
+  'LT': 2,
+  'LG': 2,
+  'C': 2,
+  'RG': 2,
+  'RT': 2,
+  'LEDG': 3,
+  'REDG': 3,
+  'DT': 4,
+  'SAM': 2,
+  'MIKE': 2,
+  'WILL': 2,
+  'CB': 5,
+  'FS': 2,
+  'SS': 2,
+  'K': 2,
+  'P': 2
+};
+
+/**
+ * Get the recruiter hub configuration (target depths) for a dynasty.
+ * Returns user-configured values merged with defaults.
+ */
+async function getConfig(dynastyId) {
+  const result = await db.query(
+    'SELECT position, target_depth FROM recruiter_hub_config WHERE dynasty_id = $1',
+    [dynastyId]
+  );
+
+  // Start with defaults, overlay any user-configured values
+  const config = { ...DEFAULT_MIN_DEPTH };
+  result.rows.forEach(row => {
+    config[row.position] = row.target_depth;
+  });
+
+  return config;
+}
+
+/**
+ * Save recruiter hub configuration (target depths) for a dynasty.
+ * Accepts an object mapping position -> target_depth.
+ */
+async function saveConfig(dynastyId, positionDepths) {
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    for (const [position, targetDepth] of Object.entries(positionDepths)) {
+      if (!ROSTER_POSITIONS.includes(position)) continue;
+      const depth = Math.max(0, Math.min(20, parseInt(targetDepth, 10)));
+      if (isNaN(depth)) continue;
+
+      await client.query(
+        `INSERT INTO recruiter_hub_config (dynasty_id, position, target_depth)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (dynasty_id, position)
+         DO UPDATE SET target_depth = $3, updated_at = CURRENT_TIMESTAMP`,
+        [dynastyId, position, depth]
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 /**
  * Calculate recruiting recommendations for a position
  */
-function calculateRecruitingNeed(position, currentCount, atRiskCount) {
-  // Basic logic: maintain minimum depth of 3-4 players per position
-  const minDepth = {
-    'QB': 3,
-    'HB': 4,
-    'FB': 2,
-    'WR': 6,
-    'TE': 3,
-    'LT': 2,
-    'LG': 2,
-    'C': 2,
-    'RG': 2,
-    'RT': 2,
-    'LEDG': 3,
-    'REDG': 3,
-    'DT': 4,
-    'SAM': 2,
-    'MIKE': 2,
-    'WILL': 2,
-    'CB': 5,
-    'FS': 2,
-    'SS': 2,
-    'K': 2,
-    'P': 2
-  };
-
-  const targetDepth = minDepth[position] || 3;
+function calculateRecruitingNeed(position, currentCount, atRiskCount, customDepthMap) {
+  const targetDepth = (customDepthMap && customDepthMap[position] !== undefined)
+    ? customDepthMap[position]
+    : (DEFAULT_MIN_DEPTH[position] || 3);
   const projectedCount = currentCount - atRiskCount;
   const needToRecruit = Math.max(0, targetDepth - projectedCount);
 
@@ -148,6 +201,9 @@ function calculateRecruitingNeed(position, currentCount, atRiskCount) {
  */
 async function analyzeRosterAttritionRisks(dynastyId) {
   try {
+    // Load user-configured target depths (merged with defaults)
+    const customDepthMap = await getConfig(dynastyId);
+
     // Get all players for the dynasty
     const result = await db.query(
       `SELECT id, first_name, last_name, position, jersey_number, year, overall_rating, 
@@ -177,7 +233,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     ROSTER_POSITIONS.forEach(position => {
       const players = playersByPosition[position] || [];
       const risks = getPositionAttritionRisk(players);
-      const recommendations = calculateRecruitingNeed(position, players.length, risks.total);
+      const recommendations = calculateRecruitingNeed(position, players.length, risks.total, customDepthMap);
 
       positionAnalysis[position] = {
         position,
@@ -289,7 +345,11 @@ function getDealbreakerBreakdown(players) {
 }
 
 module.exports = {
+  DEFAULT_MIN_DEPTH,
   analyzeRosterAttritionRisks,
+  getConfig,
+  saveConfig,
+  calculateRecruitingNeed,
   isDraftRisk,
   isGraduating,
   hasDealbreakers,

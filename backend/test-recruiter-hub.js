@@ -4,7 +4,7 @@
  * Run with: node backend/test-recruiter-hub.js
  */
 
-const { isDraftRisk, isGraduating, hasDealbreakers, hasTransferIntent } = require('./src/services/recruiterHubService');
+const { isDraftRisk, isGraduating, hasDealbreakers, hasTransferIntent, calculateRecruitingNeed, DEFAULT_MIN_DEPTH } = require('./src/services/recruiterHubService');
 
 console.log('Running Recruiter Hub Service Tests...\n');
 console.log('='.repeat(80));
@@ -231,6 +231,112 @@ if (multiRiskCount === 4) {
   passed++;
 } else {
   console.log(`✗ FAILED: Expected 4 risks, detected ${multiRiskCount}`);
+  failed++;
+}
+
+// Test 5: Default Target Depths
+console.log('\n### TEST 5: Default Target Depth Configuration ###');
+console.log('-'.repeat(80));
+
+if (DEFAULT_MIN_DEPTH['QB'] === 3) {
+  console.log('✓ PASSED: Default QB target depth is 3');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected QB default 3, got ${DEFAULT_MIN_DEPTH['QB']}`);
+  failed++;
+}
+
+if (DEFAULT_MIN_DEPTH['DT'] === 4) {
+  console.log('✓ PASSED: Default DT target depth is 4');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected DT default 4, got ${DEFAULT_MIN_DEPTH['DT']}`);
+  failed++;
+}
+
+if (DEFAULT_MIN_DEPTH['WR'] === 6) {
+  console.log('✓ PASSED: Default WR target depth is 6');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WR default 6, got ${DEFAULT_MIN_DEPTH['WR']}`);
+  failed++;
+}
+
+// Test 6: calculateRecruitingNeed with default depths
+console.log('\n### TEST 6: calculateRecruitingNeed (default depths) ###');
+console.log('-'.repeat(80));
+
+const needResult1 = calculateRecruitingNeed('QB', 2, 1);
+if (needResult1.targetDepth === 3 && needResult1.needToRecruit === 2 && needResult1.status === 'CRITICAL') {
+  console.log('✓ PASSED: QB with 2 players, 1 at risk → CRITICAL, need 2');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected CRITICAL need 2, got status=${needResult1.status} need=${needResult1.needToRecruit}`);
+  failed++;
+}
+
+const needResult2 = calculateRecruitingNeed('DT', 5, 1);
+if (needResult2.targetDepth === 4 && needResult2.needToRecruit === 0 && needResult2.status === 'WARNING') {
+  console.log('✓ PASSED: DT with 5 players, 1 at risk → WARNING (projected 4 = target, has risk)');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WARNING need 0, got status=${needResult2.status} need=${needResult2.needToRecruit}`);
+  failed++;
+}
+
+const needResult3 = calculateRecruitingNeed('WR', 7, 1);
+if (needResult3.status === 'WARNING') {
+  console.log('✓ PASSED: WR with 7 players, 1 at risk → WARNING (projected 6 = target, has risk)');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WARNING for WR 7/1, got status=${needResult3.status}`);
+  failed++;
+}
+
+// Test 7: calculateRecruitingNeed with custom depth map
+console.log('\n### TEST 7: calculateRecruitingNeed (custom depths) ###');
+console.log('-'.repeat(80));
+
+const customDepths = { 'DT': 6, 'QB': 2 };
+
+const customResult1 = calculateRecruitingNeed('DT', 5, 1, customDepths);
+if (customResult1.targetDepth === 6 && customResult1.needToRecruit === 2 && customResult1.status === 'CRITICAL') {
+  console.log('✓ PASSED: DT with custom target 6, 5 players, 1 at risk → CRITICAL, need 2');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected CRITICAL need 2 target 6, got status=${customResult1.status} need=${customResult1.needToRecruit} target=${customResult1.targetDepth}`);
+  failed++;
+}
+
+const customResult2 = calculateRecruitingNeed('QB', 3, 1, customDepths);
+if (customResult2.targetDepth === 2 && customResult2.needToRecruit === 0 && customResult2.status === 'WARNING') {
+  console.log('✓ PASSED: QB with custom target 2, 3 players, 1 at risk → WARNING (projected 2 = target, has risk)');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WARNING need 0 target 2, got status=${customResult2.status} need=${customResult2.needToRecruit} target=${customResult2.targetDepth}`);
+  failed++;
+}
+
+// Positions not in customDepths should fall back to defaults
+const customResult3 = calculateRecruitingNeed('WR', 2, 0, customDepths);
+if (customResult3.targetDepth === 6 && customResult3.needToRecruit === 4 && customResult3.status === 'CRITICAL') {
+  console.log('✓ PASSED: WR not in customDepths falls back to default target 6 → CRITICAL, need 4');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected default fallback CRITICAL need 4, got status=${customResult3.status} need=${customResult3.needToRecruit} target=${customResult3.targetDepth}`);
+  failed++;
+}
+
+// Test 8: WARNING status when exactly at target depth with at-risk players
+console.log('\n### TEST 8: WARNING status with custom depths ###');
+console.log('-'.repeat(80));
+
+const warningResult = calculateRecruitingNeed('DT', 8, 2, { 'DT': 6 });
+if (warningResult.status === 'WARNING' && warningResult.targetDepth === 6) {
+  console.log('✓ PASSED: DT projected exactly at custom target 6 with risk → WARNING');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WARNING at target 6, got status=${warningResult.status} target=${warningResult.targetDepth}`);
   failed++;
 }
 

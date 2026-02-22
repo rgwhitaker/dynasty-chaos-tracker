@@ -15,10 +15,22 @@ const createRecruit = async (dynastyId, recruitData, token) => {
   return response.data;
 };
 
+const updateRecruit = async (dynastyId, recruitId, recruitData) => {
+  const response = await api.put(`/dynasties/${dynastyId}/recruiting/${recruitId}`, recruitData);
+  return response.data;
+};
+
+const deleteRecruit = async (dynastyId, recruitId) => {
+  const response = await api.delete(`/dynasties/${dynastyId}/recruiting/${recruitId}`);
+  return response.data;
+};
+
 const recruitingService = {
   getRecruits,
   getRecruitingTargets,
   createRecruit,
+  updateRecruit,
+  deleteRecruit,
 };
 
 export default recruitingService;
