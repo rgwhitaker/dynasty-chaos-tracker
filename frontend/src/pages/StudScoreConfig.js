@@ -118,9 +118,8 @@ const StudScoreConfig = () => {
         archetype
       );
 
-      // Convert array to object, with archetype-specific weights taking precedence
-      // The backend returns both position defaults (archetype IS NULL) and archetype overrides
-      // We separate them by checking the archetype field, then merge with overrides taking precedence
+      // The backend returns both position defaults (archetype IS NULL) and archetype overrides.
+      // Separate them so we can decide which set to use based on the config level.
       const positionWeights = {};
       const archetypeWeights = {};
       
@@ -134,8 +133,11 @@ const StudScoreConfig = () => {
         }
       });
 
-      // Merge: archetype weights override position weights
-      const weightsObj = { ...positionWeights, ...archetypeWeights };
+      // When archetype-specific weights exist, use only those so that
+      // attributes the user removed are not re-added from position defaults
+      const weightsObj = (configLevel === 'archetype' && Object.keys(archetypeWeights).length > 0)
+        ? archetypeWeights
+        : { ...positionWeights, ...archetypeWeights };
 
       // Determine active weights (custom or defaults)
       const activeWeights = Object.keys(weightsObj).length === 0 ? { ...defaults } : weightsObj;
