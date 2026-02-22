@@ -45,11 +45,15 @@ export const getWeights = async (presetId, position, archetype = null) => {
 };
 
 /**
- * Get default weights for a position
+ * Get default weights for a position and optional archetype
  */
-export const getDefaultWeights = async (position) => {
+export const getDefaultWeights = async (position, archetype = null) => {
+  const params = { position };
+  if (archetype) {
+    params.archetype = archetype;
+  }
   const response = await api.get('/stud-score/weights/defaults', { 
-    params: { position } 
+    params
   });
   return response.data;
 };
