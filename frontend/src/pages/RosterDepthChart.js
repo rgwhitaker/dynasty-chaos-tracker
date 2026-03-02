@@ -44,6 +44,7 @@ import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
 import playerService from '../services/playerService';
 import HeightInput from '../components/HeightInput';
+import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 // Common chip container styles
@@ -126,6 +127,7 @@ const RosterDepthChart = () => {
     weight: '',
     dev_trait: '',
     archetype: '',
+    abilities: {},
     attributes: {},
     stat_caps: {},
   });
@@ -183,6 +185,7 @@ const RosterDepthChart = () => {
         weight: selectedPlayer.weight || '',
         dev_trait: selectedPlayer.dev_trait || '',
         archetype: selectedPlayer.archetype || '',
+        abilities: selectedPlayer.abilities || {},
         attributes: selectedPlayer.attributes || {},
         dealbreakers: selectedPlayer.dealbreakers || [],
         stat_caps: selectedPlayer.stat_caps || {},
@@ -246,6 +249,7 @@ const RosterDepthChart = () => {
       weight: '',
       dev_trait: '',
       archetype: '',
+      abilities: {},
       attributes: {},
       stat_caps: {},
     });
@@ -266,6 +270,7 @@ const RosterDepthChart = () => {
       weight: '',
       dev_trait: '',
       archetype: '',
+      abilities: {},
       attributes: {},
       stat_caps: {},
     });
@@ -274,9 +279,14 @@ const RosterDepthChart = () => {
 
   const handleAddPlayerChange = (e) => {
     const updates = { [e.target.name]: e.target.value };
-    // Reset archetype when position changes
+    // Reset archetype and abilities when position changes
     if (e.target.name === 'position') {
       updates.archetype = '';
+      updates.abilities = {};
+    }
+    // Reset abilities when archetype changes
+    if (e.target.name === 'archetype') {
+      updates.abilities = {};
     }
     setAddPlayerFormData({
       ...addPlayerFormData,
@@ -305,6 +315,14 @@ const RosterDepthChart = () => {
     if (addPlayerError) setAddPlayerError(null);
   };
 
+  const handleAddPlayerAbilityChange = (newAbilities) => {
+    setAddPlayerFormData({
+      ...addPlayerFormData,
+      abilities: newAbilities,
+    });
+    if (addPlayerError) setAddPlayerError(null);
+  };
+
   const handleAddPlayerSubmit = async (e) => {
     e.preventDefault();
     setAddPlayerError(null);
@@ -322,6 +340,7 @@ const RosterDepthChart = () => {
         overall_rating: addPlayerFormData.overall_rating ? parseInt(addPlayerFormData.overall_rating) : null,
         weight: addPlayerFormData.weight ? parseInt(addPlayerFormData.weight) : null,
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        abilities: Object.keys(addPlayerFormData.abilities || {}).length > 0 ? addPlayerFormData.abilities : undefined,
         stat_caps: addPlayerFormData.position && Object.keys(addPlayerFormData.stat_caps).length > 0 ? addPlayerFormData.stat_caps : undefined,
       };
 
@@ -344,9 +363,14 @@ const RosterDepthChart = () => {
   // Edit player handlers
   const handleEditChange = (e) => {
     const updates = { [e.target.name]: e.target.value };
-    // Reset archetype when position changes
+    // Reset archetype and abilities when position changes
     if (e.target.name === 'position') {
       updates.archetype = '';
+      updates.abilities = {};
+    }
+    // Reset abilities when archetype changes
+    if (e.target.name === 'archetype') {
+      updates.abilities = {};
     }
     setEditFormData({
       ...editFormData,
@@ -375,6 +399,14 @@ const RosterDepthChart = () => {
     if (editError) setEditError(null);
   };
 
+  const handleEditAbilityChange = (newAbilities) => {
+    setEditFormData({
+      ...editFormData,
+      abilities: newAbilities,
+    });
+    if (editError) setEditError(null);
+  };
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setEditError(null);
@@ -391,6 +423,7 @@ const RosterDepthChart = () => {
         overall_rating: editFormData.overall_rating ? parseInt(editFormData.overall_rating) : null,
         weight: editFormData.weight ? parseInt(editFormData.weight) : null,
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
+        abilities: editFormData.abilities && Object.keys(editFormData.abilities).length > 0 ? editFormData.abilities : undefined,
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
         stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
         transfer_intent: editFormData.transfer_intent || false,
@@ -1152,6 +1185,20 @@ const RosterDepthChart = () => {
                   </TextField>
                 </Grid>
               )}
+
+              {addPlayerFormData.position && addPlayerFormData.archetype && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Abilities (Optional)
+                  </Typography>
+                  <AbilitySelector
+                    position={addPlayerFormData.position}
+                    archetype={addPlayerFormData.archetype}
+                    abilities={addPlayerFormData.abilities}
+                    onChange={handleAddPlayerAbilityChange}
+                  />
+                </Grid>
+              )}
               
               {/* Player Attributes Section */}
               <Grid item xs={12}>
@@ -1385,6 +1432,20 @@ const RosterDepthChart = () => {
                       </option>
                     ))}
                   </TextField>
+                </Grid>
+              )}
+
+              {editFormData.position && editFormData.archetype && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Abilities (Optional)
+                  </Typography>
+                  <AbilitySelector
+                    position={editFormData.position}
+                    archetype={editFormData.archetype}
+                    abilities={editFormData.abilities || {}}
+                    onChange={handleEditAbilityChange}
+                  />
                 </Grid>
               )}
               
