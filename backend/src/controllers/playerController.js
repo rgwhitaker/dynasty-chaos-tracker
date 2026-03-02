@@ -93,7 +93,7 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent
+      height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities
     } = req.body;
 
     // Validate stat_caps if provided
@@ -110,13 +110,13 @@ const createPlayer = async (req, res) => {
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
         height, weight, dev_trait, archetype || null, JSON.stringify(attributes || {}), dealbreakers || [],
-        JSON.stringify(stat_caps || {}), transfer_intent || false
+        JSON.stringify(stat_caps || {}), transfer_intent || false, JSON.stringify(abilities || {})
       ]
     );
 
@@ -220,6 +220,13 @@ const updatePlayer = async (req, res) => {
 
       fields.push(`stat_caps = $${paramCount}`);
       values.push(JSON.stringify(req.body.stat_caps));
+      paramCount++;
+    }
+
+    // Handle JSONB abilities
+    if (req.body.abilities !== undefined) {
+      fields.push(`abilities = $${paramCount}`);
+      values.push(JSON.stringify(req.body.abilities));
       paramCount++;
     }
 

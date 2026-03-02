@@ -151,6 +151,263 @@ export const POSITION_ARCHETYPES = {
 // Year classifications
 export const YEARS = ['FR', 'SO', 'JR', 'SR', 'GRAD'];
 
+// Ability levels for player abilities
+export const ABILITY_LEVELS = ['None', 'Bronze', 'Silver', 'Gold', 'Platinum'];
+
+// Archetype abilities mapping
+// Each position+archetype combination has physical and mental abilities
+const QB_MENTAL = ['Winning Time', 'The Natural', 'Field General', 'Headstrong', 'Adrenaline'];
+const HB_MENTAL = ['Winning Time', 'The Natural', 'Team Player', 'Adrenaline', 'Rollercoaster'];
+const FB_MENTAL = HB_MENTAL;
+const WR_MENTAL = ['Winning Time', 'The Natural', 'Team Player', 'Best Friend', 'Adrenaline'];
+const TE_MENTAL = WR_MENTAL;
+const DL_MENTAL = ['Winning Time', 'The Natural', 'Team Player', 'Instinct', 'Adrenaline'];
+const LB_MENTAL = DL_MENTAL;
+const CB_MENTAL = ['Legion', 'Winning Time', 'The Natural', 'Team Player', 'Adrenaline'];
+const SAFETY_MENTAL = CB_MENTAL;
+const KP_MENTAL = ['Clutch Kicker', 'Clearheaded', 'Field Flip'];
+
+export const ARCHETYPE_ABILITIES = {
+  QB: {
+    'Pocket Passer': {
+      physical: ['Resistance', 'Step Up', 'Sleight of Hand', 'Dot!', 'On Time'],
+      mental: QB_MENTAL,
+    },
+    'Dual Threat': {
+      physical: ['Downhill', 'Extender', 'Option King', 'Dot!', 'Mobile Resistance'],
+      mental: QB_MENTAL,
+    },
+    'Backfield Creator': {
+      physical: ['Off Platform', 'Pull Down', 'On Time', 'Sleight of Hand', 'Mobile Deadeye'],
+      mental: QB_MENTAL,
+    },
+    'Pure Runner': {
+      physical: ['Magician', 'Option King', 'Shifty', 'Side Step', 'Workhorse'],
+      mental: QB_MENTAL,
+    },
+  },
+  HB: {
+    'Contact Seeker': {
+      physical: ['Downhill', 'Workhorse', 'Battering Ram', 'Ball Security', 'Balanced'],
+      mental: HB_MENTAL,
+    },
+    'East/West Playmaker': {
+      physical: ['Recoup', 'Shifty', 'Side Step', '360', 'Arm Bar'],
+      mental: HB_MENTAL,
+    },
+    'Backfield Threat': {
+      physical: ['360', 'Safety Valve', 'Takeoff', 'Side Step', 'Recoup'],
+      mental: HB_MENTAL,
+    },
+    'Elusive Bruiser': {
+      physical: ['Shifty', 'Headfirst', 'Side Step', 'Downhill', 'Arm Bar'],
+      mental: HB_MENTAL,
+    },
+    'North/South Receiver': {
+      physical: ['Balanced', 'Arm Bar', 'Safety Valve', 'Headfirst', 'Downhill'],
+      mental: HB_MENTAL,
+    },
+    'North/South Blocker': {
+      physical: ['Headfirst', 'Balanced', 'Sidekick', 'Ball Security', 'Strong Grip'],
+      mental: HB_MENTAL,
+    },
+  },
+  FB: {
+    'Blocking': {
+      physical: ['Strong Grip', 'Second Level', 'Pocket Shield', 'Sidekick', 'Screen Enforcer'],
+      mental: FB_MENTAL,
+    },
+    'Utility': {
+      physical: ['Safety Valve', 'Ball Security', 'Balanced', 'Recoup', 'Workhorse'],
+      mental: FB_MENTAL,
+    },
+  },
+  WR: {
+    'Speedster': {
+      physical: ['Side Step', 'Double Dip', 'Takeoff', 'Recoup', 'Shifty'],
+      mental: WR_MENTAL,
+    },
+    'Elusive Route Runner': {
+      physical: ['360', 'Cutter', 'Double Dip', 'Recoup', 'Side Step'],
+      mental: WR_MENTAL,
+    },
+    'Physical Route Runner': {
+      physical: ['Downhill', 'Press Pro', 'Sure Hands', '50/50', 'Cutter'],
+      mental: WR_MENTAL,
+    },
+    'Contested Specialist': {
+      physical: ['50/50', 'Workhorse', 'Balanced', 'Headfirst', 'Downhill'],
+      mental: WR_MENTAL,
+    },
+    'Gritty Possession': {
+      physical: ['Second Level', 'Outside Shield', 'Strong Grip', 'Workhorse', 'Sure Hands'],
+      mental: WR_MENTAL,
+    },
+    'Gadget': {
+      physical: ['Side Step', 'Shifty', 'Dot!', 'Cutter', 'Extender'],
+      mental: WR_MENTAL,
+    },
+    'Route Artist': {
+      physical: ['Cutter', 'Lay Out', 'Recoup', 'Double Dip', 'Sure Hands'],
+      mental: WR_MENTAL,
+    },
+  },
+  TE: {
+    'Gritty Possession': {
+      physical: ['Workhorse', 'Strong Grip', 'Sure Hands', 'Outside Shield', 'Battering Ram'],
+      mental: TE_MENTAL,
+    },
+    'Physical Route Runner': {
+      physical: ['Balanced', '50/50', 'Cutter', 'Downhill', 'Sure Hands'],
+      mental: TE_MENTAL,
+    },
+    'Pure Possession': {
+      physical: ['Sure Hands', 'Wear Down', 'Strong Grip', 'Outside Shield', 'Balanced'],
+      mental: TE_MENTAL,
+    },
+    'Pure Blocker': {
+      physical: ['Strong Grip', 'Outside Shield', 'Pocket Shield', 'Quick Drop'],
+      mental: TE_MENTAL,
+    },
+    'Vertical Threat': {
+      physical: ['Workhorse', 'Balanced', 'Takeoff', 'Recoup'],
+      mental: TE_MENTAL,
+    },
+  },
+  LT: {
+    'Agile': {
+      physical: ['Screen Enforcer', 'Quick Step', 'Option Shield', 'Outside Shield', 'Quick Drop'],
+      mental: [],
+    },
+    'Pass Protector': {
+      physical: ['Pocket Shield', 'Quick Drop', 'PA Shield', 'Strong Grip', 'Wear Down'],
+      mental: [],
+    },
+    'Raw Strength': {
+      physical: ['Strong Grip', 'Workhorse', 'Second Level', 'Inside Shield', 'Ground and Pound'],
+      mental: [],
+    },
+    'Well Rounded': {
+      physical: ['Option Shield', 'Pocket Shield', 'Strong Grip'],
+      mental: [],
+    },
+  },
+  LEDG: {
+    'Edge Setter': {
+      physical: ['Grip Breaker', 'Inside Disruptor', 'Outside Disruptor', 'Option Disruptor', 'Workhorse'],
+      mental: DL_MENTAL,
+    },
+    'Power Rusher': {
+      physical: ['Grip Breaker', 'Inside Disruptor', 'Outside Disruptor', 'Workhorse', 'Duress'],
+      mental: DL_MENTAL,
+    },
+    'Speed Rusher': {
+      physical: ['Pocket Disruptor', 'Quick Jump', 'Duress', 'Takedown', 'Recoup'],
+      mental: DL_MENTAL,
+    },
+    'Pure Power': {
+      physical: ['Workhorse', 'Grip Breaker', 'Pocket Disruptor'],
+      mental: DL_MENTAL,
+    },
+  },
+  DT: {
+    'Gap Specialist': {
+      physical: ['Pocket Disruptor', 'Rear Edge Physical Speed', 'Workhorse', 'Grip Breaker'],
+      mental: DL_MENTAL,
+    },
+    'Power Rusher': {
+      physical: ['Grip Breaker', 'Inside Disruptor', 'Outside Disruptor', 'Workhorse', 'Duress'],
+      mental: DL_MENTAL,
+    },
+    'Pure Power': {
+      physical: ['Workhorse', 'Grip Breaker', 'Pocket Disruptor'],
+      mental: DL_MENTAL,
+    },
+    'Speed Rusher': {
+      physical: ['Pocket Disruptor', 'Quick Jump', 'Duress', 'Takedown', 'Recoup'],
+      mental: DL_MENTAL,
+    },
+  },
+  SAM: {
+    'Signal Caller': {
+      physical: ['Take Down', 'Wrap Up', 'Workhorse', 'Blow Up', 'Hammer'],
+      mental: LB_MENTAL,
+    },
+    'Lurker': {
+      physical: ['Knockout', 'House Call', 'Robber', 'Bouncer', 'Wrap Up'],
+      mental: LB_MENTAL,
+    },
+    'Thumper': {
+      physical: ['Grip Breaker', 'Wrap Up', 'Aftershock', 'Blow Up', 'Hammer'],
+      mental: LB_MENTAL,
+    },
+  },
+  CB: {
+    'Boundary': {
+      physical: ['Jammer', 'Blanket Coverage', 'Lay Out', 'Wrap Up', 'Quick Jump'],
+      mental: CB_MENTAL,
+    },
+    'Bump and Run': {
+      physical: ['Blanket Coverage', 'Jammer', 'House Call', 'Ballhawk', 'Knockout'],
+      mental: CB_MENTAL,
+    },
+    'Field': {
+      physical: ['Wrap Up', 'Robber', 'Knockout', 'Blanket Coverage', 'Ballhawk'],
+      mental: CB_MENTAL,
+    },
+    'Zone': {
+      physical: ['Knockout', 'Lay Out', 'House Call', 'Ballhawk', 'Bouncer'],
+      mental: CB_MENTAL,
+    },
+  },
+  FS: {
+    'Box Specialist': {
+      physical: ['Aftershock', 'Wrap Up', 'Hammer', 'Blow Up', 'Workhorse'],
+      mental: SAFETY_MENTAL,
+    },
+    'Coverage Specialist': {
+      physical: ['Ballhawk', 'Lay Out', 'House Call', 'Robber', 'Knockout'],
+      mental: SAFETY_MENTAL,
+    },
+    'Hybrid': {
+      physical: ['Wrap Up', 'Hammer', 'Knockout', 'Aftershock', 'Blow Up'],
+      mental: SAFETY_MENTAL,
+    },
+  },
+  K: {
+    'Accurate': {
+      physical: ['Chip Shot', 'Deep Range', 'Mega Leg'],
+      mental: KP_MENTAL,
+    },
+    'Power': {
+      physical: ['Deep Range', 'Mega Leg', 'Coffin Corner'],
+      mental: KP_MENTAL,
+    },
+  },
+};
+
+// Shared position abilities: positions that use the same abilities as another position
+ARCHETYPE_ABILITIES.LG = ARCHETYPE_ABILITIES.LT;
+ARCHETYPE_ABILITIES.C = ARCHETYPE_ABILITIES.LT;
+ARCHETYPE_ABILITIES.RG = ARCHETYPE_ABILITIES.LT;
+ARCHETYPE_ABILITIES.RT = ARCHETYPE_ABILITIES.LT;
+ARCHETYPE_ABILITIES.REDG = ARCHETYPE_ABILITIES.LEDG;
+ARCHETYPE_ABILITIES.MIKE = ARCHETYPE_ABILITIES.SAM;
+ARCHETYPE_ABILITIES.WILL = ARCHETYPE_ABILITIES.SAM;
+ARCHETYPE_ABILITIES.SS = ARCHETYPE_ABILITIES.FS;
+ARCHETYPE_ABILITIES.P = ARCHETYPE_ABILITIES.K;
+
+/**
+ * Get abilities for a position/archetype combination
+ * Returns { physical: [...], mental: [...] } or null if not found
+ */
+export const getAbilitiesForArchetype = (position, archetype) => {
+  if (!position || !archetype) return null;
+  const positionAbilities = ARCHETYPE_ABILITIES[position];
+  if (!positionAbilities) return null;
+  return positionAbilities[archetype] || null;
+};
+
 // Attribute name mapping (from abbreviations to full names for display)
 export const ATTRIBUTE_DISPLAY_NAMES = {
   OVR: 'Overall',

@@ -35,6 +35,8 @@ import {
 } from '@mui/icons-material';
 import recruitingService from '../services/recruitingService';
 import recruiterHubService from '../services/recruiterHubService';
+import { POSITION_ARCHETYPES } from '../constants/playerAttributes';
+import AbilitySelector from '../components/AbilitySelector';
 
 const POSITIONS = [
   'QB', 'HB', 'FB', 'WR', 'TE',
@@ -51,6 +53,8 @@ const EMPTY_RECRUIT = {
   first_name: '',
   last_name: '',
   position: '',
+  archetype: '',
+  abilities: {},
   stars: '',
   overall_rating: '',
   commitment_status: '',
@@ -99,6 +103,8 @@ const Recruiting = () => {
         ...newRecruit,
         stars: newRecruit.stars ? parseInt(newRecruit.stars, 10) : null,
         overall_rating: newRecruit.overall_rating ? parseInt(newRecruit.overall_rating, 10) : null,
+        archetype: newRecruit.archetype || undefined,
+        abilities: Object.keys(newRecruit.abilities).length > 0 ? newRecruit.abilities : undefined,
       });
       setAddDialogOpen(false);
       setNewRecruit({ ...EMPTY_RECRUIT });
@@ -359,7 +365,7 @@ const Recruiting = () => {
                 fullWidth
                 required
                 value={newRecruit.position}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, position: e.target.value }))}
+                onChange={(e) => setNewRecruit(prev => ({ ...prev, position: e.target.value, archetype: '', abilities: {} }))}
               >
                 {POSITIONS.map(pos => (
                   <MenuItem key={pos} value={pos}>
@@ -371,6 +377,22 @@ const Recruiting = () => {
                 ))}
               </TextField>
             </Grid>
+            {newRecruit.position && POSITION_ARCHETYPES[newRecruit.position] && (
+              <Grid item xs={6}>
+                <TextField
+                  label="Archetype"
+                  select
+                  fullWidth
+                  value={newRecruit.archetype}
+                  onChange={(e) => setNewRecruit(prev => ({ ...prev, archetype: e.target.value, abilities: {} }))}
+                >
+                  <MenuItem value="">Select an archetype</MenuItem>
+                  {POSITION_ARCHETYPES[newRecruit.position].map(arch => (
+                    <MenuItem key={arch} value={arch}>{arch}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+            )}
             <Grid item xs={3}>
               <TextField
                 label="Stars"
@@ -422,6 +444,19 @@ const Recruiting = () => {
               />
             </Grid>
           </Grid>
+          {newRecruit.position && newRecruit.archetype && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Abilities (Optional)
+              </Typography>
+              <AbilitySelector
+                position={newRecruit.position}
+                archetype={newRecruit.archetype}
+                abilities={newRecruit.abilities}
+                onChange={(newAbilities) => setNewRecruit(prev => ({ ...prev, abilities: newAbilities }))}
+              />
+            </Box>
+          )}
           {newRecruit.position && positionAnalysis && positionAnalysis[newRecruit.position] && (
             <Alert
               severity={
