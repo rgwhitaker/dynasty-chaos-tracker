@@ -50,6 +50,7 @@ import studScoreService from '../services/studScoreService';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
+import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 // Attribute categories for organized display
@@ -89,6 +90,7 @@ const RosterManagement = () => {
     weight: '',
     dev_trait: '',
     archetype: '',
+    abilities: {},
     attributes: {},
     dealbreakers: [],
     stat_caps: {},
@@ -228,9 +230,14 @@ const RosterManagement = () => {
 
   const handleManualChange = (e) => {
     const updates = { [e.target.name]: e.target.value };
-    // Reset archetype when position changes
+    // Reset archetype and abilities when position changes
     if (e.target.name === 'position') {
       updates.archetype = '';
+      updates.abilities = {};
+    }
+    // Reset abilities when archetype changes
+    if (e.target.name === 'archetype') {
+      updates.abilities = {};
     }
     setManualFormData({
       ...manualFormData,
@@ -282,6 +289,8 @@ const RosterManagement = () => {
         dealbreakers: manualFormData.dealbreakers.length > 0 ? manualFormData.dealbreakers : undefined,
         // Only include stat_caps if position is set and any caps were entered
         stat_caps: manualFormData.position && Object.keys(manualFormData.stat_caps).length > 0 ? manualFormData.stat_caps : undefined,
+        // Only include abilities if any were set
+        abilities: Object.keys(manualFormData.abilities).length > 0 ? manualFormData.abilities : undefined,
       };
 
       await playerService.createPlayer(dynastyId, playerData);
@@ -297,6 +306,7 @@ const RosterManagement = () => {
         weight: '',
         dev_trait: '',
         archetype: '',
+        abilities: {},
         attributes: {},
         dealbreakers: [],
         stat_caps: {},
@@ -328,6 +338,7 @@ const RosterManagement = () => {
       weight: player.weight || '',
       dev_trait: player.dev_trait || '',
       archetype: player.archetype || '',
+      abilities: player.abilities || {},
       attributes: player.attributes || {},
       dealbreakers: player.dealbreakers || [],
       stat_caps: player.stat_caps || {},
@@ -339,9 +350,14 @@ const RosterManagement = () => {
 
   const handleEditChange = (e) => {
     const updates = { [e.target.name]: e.target.value };
-    // Reset archetype when position changes
+    // Reset archetype and abilities when position changes
     if (e.target.name === 'position') {
       updates.archetype = '';
+      updates.abilities = {};
+    }
+    // Reset abilities when archetype changes
+    if (e.target.name === 'archetype') {
+      updates.abilities = {};
     }
     setEditFormData({
       ...editFormData,
@@ -388,6 +404,7 @@ const RosterManagement = () => {
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
         stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
+        abilities: editFormData.abilities && Object.keys(editFormData.abilities).length > 0 ? editFormData.abilities : undefined,
         transfer_intent: editFormData.transfer_intent || false,
       };
 
@@ -759,6 +776,28 @@ const RosterManagement = () => {
                     </Grid>
                   )}
                   
+                  {/* Player Abilities Section */}
+                  {manualFormData.position && manualFormData.archetype && (
+                    <Grid item xs={12}>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="h6" gutterBottom>
+                        Player Abilities (Optional)
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Set ability levels for this archetype. Each ability can be None, Bronze, Silver, Gold, or Platinum.
+                      </Typography>
+                      <AbilitySelector
+                        position={manualFormData.position}
+                        archetype={manualFormData.archetype}
+                        abilities={manualFormData.abilities}
+                        onChange={(newAbilities) => {
+                          setManualFormData({ ...manualFormData, abilities: newAbilities });
+                          if (manualError) setManualError(null);
+                        }}
+                      />
+                    </Grid>
+                  )}
+                  
                   {/* Player Attributes Section */}
                   <Grid item xs={12}>
                     <Divider sx={{ my: 2 }} />
@@ -857,6 +896,7 @@ const RosterManagement = () => {
                             weight: '',
                             dev_trait: '',
                             archetype: '',
+                            abilities: {},
                             attributes: {},
                             dealbreakers: [],
                             stat_caps: {},
@@ -1114,6 +1154,28 @@ const RosterManagement = () => {
                         </option>
                       ))}
                     </TextField>
+                  </Grid>
+                )}
+                
+                {/* Player Abilities Section */}
+                {editFormData.position && editFormData.archetype && (
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Player Abilities (Optional)
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                      Set ability levels for this archetype. Each ability can be None, Bronze, Silver, Gold, or Platinum.
+                    </Typography>
+                    <AbilitySelector
+                      position={editFormData.position}
+                      archetype={editFormData.archetype}
+                      abilities={editFormData.abilities || {}}
+                      onChange={(newAbilities) => {
+                        setEditFormData({ ...editFormData, abilities: newAbilities });
+                        if (editError) setEditError(null);
+                      }}
+                    />
                   </Grid>
                 )}
                 

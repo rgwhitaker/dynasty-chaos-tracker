@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS players (
     dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
     archetype VARCHAR(50), -- Player archetype (e.g., Pocket Passer, Dual Threat, Pure Power)
     attributes JSONB, -- Flexible storage for all position-specific attributes (55 ratings)
+    abilities JSONB, -- Player ability levels (e.g., {"Resistance": "Gold", "Winning Time": "Platinum"})
     dealbreakers TEXT[], -- Array of dealbreaker flags
     transfer_intent BOOLEAN DEFAULT FALSE, -- Player intends to transfer (dealbreaker not met)
     departure_risk DECIMAL(5,2), -- Predicted probability of leaving
@@ -110,6 +111,7 @@ CREATE TABLE IF NOT EXISTS recruits (
     dev_trait VARCHAR(20) DEFAULT 'Unknown', -- Development Trait: Unknown, Normal, Impact, Star, Elite
     archetype VARCHAR(100),
     attributes JSONB, -- Predicted/known attributes (55 ratings)
+    abilities JSONB, -- Recruit ability levels (e.g., {"Resistance": "Gold", "Winning Time": "Platinum"})
     commitment_status VARCHAR(50), -- Committed, Considering, Not Interested
     commitment_probability DECIMAL(5,2), -- ML-predicted probability
     dealbreakers TEXT[], -- Array of dealbreaker preferences

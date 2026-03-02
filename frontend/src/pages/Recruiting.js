@@ -37,6 +37,7 @@ import {
 import recruitingService from '../services/recruitingService';
 import recruiterHubService from '../services/recruiterHubService';
 import { ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
+import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 const POSITIONS = [
@@ -70,6 +71,7 @@ const EMPTY_RECRUIT = {
   position: '',
   stars: '',
   archetype: '',
+  abilities: {},
   recruit_class: 'High School',
   gem_status: 'Unknown',
   dev_trait: 'Unknown',
@@ -130,6 +132,7 @@ const Recruiting = () => {
       attributes: filteredAttributes,
       overall_rating: filteredAttributes.OVR ?? null,
       dev_trait: recruitData.dev_trait || 'Unknown',
+      abilities: recruitData.abilities && Object.keys(recruitData.abilities).length > 0 ? recruitData.abilities : undefined,
     };
   };
 
@@ -138,6 +141,10 @@ const Recruiting = () => {
       const updates = { ...prev, [field]: value };
       if (field === 'position') {
         updates.archetype = '';
+        updates.abilities = {};
+      }
+      if (field === 'archetype') {
+        updates.abilities = {};
       }
       return updates;
     });
@@ -175,6 +182,7 @@ const Recruiting = () => {
       ...recruit,
       stars: recruit.stars || '',
       attributes: recruit.attributes || {},
+      abilities: recruit.abilities || {},
       recruit_class: recruit.recruit_class || 'High School',
       gem_status: recruit.gem_status || 'Unknown',
       dev_trait: recruit.dev_trait || 'Unknown',
@@ -574,6 +582,19 @@ const Recruiting = () => {
                 ))}
               </TextField>
             </Grid>
+            {newRecruit.position && newRecruit.archetype && (
+              <Grid item xs={12}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Abilities (Optional)
+                </Typography>
+                <AbilitySelector
+                  position={newRecruit.position}
+                  archetype={newRecruit.archetype}
+                  abilities={newRecruit.abilities}
+                  onChange={(newAbilities) => setNewRecruit(prev => ({ ...prev, abilities: newAbilities }))}
+                />
+              </Grid>
+            )}
             {renderAttributeFields(newRecruit, setNewRecruit, addFormStudScoreAttrs)}
           </Grid>
           {newRecruit.position && positionAnalysis && positionAnalysis[newRecruit.position] && (
@@ -720,6 +741,19 @@ const Recruiting = () => {
                   ))}
                 </TextField>
               </Grid>
+              {editingRecruit.position && editingRecruit.archetype && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Abilities (Optional)
+                  </Typography>
+                  <AbilitySelector
+                    position={editingRecruit.position}
+                    archetype={editingRecruit.archetype}
+                    abilities={editingRecruit.abilities || {}}
+                    onChange={(newAbilities) => setEditingRecruit(prev => ({ ...prev, abilities: newAbilities }))}
+                  />
+                </Grid>
+              )}
               {renderAttributeFields(editingRecruit, setEditingRecruit, editFormStudScoreAttrs)}
             </Grid>
           )}

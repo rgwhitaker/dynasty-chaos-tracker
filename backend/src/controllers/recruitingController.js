@@ -44,7 +44,7 @@ const createRecruit = async (req, res) => {
     const {
       first_name, last_name, position, stars, overall_rating,
       attributes, commitment_status, dealbreakers, hometown, state,
-      archetype, recruit_class, gem_status, dev_trait
+      archetype, abilities, recruit_class, gem_status, dev_trait
     } = req.body;
 
     // Calculate commitment probability
@@ -68,12 +68,12 @@ const createRecruit = async (req, res) => {
         dynasty_id, first_name, last_name, position, stars, overall_rating,
         attributes, commitment_status, commitment_probability, dealbreakers,
         dealbreaker_fit_score, priority_score, hometown, state,
-        archetype, recruit_class, gem_status, dev_trait
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING *`,
+        archetype, abilities, recruit_class, gem_status, dev_trait
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING *`,
        [dynastyId, first_name, last_name, position, stars, overall_rating,
         JSON.stringify(attributes || {}), commitment_status, commitmentProbability,
        dealbreakers || [], dealbreakerFitScore, priorityScore, hometown, state,
-       archetype || null, recruit_class || 'High School', gem_status || 'Unknown', dev_trait || 'Unknown']
+       archetype || null, JSON.stringify(abilities || {}), recruit_class || 'High School', gem_status || 'Unknown', dev_trait || 'Unknown']
     );
 
     res.status(201).json(result.rows[0]);
@@ -126,6 +126,13 @@ const updateRecruit = async (req, res) => {
     if (req.body.dealbreakers !== undefined) {
       fields.push(`dealbreakers = $${paramCount}`);
       values.push(req.body.dealbreakers);
+      paramCount++;
+    }
+
+    // Handle JSONB abilities
+    if (req.body.abilities !== undefined) {
+      fields.push(`abilities = $${paramCount}`);
+      values.push(JSON.stringify(req.body.abilities));
       paramCount++;
     }
 
