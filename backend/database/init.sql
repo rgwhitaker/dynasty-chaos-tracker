@@ -103,9 +103,12 @@ CREATE TABLE IF NOT EXISTS recruits (
     position VARCHAR(10) NOT NULL,
     stars INTEGER,
     overall_rating INTEGER,
+    recruit_class VARCHAR(20) DEFAULT 'High School', -- High School or Transfer
+    gem_status VARCHAR(20) DEFAULT 'Unknown', -- Gem, Bust, or Unknown
     height VARCHAR(10), -- Height (e.g., "6'2\"")
     weight INTEGER, -- Weight in pounds
-    dev_trait VARCHAR(20), -- Development Trait: Normal, Impact, Star, Elite
+    dev_trait VARCHAR(20) DEFAULT 'Unknown', -- Development Trait: Unknown, Normal, Impact, Star, Elite
+    archetype VARCHAR(100),
     attributes JSONB, -- Predicted/known attributes (55 ratings)
     commitment_status VARCHAR(50), -- Committed, Considering, Not Interested
     commitment_probability DECIMAL(5,2), -- ML-predicted probability

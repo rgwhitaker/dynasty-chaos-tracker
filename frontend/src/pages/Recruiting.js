@@ -29,12 +29,15 @@ import {
 } from '@mui/material';
 import {
   Add as AddIcon,
+  Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowBack as ArrowBackIcon,
   Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import recruitingService from '../services/recruitingService';
 import recruiterHubService from '../services/recruiterHubService';
+import { ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
+import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 const POSITIONS = [
   'QB', 'HB', 'FB', 'WR', 'TE',
@@ -46,16 +49,32 @@ const POSITIONS = [
 ];
 
 const COMMITMENT_STATUSES = ['Committed', 'Considering', 'Not Interested', ''];
+const RECRUIT_CLASSES = ['High School', 'Transfer'];
+const GEM_STATUSES = ['Gem', 'Bust', 'Unknown'];
+const DEV_TRAITS = ['Unknown', 'Normal', 'Impact', 'Star', 'Elite'];
+const ATTRIBUTE_CATEGORIES = {
+  Physical: ['SPD', 'ACC', 'AGI', 'COD', 'STR', 'JMP', 'STA', 'TGH', 'INJ'],
+  Awareness: ['AWR', 'PRC'],
+  'Ball Carrier': ['CAR', 'BCV', 'BTK', 'TRK', 'SFA', 'SPM', 'JKM'],
+  Receiving: ['CTH', 'CIT', 'SPC', 'SRR', 'MRR', 'DRR', 'RLS'],
+  Passing: ['THP', 'SAC', 'MAC', 'DAC', 'TUP', 'BSK', 'PAC'],
+  Blocking: ['PBK', 'PBP', 'PBF', 'RBK', 'RBP', 'RBF', 'LBK', 'IBL', 'RUN'],
+  Defense: ['TAK', 'POW', 'BSH', 'FMV', 'PMV', 'PUR'],
+  Coverage: ['MCV', 'ZCV', 'PRS'],
+  'Special Teams': ['RET', 'KPW', 'KAC', 'LSP'],
+};
 
 const EMPTY_RECRUIT = {
   first_name: '',
   last_name: '',
   position: '',
   stars: '',
-  overall_rating: '',
+  archetype: '',
+  recruit_class: 'High School',
+  gem_status: 'Unknown',
+  dev_trait: 'Unknown',
+  attributes: {},
   commitment_status: '',
-  hometown: '',
-  state: '',
 };
 
 const Recruiting = () => {
@@ -66,9 +85,13 @@ const Recruiting = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingRecruit, setEditingRecruit] = useState(null);
   const [newRecruit, setNewRecruit] = useState({ ...EMPTY_RECRUIT });
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const addFormStudScoreAttrs = useStudScoreAttributes(dynastyId, newRecruit.position, newRecruit.archetype);
+  const editFormStudScoreAttrs = useStudScoreAttributes(dynastyId, editingRecruit?.position, editingRecruit?.archetype);
 
   const loadData = useCallback(async () => {
     try {
@@ -92,14 +115,48 @@ const Recruiting = () => {
     loadData();
   }, [loadData]);
 
+  const buildRecruitPayload = (recruitData) => {
+    const filteredAttributes = Object.entries(recruitData.attributes || {})
+      .reduce((acc, [key, value]) => {
+        if (value === '' || value === null || value === undefined) return acc;
+        const numericValue = Number(value);
+        if (Number.isNaN(numericValue)) return acc;
+        return { ...acc, [key]: numericValue };
+      }, {});
+
+    return {
+      ...recruitData,
+      stars: recruitData.stars ? parseInt(recruitData.stars, 10) : null,
+      attributes: filteredAttributes,
+      overall_rating: filteredAttributes.OVR ?? null,
+      dev_trait: recruitData.dev_trait || 'Unknown',
+    };
+  };
+
+  const handleRecruitFieldChange = (setter) => (field, value) => {
+    setter((prev) => {
+      const updates = { ...prev, [field]: value };
+      if (field === 'position') {
+        updates.archetype = '';
+      }
+      return updates;
+    });
+  };
+
+  const handleRecruitAttributeChange = (setter) => (attribute, value) => {
+    setter((prev) => ({
+      ...prev,
+      attributes: {
+        ...(prev.attributes || {}),
+        [attribute]: value,
+      },
+    }));
+  };
+
   const handleAddRecruit = async () => {
     try {
       setSaving(true);
-      await recruitingService.createRecruit(dynastyId, {
-        ...newRecruit,
-        stars: newRecruit.stars ? parseInt(newRecruit.stars, 10) : null,
-        overall_rating: newRecruit.overall_rating ? parseInt(newRecruit.overall_rating, 10) : null,
-      });
+      await recruitingService.createRecruit(dynastyId, buildRecruitPayload(newRecruit));
       setAddDialogOpen(false);
       setNewRecruit({ ...EMPTY_RECRUIT });
       setSnackbar({ open: true, message: 'Recruit added successfully.', severity: 'success' });
@@ -107,6 +164,36 @@ const Recruiting = () => {
     } catch (err) {
       console.error('Failed to add recruit:', err);
       setSnackbar({ open: true, message: 'Failed to add recruit.', severity: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenEditRecruit = (recruit) => {
+    setEditingRecruit({
+      ...EMPTY_RECRUIT,
+      ...recruit,
+      stars: recruit.stars || '',
+      attributes: recruit.attributes || {},
+      recruit_class: recruit.recruit_class || 'High School',
+      gem_status: recruit.gem_status || 'Unknown',
+      dev_trait: recruit.dev_trait || 'Unknown',
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveRecruit = async () => {
+    if (!editingRecruit) return;
+    try {
+      setSaving(true);
+      await recruitingService.updateRecruit(dynastyId, editingRecruit.id, buildRecruitPayload(editingRecruit));
+      setEditDialogOpen(false);
+      setEditingRecruit(null);
+      setSnackbar({ open: true, message: 'Recruit updated successfully.', severity: 'success' });
+      await loadData();
+    } catch (err) {
+      console.error('Failed to update recruit:', err);
+      setSnackbar({ open: true, message: 'Failed to update recruit.', severity: 'error' });
     } finally {
       setSaving(false);
     }
@@ -134,6 +221,36 @@ const Recruiting = () => {
     }
     return <Chip label="OK" color="success" size="small" />;
   };
+
+  const renderAttributeFields = (recruitData, setRecruitData, relevantAttributes) => (
+    Object.entries(ATTRIBUTE_CATEGORIES).map(([category, categoryAttributes]) => {
+      const filteredAttrs = relevantAttributes
+        ? categoryAttributes.filter(attr => relevantAttributes.has(attr))
+        : categoryAttributes;
+
+      if (filteredAttrs.length === 0) return null;
+
+      return (
+        <Grid item xs={12} key={category}>
+          <Typography variant="subtitle2" sx={{ mt: 1 }}>{category}</Typography>
+          <Grid container spacing={1}>
+            {filteredAttrs.map(attr => (
+              <Grid item xs={6} sm={4} md={3} key={attr}>
+                <TextField
+                  label={ATTRIBUTE_DISPLAY_NAMES[attr] || attr}
+                  type="number"
+                  fullWidth
+                  inputProps={{ min: 0, max: 99 }}
+                  value={recruitData.attributes?.[attr] ?? ''}
+                  onChange={(e) => handleRecruitAttributeChange(setRecruitData)(attr, e.target.value)}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        </Grid>
+      );
+    })
+  );
 
   if (loading) {
     return (
@@ -227,11 +344,13 @@ const Recruiting = () => {
                       <TableCell>Name</TableCell>
                       <TableCell>Position</TableCell>
                       <TableCell align="center">Stars</TableCell>
-                      <TableCell align="center">OVR</TableCell>
+                      <TableCell align="center">Class</TableCell>
+                      <TableCell align="center">Archetype</TableCell>
+                      <TableCell align="center">Gem/Bust</TableCell>
+                      <TableCell align="center">Dev Trait</TableCell>
                       <TableCell align="center">Status</TableCell>
                       <TableCell align="center">Priority</TableCell>
                       <TableCell align="center">Position Need</TableCell>
-                      <TableCell align="center">Location</TableCell>
                       <TableCell align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -245,7 +364,10 @@ const Recruiting = () => {
                         <TableCell align="center">
                           {recruit.stars ? '★'.repeat(recruit.stars) : '-'}
                         </TableCell>
-                        <TableCell align="center">{recruit.overall_rating || '-'}</TableCell>
+                        <TableCell align="center">{recruit.recruit_class || '-'}</TableCell>
+                        <TableCell align="center">{recruit.archetype || '-'}</TableCell>
+                        <TableCell align="center">{recruit.gem_status || '-'}</TableCell>
+                        <TableCell align="center">{recruit.dev_trait || 'Unknown'}</TableCell>
                         <TableCell align="center">
                           {recruit.commitment_status ? (
                             <Chip
@@ -265,11 +387,14 @@ const Recruiting = () => {
                           {getPositionNeedChip(recruit.position)}
                         </TableCell>
                         <TableCell align="center">
-                          {recruit.hometown && recruit.state
-                            ? `${recruit.hometown}, ${recruit.state}`
-                            : recruit.state || recruit.hometown || '-'}
-                        </TableCell>
-                        <TableCell align="center">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => handleOpenEditRecruit(recruit)}
+                            aria-label="edit recruit"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
                           <IconButton
                             size="small"
                             color="error"
@@ -359,7 +484,7 @@ const Recruiting = () => {
                 fullWidth
                 required
                 value={newRecruit.position}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, position: e.target.value }))}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('position', e.target.value)}
               >
                 {POSITIONS.map(pos => (
                   <MenuItem key={pos} value={pos}>
@@ -378,18 +503,62 @@ const Recruiting = () => {
                 fullWidth
                 inputProps={{ min: 1, max: 5 }}
                 value={newRecruit.stars}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, stars: e.target.value }))}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('stars', e.target.value)}
               />
             </Grid>
-            <Grid item xs={3}>
+            <Grid item xs={6}>
               <TextField
-                label="OVR"
-                type="number"
+                label="Class"
+                select
                 fullWidth
-                inputProps={{ min: 1, max: 99 }}
-                value={newRecruit.overall_rating}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, overall_rating: e.target.value }))}
-              />
+                value={newRecruit.recruit_class}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('recruit_class', e.target.value)}
+              >
+                {RECRUIT_CLASSES.map(option => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Archetype"
+                select
+                fullWidth
+                value={newRecruit.archetype}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('archetype', e.target.value)}
+                disabled={!newRecruit.position || !POSITION_ARCHETYPES[newRecruit.position]}
+              >
+                <MenuItem value="">None</MenuItem>
+                {(POSITION_ARCHETYPES[newRecruit.position] || []).map(option => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Gem/Bust"
+                select
+                fullWidth
+                value={newRecruit.gem_status}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('gem_status', e.target.value)}
+              >
+                {GEM_STATUSES.map(option => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Dev Trait"
+                select
+                fullWidth
+                value={newRecruit.dev_trait}
+                onChange={(e) => handleRecruitFieldChange(setNewRecruit)('dev_trait', e.target.value)}
+              >
+                {DEV_TRAITS.map(option => (
+                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid item xs={6}>
               <TextField
@@ -405,22 +574,7 @@ const Recruiting = () => {
                 ))}
               </TextField>
             </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Hometown"
-                fullWidth
-                value={newRecruit.hometown}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, hometown: e.target.value }))}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="State"
-                fullWidth
-                value={newRecruit.state}
-                onChange={(e) => setNewRecruit(prev => ({ ...prev, state: e.target.value }))}
-              />
-            </Grid>
+            {renderAttributeFields(newRecruit, setNewRecruit, addFormStudScoreAttrs)}
           </Grid>
           {newRecruit.position && positionAnalysis && positionAnalysis[newRecruit.position] && (
             <Alert
@@ -446,6 +600,138 @@ const Recruiting = () => {
             disabled={saving || !newRecruit.first_name || !newRecruit.last_name || !newRecruit.position}
           >
             {saving ? 'Adding...' : 'Add Recruit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Recruit Dialog */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Edit Recruit</DialogTitle>
+        <DialogContent>
+          {editingRecruit && (
+            <Grid container spacing={2} sx={{ mt: 0.5 }}>
+              <Grid item xs={6}>
+                <TextField
+                  label="First Name"
+                  fullWidth
+                  required
+                  value={editingRecruit.first_name}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('first_name', e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Last Name"
+                  fullWidth
+                  required
+                  value={editingRecruit.last_name}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('last_name', e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Position"
+                  select
+                  fullWidth
+                  required
+                  value={editingRecruit.position}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('position', e.target.value)}
+                >
+                  {POSITIONS.map(pos => (
+                    <MenuItem key={pos} value={pos}>{pos}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Stars"
+                  type="number"
+                  fullWidth
+                  inputProps={{ min: 1, max: 5 }}
+                  value={editingRecruit.stars}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('stars', e.target.value)}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Class"
+                  select
+                  fullWidth
+                  value={editingRecruit.recruit_class}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('recruit_class', e.target.value)}
+                >
+                  {RECRUIT_CLASSES.map(option => (
+                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Archetype"
+                  select
+                  fullWidth
+                  value={editingRecruit.archetype}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('archetype', e.target.value)}
+                  disabled={!editingRecruit.position || !POSITION_ARCHETYPES[editingRecruit.position]}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {(POSITION_ARCHETYPES[editingRecruit.position] || []).map(option => (
+                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Gem/Bust"
+                  select
+                  fullWidth
+                  value={editingRecruit.gem_status}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('gem_status', e.target.value)}
+                >
+                  {GEM_STATUSES.map(option => (
+                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Dev Trait"
+                  select
+                  fullWidth
+                  value={editingRecruit.dev_trait}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('dev_trait', e.target.value)}
+                >
+                  {DEV_TRAITS.map(option => (
+                    <MenuItem key={option} value={option}>{option}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Commitment Status"
+                  select
+                  fullWidth
+                  value={editingRecruit.commitment_status}
+                  onChange={(e) => handleRecruitFieldChange(setEditingRecruit)('commitment_status', e.target.value)}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {COMMITMENT_STATUSES.filter(s => s).map(s => (
+                    <MenuItem key={s} value={s}>{s}</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              {renderAttributeFields(editingRecruit, setEditingRecruit, editFormStudScoreAttrs)}
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleSaveRecruit}
+            variant="contained"
+            disabled={saving || !editingRecruit?.first_name || !editingRecruit?.last_name || !editingRecruit?.position}
+          >
+            {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogActions>
       </Dialog>
