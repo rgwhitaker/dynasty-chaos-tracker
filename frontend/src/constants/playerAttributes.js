@@ -330,7 +330,7 @@ export const ARCHETYPE_ABILITIES = {
   },
   SAM: {
     'Signal Caller': {
-      physical: ['Take Down', 'Wrap Up', 'Workhorse', 'Blow Up', 'Hammer'],
+      physical: ['Takedown', 'Wrap Up', 'Workhorse', 'Blow Up', 'Hammer'],
       mental: LB_MENTAL,
     },
     'Lurker': {
