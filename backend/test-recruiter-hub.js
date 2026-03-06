@@ -340,6 +340,34 @@ if (warningResult.status === 'WARNING' && warningResult.targetDepth === 6) {
   failed++;
 }
 
+// Test 9: Committed recruits count toward recruiting need
+console.log('\n### TEST 9: committed recruits impact recruiting needs ###');
+console.log('-'.repeat(80));
+
+const committedResult = calculateRecruitingNeed('QB', 2, 1, undefined, 1);
+if (
+  committedResult.currentCount === 2 &&
+  committedResult.committedCount === 1 &&
+  committedResult.projectedCount === 2 &&
+  committedResult.needToRecruit === 1 &&
+  committedResult.status === 'CRITICAL'
+) {
+  console.log('✓ PASSED: Committed QB recruit reduces need from 2 to 1 (counts like roster depth)');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected committed recruit to reduce need to 1, got status=${committedResult.status} need=${committedResult.needToRecruit} projected=${committedResult.projectedCount}`);
+  failed++;
+}
+
+const committedWarningResult = calculateRecruitingNeed('DT', 4, 1, undefined, 1);
+if (committedWarningResult.status === 'WARNING' && committedWarningResult.needToRecruit === 0) {
+  console.log('✓ PASSED: Committed DT recruit shifts CRITICAL need to WARNING when projected meets target');
+  passed++;
+} else {
+  console.log(`✗ FAILED: Expected WARNING with 0 need after commitment, got status=${committedWarningResult.status} need=${committedWarningResult.needToRecruit}`);
+  failed++;
+}
+
 // Summary
 console.log('\n');
 console.log('='.repeat(80));
