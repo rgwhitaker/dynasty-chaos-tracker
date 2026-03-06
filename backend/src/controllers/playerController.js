@@ -2,6 +2,44 @@ const db = require('../config/database');
 const studScoreService = require('../services/studScoreService');
 const { validateStatCaps, calculatePotentialScore } = require('../constants/statCaps');
 
+const YEAR_ADVANCEMENT = {
+  FR: 'SO',
+  SO: 'JR',
+  JR: 'SR',
+  SR: 'GRAD',
+  'RS FR': 'RS SO',
+  'RS SO': 'RS JR',
+  'RS JR': 'RS SR',
+  'RS SR': 'GRAD',
+  GRAD: 'GRAD',
+};
+
+const getAdvancedYear = (year) => YEAR_ADVANCEMENT[year] || year || null;
+
+const advancePlayerSeason = (player) => {
+  let nextYear = getAdvancedYear(player.year);
+  let redshirted = player.redshirted || false;
+  let redshirtUsed = player.redshirt_used || false;
+  let redshirtApplied = false;
+
+  if (redshirted && !redshirtUsed) {
+    nextYear = player.year;
+    redshirted = false;
+    redshirtUsed = true;
+    redshirtApplied = true;
+  } else {
+    redshirted = false;
+  }
+
+  return {
+    year: nextYear,
+    redshirted,
+    redshirt_used: redshirtUsed,
+    redshirtApplied,
+    graduated: nextYear === 'GRAD',
+  };
+};
+
 /**
  * Helper function to ensure player attributes are properly parsed from JSONB
  * @param {Object} player - Player object from database
@@ -93,7 +131,8 @@ const createPlayer = async (req, res) => {
 
     const {
       first_name, last_name, position, jersey_number, year, overall_rating,
-      height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities
+      height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities,
+      redshirted, redshirt_used
     } = req.body;
 
     // Validate stat_caps if provided
@@ -110,13 +149,15 @@ const createPlayer = async (req, res) => {
     const result = await db.query(
       `INSERT INTO players (
         dynasty_id, first_name, last_name, position, jersey_number, year, overall_rating,
-        height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        height, weight, dev_trait, archetype, attributes, dealbreakers, stat_caps, transfer_intent, abilities,
+        redshirted, redshirt_used
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       RETURNING *`,
       [
         dynastyId, first_name, last_name, position, jersey_number, year, overall_rating,
         height, weight, dev_trait, archetype || null, JSON.stringify(attributes || {}), dealbreakers || [],
-        JSON.stringify(stat_caps || {}), transfer_intent || false, JSON.stringify(abilities || {})
+        JSON.stringify(stat_caps || {}), transfer_intent || false, JSON.stringify(abilities || {}),
+        redshirted || false, redshirt_used || false
       ]
     );
 
@@ -171,7 +212,7 @@ const updatePlayer = async (req, res) => {
 
     const allowedFields = [
       'first_name', 'last_name', 'position', 'jersey_number', 'year', 'overall_rating',
-      'height', 'weight', 'dev_trait', 'archetype', 'transfer_intent'
+      'height', 'weight', 'dev_trait', 'archetype', 'transfer_intent', 'redshirted', 'redshirt_used'
     ];
 
     for (const field of allowedFields) {
@@ -307,9 +348,135 @@ const deletePlayer = async (req, res) => {
   }
 };
 
+const advanceSeason = async (req, res) => {
+  const client = await db.pool.connect();
+
+  try {
+    const { dynastyId } = req.params;
+
+    await client.query('BEGIN');
+
+    const dynastyCheck = await client.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const playersResult = await client.query(
+      'SELECT id, year, redshirted, redshirt_used FROM players WHERE dynasty_id = $1 FOR UPDATE',
+      [dynastyId]
+    );
+
+    let graduatesCount = 0;
+    let redshirtsProcessed = 0;
+
+    for (const player of playersResult.rows) {
+      const advancedPlayer = advancePlayerSeason(player);
+
+      if (advancedPlayer.redshirtApplied) {
+        redshirtsProcessed += 1;
+      }
+
+      if (advancedPlayer.graduated) {
+        graduatesCount += 1;
+      }
+
+      await client.query(
+        `UPDATE players
+         SET year = $1, redshirted = $2, redshirt_used = $3, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4`,
+        [advancedPlayer.year, advancedPlayer.redshirted, advancedPlayer.redshirt_used, player.id]
+      );
+    }
+
+    await client.query(
+      `DELETE FROM depth_charts dc
+       USING players p
+       WHERE dc.player_id = p.id
+         AND p.dynasty_id = $1
+         AND p.year = 'GRAD'`,
+      [dynastyId]
+    );
+
+    const committedRecruitsResult = await client.query(
+      `SELECT *
+       FROM recruits
+       WHERE dynasty_id = $1 AND commitment_status = 'Committed'
+       FOR UPDATE`,
+      [dynastyId]
+    );
+
+    const committedRecruits = committedRecruitsResult.rows;
+    let movedRecruitsCount = 0;
+
+    for (const recruit of committedRecruits) {
+      await client.query(
+        `INSERT INTO players (
+          dynasty_id, first_name, last_name, position, year, overall_rating,
+          height, weight, dev_trait, archetype, attributes, abilities,
+          dealbreakers, transfer_intent, stat_caps, redshirted, redshirt_used
+        ) VALUES (
+          $1, $2, $3, $4, 'FR', $5,
+          $6, $7, $8, $9, $10, $11,
+          $12, FALSE, $13, FALSE, FALSE
+        )`,
+        [
+          dynastyId,
+          recruit.first_name,
+          recruit.last_name,
+          recruit.position,
+          recruit.overall_rating,
+          recruit.height,
+          recruit.weight,
+          recruit.dev_trait || 'Unknown',
+          recruit.archetype || null,
+          recruit.attributes || {},
+          recruit.abilities || {},
+          recruit.dealbreakers || [],
+          {},
+        ]
+      );
+      movedRecruitsCount += 1;
+    }
+
+    if (committedRecruits.length > 0) {
+      await client.query(
+        `DELETE FROM recruits
+         WHERE dynasty_id = $1 AND commitment_status = 'Committed'`,
+        [dynastyId]
+      );
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      message: 'Season advanced successfully',
+      summary: {
+        playersProcessed: playersResult.rows.length,
+        recruitsMoved: movedRecruitsCount,
+        graduatesMoved: graduatesCount,
+        redshirtsProcessed,
+      },
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Advance season error:', error);
+    res.status(500).json({ error: 'Failed to advance season' });
+  } finally {
+    client.release();
+  }
+};
+
 module.exports = {
   getPlayers,
   createPlayer,
   updatePlayer,
   deletePlayer,
+  advanceSeason,
+  getAdvancedYear,
+  advancePlayerSeason,
 };

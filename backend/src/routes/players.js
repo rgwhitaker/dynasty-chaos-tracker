@@ -5,6 +5,7 @@ const playerController = require('../controllers/playerController');
 
 router.get('/', authMiddleware, playerController.getPlayers);
 router.post('/', authMiddleware, playerController.createPlayer);
+router.post('/advance-season', authMiddleware, playerController.advanceSeason);
 router.put('/:playerId', authMiddleware, playerController.updatePlayer);
 router.delete('/:playerId', authMiddleware, playerController.deletePlayer);
 

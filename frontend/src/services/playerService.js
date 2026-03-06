@@ -20,6 +20,11 @@ const deletePlayer = async (dynastyId, playerId, token) => {
   return response.data;
 };
 
+const advanceSeason = async (dynastyId) => {
+  const response = await api.post(`/dynasties/${dynastyId}/players/advance-season`);
+  return response.data;
+};
+
 const uploadScreenshots = async (dynastyId, files, ocrMethod = 'tesseract') => {
   const formData = new FormData();
   if (files.length > 1) {
@@ -64,6 +69,7 @@ const playerService = {
   createPlayer,
   updatePlayer,
   deletePlayer,
+  advanceSeason,
   uploadScreenshots,
   uploadStatGroupScreenshot,
 };
