@@ -166,11 +166,13 @@ async function saveConfig(dynastyId, positionDepths) {
 /**
  * Calculate recruiting recommendations for a position
  */
-function calculateRecruitingNeed(position, currentCount, atRiskCount, customDepthMap) {
+function calculateRecruitingNeed(position, currentCount, atRiskCount, customDepthMap, committedCount = 0) {
   const targetDepth = (customDepthMap && customDepthMap[position] !== undefined)
     ? customDepthMap[position]
     : (DEFAULT_MIN_DEPTH[position] || 3);
-  const projectedCount = currentCount - atRiskCount;
+  const normalizedCommittedCount = Math.max(0, committedCount || 0);
+  const effectiveCount = currentCount + normalizedCommittedCount;
+  const projectedCount = effectiveCount - atRiskCount;
   const needToRecruit = Math.max(0, targetDepth - projectedCount);
 
   // Determine status
@@ -188,6 +190,8 @@ function calculateRecruitingNeed(position, currentCount, atRiskCount, customDept
 
   return {
     currentCount,
+    committedCount: normalizedCommittedCount,
+    effectiveCount,
     atRiskCount,
     projectedCount,
     targetDepth,
@@ -216,6 +220,19 @@ async function analyzeRosterAttritionRisks(dynastyId) {
 
     const allPlayers = result.rows;
 
+    // Get committed recruits by position so they count toward recruiting needs
+    const committedResult = await db.query(
+      `SELECT position, COUNT(*)::int AS committed_count
+       FROM recruits
+       WHERE dynasty_id = $1 AND commitment_status = 'Committed'
+       GROUP BY position`,
+      [dynastyId]
+    );
+    const committedByPosition = {};
+    committedResult.rows.forEach(row => {
+      committedByPosition[row.position] = Number(row.committed_count) || 0;
+    });
+
     // Group players by position
     const playersByPosition = {};
     ROSTER_POSITIONS.forEach(pos => {
@@ -233,7 +250,8 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     ROSTER_POSITIONS.forEach(position => {
       const players = playersByPosition[position] || [];
       const risks = getPositionAttritionRisk(players);
-      const recommendations = calculateRecruitingNeed(position, players.length, risks.total, customDepthMap);
+      const committedCount = committedByPosition[position] || 0;
+      const recommendations = calculateRecruitingNeed(position, players.length, risks.total, customDepthMap, committedCount);
 
       positionAnalysis[position] = {
         position,
