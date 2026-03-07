@@ -56,6 +56,8 @@ const RecruiterHub = () => {
   const [configSaving, setConfigSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+  const getErrorMessage = (err, fallbackMessage) => err?.response?.data?.error || fallbackMessage;
+
   useEffect(() => {
     loadAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,8 +114,19 @@ const RecruiterHub = () => {
   const handleOpenConfig = async () => {
     try {
       const data = await recruiterHubService.getConfig(dynastyId);
-      setConfigValues({ ...data.positionTargets });
-      setConfigDefaults(data.defaults);
+      const defaults = data.defaults || {};
+      const activeConfig = data.depthChartMapping || defaults;
+      setConfigDefaults(defaults);
+      setConfigValues(
+        Object.fromEntries(
+          Object.entries(activeConfig.slots || {}).map(([slot, slotConfig]) => [
+            slot,
+            (slotConfig.rules || [])
+              .map(rule => `${rule.position}${rule.archetype ? ` | ${rule.archetype}` : ''}`)
+              .join('\n')
+          ])
+        )
+      );
       setConfigOpen(true);
     } catch (err) {
       console.error('Failed to load config:', err);
@@ -121,30 +134,68 @@ const RecruiterHub = () => {
     }
   };
 
-  const handleConfigChange = (position, value) => {
-    const parsed = parseInt(value, 10);
+  const handleConfigChange = (slot, value) => {
     setConfigValues(prev => ({
       ...prev,
-      [position]: isNaN(parsed) ? '' : Math.max(0, Math.min(20, parsed))
+      [slot]: value
     }));
   };
 
   const handleResetDefaults = () => {
-    setConfigValues({ ...configDefaults });
+    setConfigValues(
+      Object.fromEntries(
+        Object.entries(configDefaults.slots || {}).map(([slot, slotConfig]) => [
+          slot,
+          (slotConfig.rules || [])
+            .map(rule => `${rule.position}${rule.archetype ? ` | ${rule.archetype}` : ''}`)
+            .join('\n')
+        ])
+      )
+    );
   };
 
   const handleSaveConfig = async () => {
     try {
       setConfigSaving(true);
-      await recruiterHubService.saveConfig(dynastyId, configValues);
+      const parsedSlots = {};
+      Object.entries(configValues).forEach(([slot, rawRules]) => {
+        const rules = String(rawRules || '')
+          .split('\n')
+          .map(line => line.trim())
+          .filter(Boolean)
+          .map(line => {
+            const [positionPart, archetypePart] = line.split('|').map(value => value.trim());
+            return {
+              position: positionPart,
+              archetype: archetypePart || undefined
+            };
+          });
+        parsedSlots[slot] = { rules };
+      });
+
+      await recruiterHubService.saveConfig(dynastyId, { slots: parsedSlots });
       setConfigOpen(false);
       setSnackbar({ open: true, message: 'Configuration saved. Refreshing analysis...', severity: 'success' });
       await loadAnalysis();
     } catch (err) {
       console.error('Failed to save config:', err);
-      setSnackbar({ open: true, message: 'Failed to save configuration.', severity: 'error' });
+      const errorMessage = getErrorMessage(err, 'Failed to save configuration.');
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     } finally {
       setConfigSaving(false);
+    }
+  };
+
+  const handleResetToDefaults = async () => {
+    try {
+      await recruiterHubService.resetConfig(dynastyId);
+      handleResetDefaults();
+      setSnackbar({ open: true, message: 'Defaults restored.', severity: 'success' });
+      await loadAnalysis();
+    } catch (err) {
+      console.error('Failed to reset config:', err);
+      const errorMessage = getErrorMessage(err, 'Failed to reset configuration.');
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -178,7 +229,8 @@ const RecruiterHub = () => {
     );
   }
 
-  const { positionAnalysis, overallStats, dealbreakerBreakdown } = analysis;
+  const { positionAnalysis, archetypeAnalysis = {}, overallStats, dealbreakerBreakdown } = analysis;
+  const activeArchetypeDemand = Object.values(archetypeAnalysis).filter(item => item.targetDepth > 0);
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -275,6 +327,50 @@ const RecruiterHub = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {activeArchetypeDemand.length > 0 && (
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Archetype Demand (From Depth Chart Mapping)
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Position</TableCell>
+                  <TableCell>Archetype</TableCell>
+                  <TableCell align="center">Projected</TableCell>
+                  <TableCell align="center">Target</TableCell>
+                  <TableCell align="center">Need</TableCell>
+                  <TableCell align="center">Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {activeArchetypeDemand
+                  .sort((a, b) => {
+                    if (b.needToRecruit !== a.needToRecruit) return b.needToRecruit - a.needToRecruit;
+                    if (a.position !== b.position) return a.position.localeCompare(b.position);
+                    return (a.archetype || '').localeCompare(b.archetype || '');
+                  })
+                  .map(item => (
+                    <TableRow key={`${item.position}-${item.archetype || 'ANY'}`}>
+                      <TableCell>{item.position}</TableCell>
+                      <TableCell>{item.archetype || 'Any'}</TableCell>
+                      <TableCell align="center">{item.projectedCount}</TableCell>
+                      <TableCell align="center">{item.targetDepth}</TableCell>
+                      <TableCell align="center">
+                        <strong>{item.needToRecruit}</strong>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip size="small" label={item.status} color={getStatusColor(item.status)} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
 
       {/* Risk Breakdown */}
       <Grid container spacing={3} mb={4}>
@@ -519,33 +615,36 @@ const RecruiterHub = () => {
       </Grid>
 
       {/* Configuration Dialog */}
-      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Configure Target Depths</DialogTitle>
+      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Configure Depth Chart Slot Mapping</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-            Set the target roster depth for each position. This determines when positions are flagged as CRITICAL or WARNING.
+            Ordered rules are evaluated top-to-bottom for each slot entry. Use one rule per line in the format
+            <strong> POSITION</strong> or <strong>POSITION | Archetype</strong>. These mappings directly drive recruiting demand.
           </Typography>
           <TableContainer>
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>Position</TableCell>
-                  <TableCell align="center">Default</TableCell>
-                  <TableCell align="center">Your Target</TableCell>
+                  <TableCell>Slot</TableCell>
+                  <TableCell align="center">Count</TableCell>
+                  <TableCell>Ordered Rules</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Object.keys(configDefaults).map(position => (
-                  <TableRow key={position}>
-                    <TableCell><strong>{position}</strong></TableCell>
-                    <TableCell align="center">{configDefaults[position]}</TableCell>
-                    <TableCell align="center">
+                {Object.keys(configDefaults.slots || {}).map(slot => (
+                  <TableRow key={slot}>
+                    <TableCell><strong>{slot}</strong></TableCell>
+                    <TableCell align="center">{configDefaults.slots[slot].count}</TableCell>
+                    <TableCell>
                       <TextField
-                        type="number"
+                        multiline
+                        minRows={2}
+                        fullWidth
                         size="small"
-                        inputProps={{ min: 0, max: 20, style: { textAlign: 'center', width: 60 } }}
-                        value={configValues[position] !== undefined ? configValues[position] : ''}
-                        onChange={(e) => handleConfigChange(position, e.target.value)}
+                        placeholder="Example: SAM | Thumper"
+                        value={configValues[slot] !== undefined ? configValues[slot] : ''}
+                        onChange={(e) => handleConfigChange(slot, e.target.value)}
                       />
                     </TableCell>
                   </TableRow>
@@ -555,7 +654,7 @@ const RecruiterHub = () => {
           </TableContainer>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleResetDefaults}>Reset to Defaults</Button>
+          <Button onClick={handleResetToDefaults}>Reset to Defaults</Button>
           <Button onClick={() => setConfigOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveConfig} variant="contained" disabled={configSaving}>
             {configSaving ? 'Saving...' : 'Save'}

@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const recruiterHubService = require('../services/recruiterHubService');
+const depthChartMappingService = require('../services/depthChartMappingService');
 
 /**
  * Get recruiter hub analysis for a dynasty
@@ -28,7 +29,7 @@ const getRecruiterHubAnalysis = async (req, res) => {
 };
 
 /**
- * Get recruiter hub configuration (target depths) for a dynasty
+ * Get recruiter hub configuration (depth chart mapping) for a dynasty
  */
 const getConfig = async (req, res) => {
   try {
@@ -44,7 +45,7 @@ const getConfig = async (req, res) => {
     }
 
     const config = await recruiterHubService.getConfig(dynastyId);
-    res.json({ positionTargets: config, defaults: recruiterHubService.DEFAULT_MIN_DEPTH });
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
   } catch (error) {
     console.error('Get recruiter hub config error:', error);
     res.status(500).json({ error: 'Failed to get recruiter hub configuration' });
@@ -52,15 +53,15 @@ const getConfig = async (req, res) => {
 };
 
 /**
- * Save recruiter hub configuration (target depths) for a dynasty
+ * Save recruiter hub configuration (depth chart mapping) for a dynasty
  */
 const saveConfig = async (req, res) => {
   try {
     const { dynastyId } = req.params;
-    const { positionTargets } = req.body;
+    const { depthChartMapping } = req.body;
 
-    if (!positionTargets || typeof positionTargets !== 'object') {
-      return res.status(400).json({ error: 'positionTargets object is required' });
+    if (!depthChartMapping || typeof depthChartMapping !== 'object') {
+      return res.status(400).json({ error: 'depthChartMapping object is required' });
     }
 
     const dynastyCheck = await db.query(
@@ -72,12 +73,36 @@ const saveConfig = async (req, res) => {
       return res.status(404).json({ error: 'Dynasty not found' });
     }
 
-    await recruiterHubService.saveConfig(dynastyId, positionTargets);
+    await recruiterHubService.saveConfig(dynastyId, depthChartMapping);
     const config = await recruiterHubService.getConfig(dynastyId);
-    res.json({ positionTargets: config, defaults: recruiterHubService.DEFAULT_MIN_DEPTH });
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
   } catch (error) {
     console.error('Save recruiter hub config error:', error);
-    res.status(500).json({ error: 'Failed to save recruiter hub configuration' });
+    res.status(400).json({ error: error.message || 'Failed to save recruiter hub configuration' });
+  }
+};
+
+/**
+ * Reset recruiter hub configuration to defaults
+ */
+const resetConfig = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const config = await recruiterHubService.resetConfig(dynastyId);
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
+  } catch (error) {
+    console.error('Reset recruiter hub config error:', error);
+    res.status(500).json({ error: 'Failed to reset recruiter hub configuration' });
   }
 };
 
@@ -111,6 +136,7 @@ const getRecruitingBoard = async (req, res) => {
       const posAnalysis = analysis.positionAnalysis[recruit.position] || null;
       return {
         ...recruit,
+        archetypeNeed: (recruit.archetype && analysis.archetypeAnalysis[`${recruit.position}::${recruit.archetype}`]) || null,
         positionNeed: posAnalysis ? {
           status: posAnalysis.status,
           needToRecruit: posAnalysis.needToRecruit,
@@ -135,5 +161,6 @@ module.exports = {
   getRecruiterHubAnalysis,
   getConfig,
   saveConfig,
+  resetConfig,
   getRecruitingBoard
 };

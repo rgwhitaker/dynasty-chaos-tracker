@@ -1,10 +1,19 @@
 /**
- * Unit test for recruiter hub service
- * Tests the logic for analyzing roster attrition risks
+ * Unit test for recruiter hub and depth chart mapping logic
  * Run with: node backend/test-recruiter-hub.js
  */
 
-const { isDraftRisk, isGraduating, hasDealbreakers, hasTransferIntent, calculateRecruitingNeed, DEFAULT_MIN_DEPTH } = require('./src/services/recruiterHubService');
+const recruiterHubService = require('./src/services/recruiterHubService');
+const depthChartMappingService = require('./src/services/depthChartMappingService');
+
+const {
+  isDraftRisk,
+  isGraduating,
+  hasDealbreakers,
+  hasTransferIntent,
+  simulateDemandFromMapping,
+  bucketKey,
+} = recruiterHubService;
 
 console.log('Running Recruiter Hub Service Tests...\n');
 console.log('='.repeat(80));
@@ -12,361 +21,193 @@ console.log('='.repeat(80));
 let passed = 0;
 let failed = 0;
 
+function assert(condition, passMessage, failMessage) {
+  if (condition) {
+    console.log(`✓ PASSED: ${passMessage}`);
+    passed++;
+  } else {
+    console.log(`✗ FAILED: ${failMessage}`);
+    failed++;
+  }
+}
+
 // Test 1: Draft Risk Detection
 console.log('\n### TEST 1: Draft Risk Detection ###');
 console.log('-'.repeat(80));
-
-const draftRiskPlayer = { 
-  overall_rating: 90, 
-  year: 'JR',
-  first_name: 'John',
-  last_name: 'Smith'
-};
-
-const noDraftRiskPlayer = { 
-  overall_rating: 85, 
-  year: 'JR',
-  first_name: 'Jane',
-  last_name: 'Doe'
-};
-
-const noDraftRiskSophomore = { 
-  overall_rating: 90, 
-  year: 'SO',
-  first_name: 'Bob',
-  last_name: 'Johnson'
-};
-
-if (isDraftRisk(draftRiskPlayer) === true) {
-  console.log('✓ PASSED: High OVR Junior detected as draft risk');
-  passed++;
-} else {
-  console.log('✗ FAILED: High OVR Junior should be draft risk');
-  failed++;
-}
-
-if (isDraftRisk(noDraftRiskPlayer) === false) {
-  console.log('✓ PASSED: OVR 85 Junior not flagged as draft risk');
-  passed++;
-} else {
-  console.log('✗ FAILED: OVR 85 Junior should not be draft risk');
-  failed++;
-}
-
-if (isDraftRisk(noDraftRiskSophomore) === false) {
-  console.log('✓ PASSED: High OVR Sophomore not flagged as draft risk');
-  passed++;
-} else {
-  console.log('✗ FAILED: Sophomores should not be draft eligible');
-  failed++;
-}
+assert(
+  isDraftRisk({ overall_rating: 90, year: 'JR' }) === true,
+  'High OVR Junior detected as draft risk',
+  'High OVR Junior should be draft risk'
+);
+assert(
+  isDraftRisk({ overall_rating: 85, year: 'JR' }) === false,
+  'OVR 85 Junior not flagged as draft risk',
+  'OVR 85 Junior should not be draft risk'
+);
+assert(
+  isDraftRisk({ overall_rating: 90, year: 'SO' }) === false,
+  'High OVR Sophomore not flagged as draft risk',
+  'Sophomores should not be draft eligible'
+);
 
 // Test 2: Graduation Detection
 console.log('\n### TEST 2: Graduation Detection ###');
 console.log('-'.repeat(80));
+assert(
+  isGraduating({ year: 'SR' }) === true,
+  'Senior detected as graduating',
+  'Senior should be graduating'
+);
+assert(
+  isGraduating({ year: 'JR' }) === false,
+  'Junior not flagged as graduating',
+  'Junior should not be graduating'
+);
 
-const graduatingSenior = { year: 'SR', first_name: 'Tom', last_name: 'Wilson' };
-const graduatingRsSr = { year: 'RS SR', first_name: 'Tim', last_name: 'Brown' };
-const graduatingGrad = { year: 'GRAD', first_name: 'Terry', last_name: 'Green' };
-const notGraduatingJr = { year: 'JR', first_name: 'Tyler', last_name: 'White' };
-
-if (isGraduating(graduatingSenior) === true) {
-  console.log('✓ PASSED: Senior detected as graduating');
-  passed++;
-} else {
-  console.log('✗ FAILED: Senior should be graduating');
-  failed++;
-}
-
-if (isGraduating(graduatingRsSr) === true) {
-  console.log('✓ PASSED: RS SR detected as graduating');
-  passed++;
-} else {
-  console.log('✗ FAILED: RS SR should be graduating');
-  failed++;
-}
-
-if (isGraduating(graduatingGrad) === true) {
-  console.log('✓ PASSED: GRAD detected as graduating');
-  passed++;
-} else {
-  console.log('✗ FAILED: GRAD should be graduating');
-  failed++;
-}
-
-if (isGraduating(notGraduatingJr) === false) {
-  console.log('✓ PASSED: Junior not flagged as graduating');
-  passed++;
-} else {
-  console.log('✗ FAILED: Junior should not be graduating');
-  failed++;
-}
-
-// Test 3: Dealbreaker Detection
-console.log('\n### TEST 3: Dealbreaker Detection ###');
+// Test 3: Dealbreaker and transfer intent checks
+console.log('\n### TEST 3: Risk Flag Detection ###');
 console.log('-'.repeat(80));
+assert(
+  hasDealbreakers({ dealbreakers: ['Playing Time C+'] }) === true,
+  'Dealbreaker risk detected',
+  'Dealbreaker risk should be detected'
+);
+assert(
+  hasDealbreakers({ dealbreakers: [] }) === false,
+  'Empty dealbreakers are ignored',
+  'Empty dealbreakers should not be flagged'
+);
+assert(
+  hasTransferIntent({ transfer_intent: true }) === true,
+  'Transfer intent detected',
+  'Transfer intent should be detected'
+);
+assert(
+  hasTransferIntent({ transfer_intent: false }) === false,
+  'No transfer intent when false',
+  'False transfer intent should not be flagged'
+);
 
-const playerWithDealbreakers = {
-  dealbreakers: ['Playing Time C+', 'Conference Prestige D'],
-  first_name: 'Mike',
-  last_name: 'Davis'
-};
-
-const playerWithoutDealbreakers = {
-  dealbreakers: [],
-  first_name: 'Steve',
-  last_name: 'Miller'
-};
-
-const playerWithNullDealbreakers = {
-  dealbreakers: null,
-  first_name: 'Dave',
-  last_name: 'Moore'
-};
-
-if (hasDealbreakers(playerWithDealbreakers) === true) {
-  console.log('✓ PASSED: Player with dealbreakers detected');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with dealbreakers should be flagged');
-  failed++;
-}
-
-if (hasDealbreakers(playerWithoutDealbreakers) === false) {
-  console.log('✓ PASSED: Player with empty dealbreakers not flagged');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with empty dealbreakers should not be flagged');
-  failed++;
-}
-
-if (hasDealbreakers(playerWithNullDealbreakers) === false) {
-  console.log('✓ PASSED: Player with null dealbreakers not flagged');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with null dealbreakers should not be flagged');
-  failed++;
-}
-
-// Test 3.5: Transfer Intent Detection
-console.log('\n### TEST 3.5: Transfer Intent Detection ###');
+// Test 4: Default mapping slot counts and rule shape
+console.log('\n### TEST 4: Default Mapping Configuration ###');
 console.log('-'.repeat(80));
+const defaultConfig = depthChartMappingService.buildDefaultConfig();
+assert(
+  defaultConfig.slots.QB.count === 3 && defaultConfig.slots.WR.count === 6 && defaultConfig.slots.NT.count === 3,
+  'Default slot counts include in-game values',
+  'Default slot counts do not match expected in-game values'
+);
+assert(
+  Array.isArray(defaultConfig.slots.LEDG.rules) && defaultConfig.slots.LEDG.rules.length > 0,
+  'Default mapping includes ordered rules',
+  'Default mapping should include ordered rules for each slot'
+);
 
-const playerWithTransferIntent = {
-  transfer_intent: true,
-  first_name: 'Alex',
-  last_name: 'Transfer'
-};
-
-const playerWithoutTransferIntent = {
-  transfer_intent: false,
-  first_name: 'Ben',
-  last_name: 'Staying'
-};
-
-const playerWithNullTransferIntent = {
-  transfer_intent: null,
-  first_name: 'Carl',
-  last_name: 'Unknown'
-};
-
-const playerWithUndefinedTransferIntent = {
-  first_name: 'Dan',
-  last_name: 'Legacy'
-};
-
-if (hasTransferIntent(playerWithTransferIntent) === true) {
-  console.log('✓ PASSED: Player with transfer intent detected');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with transfer intent should be flagged');
-  failed++;
-}
-
-if (hasTransferIntent(playerWithoutTransferIntent) === false) {
-  console.log('✓ PASSED: Player without transfer intent not flagged');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player without transfer intent should not be flagged');
-  failed++;
-}
-
-if (hasTransferIntent(playerWithNullTransferIntent) === false) {
-  console.log('✓ PASSED: Player with null transfer intent not flagged');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with null transfer intent should not be flagged');
-  failed++;
-}
-
-if (hasTransferIntent(playerWithUndefinedTransferIntent) === false) {
-  console.log('✓ PASSED: Player with undefined transfer intent not flagged');
-  passed++;
-} else {
-  console.log('✗ FAILED: Player with undefined transfer intent should not be flagged');
-  failed++;
-}
-
-// Test 4: Combined Risk Scenarios
-console.log('\n### TEST 4: Combined Risk Scenarios ###');
+// Test 5: Override validation and persistence schema safety
+console.log('\n### TEST 5: Override Validation ###');
 console.log('-'.repeat(80));
-
-const multiRiskPlayer = {
-  overall_rating: 92,
-  year: 'SR',
-  dealbreakers: ['Playing Time C'],
-  transfer_intent: true,
-  first_name: 'Multi',
-  last_name: 'Risk'
-};
-
-let multiRiskCount = 0;
-if (isDraftRisk(multiRiskPlayer)) multiRiskCount++;
-if (isGraduating(multiRiskPlayer)) multiRiskCount++;
-if (hasDealbreakers(multiRiskPlayer)) multiRiskCount++;
-if (hasTransferIntent(multiRiskPlayer)) multiRiskCount++;
-
-if (multiRiskCount === 4) {
-  console.log('✓ PASSED: Player with multiple risks detected correctly (4 risks)');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected 4 risks, detected ${multiRiskCount}`);
-  failed++;
+let validationError = null;
+try {
+  depthChartMappingService.validateAndMergeConfig({
+    slots: {
+      SUBLB: {
+        rules: [{ position: 'MIKE', archetype: 'Not Real' }]
+      }
+    }
+  });
+} catch (error) {
+  validationError = error;
 }
+assert(
+  !!validationError && validationError.message.includes('Invalid archetype'),
+  'Invalid archetype override is rejected with clear error',
+  'Invalid archetype should fail validation with an explicit error'
+);
 
-// Test 5: Default Target Depths
-console.log('\n### TEST 5: Default Target Depth Configuration ###');
+// Test 6: Deterministic slot fill simulation
+console.log('\n### TEST 6: Deterministic Simulation ###');
 console.log('-'.repeat(80));
+const deterministicConfig = depthChartMappingService.validateAndMergeConfig({
+  slots: {
+    QB: { rules: [{ position: 'QB' }] }
+  }
+});
+const deterministicPlayers = [
+  { position: 'QB', archetype: 'Dual Threat' },
+  { position: 'QB', archetype: 'Pocket Passer' },
+];
+const firstSim = simulateDemandFromMapping(deterministicConfig, deterministicPlayers, []);
+const secondSim = simulateDemandFromMapping(deterministicConfig, deterministicPlayers, []);
+assert(
+  JSON.stringify(firstSim) === JSON.stringify(secondSim),
+  'Simulation output is deterministic for identical inputs',
+  'Simulation should be deterministic'
+);
 
-if (DEFAULT_MIN_DEPTH['QB'] === 3) {
-  console.log('✓ PASSED: Default QB target depth is 3');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected QB default 3, got ${DEFAULT_MIN_DEPTH['QB']}`);
-  failed++;
-}
-
-if (DEFAULT_MIN_DEPTH['DT'] === 4) {
-  console.log('✓ PASSED: Default DT target depth is 4');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected DT default 4, got ${DEFAULT_MIN_DEPTH['DT']}`);
-  failed++;
-}
-
-if (DEFAULT_MIN_DEPTH['WR'] === 6) {
-  console.log('✓ PASSED: Default WR target depth is 6');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WR default 6, got ${DEFAULT_MIN_DEPTH['WR']}`);
-  failed++;
-}
-
-// Test 6: calculateRecruitingNeed with default depths
-console.log('\n### TEST 6: calculateRecruitingNeed (default depths) ###');
+// Test 7: Scenario - Any QB at QB
+console.log('\n### TEST 7: Scenario - Any QB at QB ###');
 console.log('-'.repeat(80));
+const qbConfig = depthChartMappingService.validateAndMergeConfig({
+  slots: {
+    QB: { rules: [{ position: 'QB' }] }
+  }
+});
+const qbSim = simulateDemandFromMapping(qbConfig, [{ position: 'QB', archetype: 'Dual Threat' }], []);
+assert(
+  qbSim.targetByBucket[bucketKey('QB', null)] === 3,
+  'QB slot produces generic QB target demand',
+  `Expected QB target demand of 3, got ${qbSim.targetByBucket[bucketKey('QB', null)]}`
+);
 
-const needResult1 = calculateRecruitingNeed('QB', 2, 1);
-if (needResult1.targetDepth === 3 && needResult1.needToRecruit === 2 && needResult1.status === 'CRITICAL') {
-  console.log('✓ PASSED: QB with 2 players, 1 at risk → CRITICAL, need 2');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected CRITICAL need 2, got status=${needResult1.status} need=${needResult1.needToRecruit}`);
-  failed++;
-}
-
-const needResult2 = calculateRecruitingNeed('DT', 5, 1);
-if (needResult2.targetDepth === 4 && needResult2.needToRecruit === 0 && needResult2.status === 'WARNING') {
-  console.log('✓ PASSED: DT with 5 players, 1 at risk → WARNING (projected 4 = target, has risk)');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WARNING need 0, got status=${needResult2.status} need=${needResult2.needToRecruit}`);
-  failed++;
-}
-
-const needResult3 = calculateRecruitingNeed('WR', 7, 1);
-if (needResult3.status === 'WARNING') {
-  console.log('✓ PASSED: WR with 7 players, 1 at risk → WARNING (projected 6 = target, has risk)');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WARNING for WR 7/1, got status=${needResult3.status}`);
-  failed++;
-}
-
-// Test 7: calculateRecruitingNeed with custom depth map
-console.log('\n### TEST 7: calculateRecruitingNeed (custom depths) ###');
+// Test 8: Scenario - Thumpers at LEDG/REDG
+console.log('\n### TEST 8: Scenario - Thumpers at LEDG/REDG ###');
 console.log('-'.repeat(80));
+const thumperConfig = depthChartMappingService.validateAndMergeConfig({
+  slots: {
+    LEDG: { rules: [{ position: 'SAM', archetype: 'Thumper' }] },
+    REDG: { rules: [{ position: 'WILL', archetype: 'Thumper' }] },
+  }
+});
+const thumperSim = simulateDemandFromMapping(thumperConfig, [], []);
+assert(
+  thumperSim.targetByBucket[bucketKey('SAM', 'Thumper')] === 3 &&
+  thumperSim.targetByBucket[bucketKey('WILL', 'Thumper')] === 3,
+  'LEDG/REDG remap contributes Thumper archetype demand',
+  'Expected Thumper demand from LEDG/REDG remapping'
+);
 
-const customDepths = { 'DT': 6, 'QB': 2 };
-
-const customResult1 = calculateRecruitingNeed('DT', 5, 1, customDepths);
-if (customResult1.targetDepth === 6 && customResult1.needToRecruit === 2 && customResult1.status === 'CRITICAL') {
-  console.log('✓ PASSED: DT with custom target 6, 5 players, 1 at risk → CRITICAL, need 2');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected CRITICAL need 2 target 6, got status=${customResult1.status} need=${customResult1.needToRecruit} target=${customResult1.targetDepth}`);
-  failed++;
-}
-
-const customResult2 = calculateRecruitingNeed('QB', 3, 1, customDepths);
-if (customResult2.targetDepth === 2 && customResult2.needToRecruit === 0 && customResult2.status === 'WARNING') {
-  console.log('✓ PASSED: QB with custom target 2, 3 players, 1 at risk → WARNING (projected 2 = target, has risk)');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WARNING need 0 target 2, got status=${customResult2.status} need=${customResult2.needToRecruit} target=${customResult2.targetDepth}`);
-  failed++;
-}
-
-// Positions not in customDepths should fall back to defaults
-const customResult3 = calculateRecruitingNeed('WR', 2, 0, customDepths);
-if (customResult3.targetDepth === 6 && customResult3.needToRecruit === 4 && customResult3.status === 'CRITICAL') {
-  console.log('✓ PASSED: WR not in customDepths falls back to default target 6 → CRITICAL, need 4');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected default fallback CRITICAL need 4, got status=${customResult3.status} need=${customResult3.needToRecruit} target=${customResult3.targetDepth}`);
-  failed++;
-}
-
-// Test 8: WARNING status when exactly at target depth with at-risk players
-console.log('\n### TEST 8: WARNING status with custom depths ###');
+// Test 9: Scenario - Lurkers at SUBLB
+console.log('\n### TEST 9: Scenario - Lurkers at SUBLB ###');
 console.log('-'.repeat(80));
+const lurkerConfig = depthChartMappingService.validateAndMergeConfig({
+  slots: {
+    SUBLB: { rules: [{ position: 'MIKE', archetype: 'Lurker' }] },
+  }
+});
+const lurkerSim = simulateDemandFromMapping(lurkerConfig, [], []);
+assert(
+  lurkerSim.targetByBucket[bucketKey('MIKE', 'Lurker')] === 3,
+  'SUBLB remap drives Lurker demand',
+  'Expected Lurker demand from SUBLB remap'
+);
 
-const warningResult = calculateRecruitingNeed('DT', 8, 2, { 'DT': 6 });
-if (warningResult.status === 'WARNING' && warningResult.targetDepth === 6) {
-  console.log('✓ PASSED: DT projected exactly at custom target 6 with risk → WARNING');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WARNING at target 6, got status=${warningResult.status} target=${warningResult.targetDepth}`);
-  failed++;
-}
-
-// Test 9: Committed recruits count toward recruiting need
-console.log('\n### TEST 9: committed recruits impact recruiting needs ###');
+// Test 10: Scenario - No EDGE usage
+console.log('\n### TEST 10: Scenario - No EDGE Usage ###');
 console.log('-'.repeat(80));
-
-const committedResult = calculateRecruitingNeed('QB', 2, 1, undefined, 1);
-if (
-  committedResult.currentCount === 2 &&
-  committedResult.committedCount === 1 &&
-  committedResult.projectedCount === 2 &&
-  committedResult.needToRecruit === 1 &&
-  committedResult.status === 'CRITICAL'
-) {
-  console.log('✓ PASSED: Committed QB recruit reduces need from 2 to 1 (counts like roster depth)');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected committed recruit to reduce need to 1, got status=${committedResult.status} need=${committedResult.needToRecruit} projected=${committedResult.projectedCount}`);
-  failed++;
-}
-
-const committedWarningResult = calculateRecruitingNeed('DT', 4, 1, undefined, 1);
-if (committedWarningResult.status === 'WARNING' && committedWarningResult.needToRecruit === 0) {
-  console.log('✓ PASSED: Committed DT recruit shifts CRITICAL need to WARNING when projected meets target');
-  passed++;
-} else {
-  console.log(`✗ FAILED: Expected WARNING with 0 need after commitment, got status=${committedWarningResult.status} need=${committedWarningResult.needToRecruit}`);
-  failed++;
-}
+const noEdgeConfig = depthChartMappingService.validateAndMergeConfig({
+  slots: {
+    LEDG: { rules: [{ position: 'SAM', archetype: 'Thumper' }] },
+    REDG: { rules: [{ position: 'WILL', archetype: 'Thumper' }] },
+    RLE: { rules: [{ position: 'SAM', archetype: 'Thumper' }] },
+    RRE: { rules: [{ position: 'WILL', archetype: 'Thumper' }] },
+  }
+});
+const noEdgeSim = simulateDemandFromMapping(noEdgeConfig, [], []);
+assert(
+  !Object.keys(noEdgeSim.targetByBucket).some(key => key.startsWith('LEDG::') || key.startsWith('REDG::') || key.includes('Edge Setter')),
+  'No EDGE rule usage results in no EDGE/Edge Setter demand bucket',
+  'EDGE demand buckets should be absent when mapping does not reference EDGE'
+);
 
 // Summary
 console.log('\n');

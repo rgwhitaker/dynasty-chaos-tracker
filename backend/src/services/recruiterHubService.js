@@ -1,5 +1,7 @@
 const db = require('../config/database');
 const { ROSTER_POSITIONS } = require('../constants/playerAttributes');
+const { DEPTH_CHART_SLOTS } = require('../constants/depthChartMapping');
+const depthChartMappingService = require('./depthChartMappingService');
 
 /**
  * Analyzes roster retention risks and recruiting needs
@@ -34,6 +36,112 @@ function hasDealbreakers(player) {
  */
 function hasTransferIntent(player) {
   return player.transfer_intent === true;
+}
+
+function isPlayerAtRisk(player) {
+  return hasDealbreakers(player) || hasTransferIntent(player) || isDraftRisk(player) || isGraduating(player);
+}
+
+function bucketKey(position, archetype = null) {
+  return `${position}::${archetype || '*'}`;
+}
+
+function incrementCount(map, key, amount = 1) {
+  map[key] = (map[key] || 0) + amount;
+}
+
+function parseBucketKey(key) {
+  const [position, archetype] = key.split('::');
+  return { position, archetype: archetype === '*' ? null : archetype };
+}
+
+function buildAvailabilityPool(players, committedRecruits) {
+  const pool = {};
+
+  const addEntry = (position, archetype) => {
+    if (!pool[position]) {
+      pool[position] = { total: 0, byArchetype: {} };
+    }
+    const normalizedArchetype = archetype || '__UNSPECIFIED__';
+    pool[position].total += 1;
+    pool[position].byArchetype[normalizedArchetype] = (pool[position].byArchetype[normalizedArchetype] || 0) + 1;
+  };
+
+  players.forEach(player => addEntry(player.position, player.archetype));
+  committedRecruits.forEach(recruit => addEntry(recruit.position, recruit.archetype));
+
+  return pool;
+}
+
+function canConsume(pool, rule) {
+  const entry = pool[rule.position];
+  if (!entry || entry.total <= 0) return false;
+
+  if (rule.archetype) {
+    return (entry.byArchetype[rule.archetype] || 0) > 0;
+  }
+
+  return entry.total > 0;
+}
+
+function consume(pool, rule) {
+  const entry = pool[rule.position];
+  if (!entry || entry.total <= 0) return false;
+
+  let archetypeToConsume = rule.archetype || null;
+  if (!archetypeToConsume) {
+    const candidates = Object.entries(entry.byArchetype)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0].localeCompare(b[0]);
+      });
+    if (!candidates.length) return false;
+    archetypeToConsume = candidates[0][0];
+  }
+
+  if (!entry.byArchetype[archetypeToConsume] || entry.byArchetype[archetypeToConsume] <= 0) {
+    return false;
+  }
+
+  entry.byArchetype[archetypeToConsume] -= 1;
+  entry.total -= 1;
+  return true;
+}
+
+function determineStatus(needToRecruit, atRiskCount, projectedCount, targetDepth) {
+  if (needToRecruit > 0) return 'CRITICAL';
+  if (atRiskCount > 0 && projectedCount === targetDepth) return 'WARNING';
+  return 'OK';
+}
+
+function simulateDemandFromMapping(mappingConfig, projectedPlayers, committedRecruits) {
+  const pool = buildAvailabilityPool(projectedPlayers, committedRecruits);
+  const targetByBucket = {};
+  const shortageByBucket = {};
+
+  DEPTH_CHART_SLOTS.forEach(slot => {
+    const slotConfig = mappingConfig.slots[slot];
+    for (let i = 0; i < slotConfig.count; i++) {
+      let matchedRule = null;
+      for (const rule of slotConfig.rules) {
+        if (canConsume(pool, rule)) {
+          consume(pool, rule);
+          matchedRule = rule;
+          break;
+        }
+      }
+
+      if (!matchedRule) {
+        matchedRule = slotConfig.rules[0];
+        incrementCount(shortageByBucket, bucketKey(matchedRule.position, matchedRule.archetype));
+      }
+
+      incrementCount(targetByBucket, bucketKey(matchedRule.position, matchedRule.archetype));
+    }
+  });
+
+  return { targetByBucket, shortageByBucket };
 }
 
 /**
@@ -71,13 +179,11 @@ function getPositionAttritionRisk(players) {
       playerAtRisk = true;
     }
 
-    // Count unique players (a player might have multiple risk factors)
     if (playerAtRisk) {
       risks.total++;
     }
   });
 
-  // Remove duplicates in total count (a player might be in multiple categories)
   const uniqueAtRiskPlayers = new Set();
   [...risks.dealbreakers, ...risks.transferIntent, ...risks.draftRisk, ...risks.graduating].forEach(p => {
     uniqueAtRiskPlayers.add(p.id);
@@ -87,117 +193,16 @@ function getPositionAttritionRisk(players) {
   return risks;
 }
 
-// Default minimum depth per position
-const DEFAULT_MIN_DEPTH = {
-  'QB': 3,
-  'HB': 4,
-  'FB': 2,
-  'WR': 6,
-  'TE': 3,
-  'LT': 2,
-  'LG': 2,
-  'C': 2,
-  'RG': 2,
-  'RT': 2,
-  'LEDG': 3,
-  'REDG': 3,
-  'DT': 4,
-  'SAM': 2,
-  'MIKE': 2,
-  'WILL': 2,
-  'CB': 5,
-  'FS': 2,
-  'SS': 2,
-  'K': 2,
-  'P': 2
-};
-
-/**
- * Get the recruiter hub configuration (target depths) for a dynasty.
- * Returns user-configured values merged with defaults.
- */
 async function getConfig(dynastyId) {
-  const result = await db.query(
-    'SELECT position, target_depth FROM recruiter_hub_config WHERE dynasty_id = $1',
-    [dynastyId]
-  );
-
-  // Start with defaults, overlay any user-configured values
-  const config = { ...DEFAULT_MIN_DEPTH };
-  result.rows.forEach(row => {
-    config[row.position] = row.target_depth;
-  });
-
-  return config;
+  return depthChartMappingService.getConfig(dynastyId);
 }
 
-/**
- * Save recruiter hub configuration (target depths) for a dynasty.
- * Accepts an object mapping position -> target_depth.
- */
-async function saveConfig(dynastyId, positionDepths) {
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    for (const [position, targetDepth] of Object.entries(positionDepths)) {
-      if (!ROSTER_POSITIONS.includes(position)) continue;
-      const depth = Math.max(0, Math.min(20, parseInt(targetDepth, 10)));
-      if (isNaN(depth)) continue;
-
-      await client.query(
-        `INSERT INTO recruiter_hub_config (dynasty_id, position, target_depth)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (dynasty_id, position)
-         DO UPDATE SET target_depth = $3, updated_at = CURRENT_TIMESTAMP`,
-        [dynastyId, position, depth]
-      );
-    }
-
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+async function saveConfig(dynastyId, depthChartMapping) {
+  return depthChartMappingService.saveConfig(dynastyId, depthChartMapping);
 }
 
-/**
- * Calculate recruiting recommendations for a position
- */
-function calculateRecruitingNeed(position, currentCount, atRiskCount, customDepthMap, committedCount = 0) {
-  const targetDepth = (customDepthMap && customDepthMap[position] !== undefined)
-    ? customDepthMap[position]
-    : (DEFAULT_MIN_DEPTH[position] || 3);
-  const normalizedCommittedCount = Math.max(0, committedCount || 0);
-  const effectiveCount = currentCount + normalizedCommittedCount;
-  const projectedCount = effectiveCount - atRiskCount;
-  const needToRecruit = Math.max(0, targetDepth - projectedCount);
-
-  // Determine status
-  let status;
-  if (needToRecruit > 0) {
-    // Below target depth - critical
-    status = 'CRITICAL';
-  } else if (atRiskCount > 0 && projectedCount === targetDepth) {
-    // At target depth but has risk - warning
-    status = 'WARNING';
-  } else {
-    // Above target depth - OK
-    status = 'OK';
-  }
-
-  return {
-    currentCount,
-    committedCount: normalizedCommittedCount,
-    effectiveCount,
-    atRiskCount,
-    projectedCount,
-    targetDepth,
-    needToRecruit,
-    status
-  };
+async function resetConfig(dynastyId) {
+  return depthChartMappingService.resetConfig(dynastyId);
 }
 
 /**
@@ -205,57 +210,128 @@ function calculateRecruitingNeed(position, currentCount, atRiskCount, customDept
  */
 async function analyzeRosterAttritionRisks(dynastyId) {
   try {
-    // Load user-configured target depths (merged with defaults)
-    const customDepthMap = await getConfig(dynastyId);
+    const mappingConfig = await depthChartMappingService.getConfig(dynastyId);
 
-    // Get all players for the dynasty
     const result = await db.query(
-      `SELECT id, first_name, last_name, position, jersey_number, year, overall_rating, 
+      `SELECT id, first_name, last_name, position, archetype, jersey_number, year, overall_rating,
               attributes, dealbreakers, departure_risk, transfer_intent
-       FROM players 
+       FROM players
        WHERE dynasty_id = $1
        ORDER BY position, overall_rating DESC`,
       [dynastyId]
     );
 
-    const allPlayers = result.rows;
-
-    // Get committed recruits by position so they count toward recruiting needs
     const committedResult = await db.query(
-      `SELECT position, COUNT(*)::int AS committed_count
+      `SELECT position, COALESCE(archetype, '') AS archetype, COUNT(*)::int AS committed_count
        FROM recruits
        WHERE dynasty_id = $1 AND commitment_status = 'Committed'
-       GROUP BY position`,
+       GROUP BY position, COALESCE(archetype, '')`,
       [dynastyId]
     );
+
+    const allPlayers = result.rows;
+    const atRiskPlayers = allPlayers.filter(isPlayerAtRisk);
+    const projectedPlayers = allPlayers.filter(player => !isPlayerAtRisk(player));
+    const committedRecruits = [];
+
     const committedByPosition = {};
+    const committedByPositionArchetype = {};
     committedResult.rows.forEach(row => {
-      committedByPosition[row.position] = Number(row.committed_count) || 0;
-    });
+      const count = Number(row.committed_count) || 0;
+      if (count <= 0) return;
+      committedByPosition[row.position] = (committedByPosition[row.position] || 0) + count;
+      if (!committedByPositionArchetype[row.position]) committedByPositionArchetype[row.position] = {};
+      if (row.archetype) {
+        committedByPositionArchetype[row.position][row.archetype] = (committedByPositionArchetype[row.position][row.archetype] || 0) + count;
+      }
 
-    // Group players by position
-    const playersByPosition = {};
-    ROSTER_POSITIONS.forEach(pos => {
-      playersByPosition[pos] = [];
-    });
-
-    allPlayers.forEach(player => {
-      if (playersByPosition[player.position]) {
-        playersByPosition[player.position].push(player);
+      for (let i = 0; i < count; i++) {
+        committedRecruits.push({ position: row.position, archetype: row.archetype || null });
       }
     });
 
-    // Analyze each position
+    const demandSimulation = simulateDemandFromMapping(mappingConfig, projectedPlayers, committedRecruits);
+
+    const playersByPosition = {};
+    const atRiskByPosition = {};
+    const atRiskByPositionArchetype = {};
+    const currentByPositionArchetype = {};
+    ROSTER_POSITIONS.forEach(pos => {
+      playersByPosition[pos] = [];
+      atRiskByPosition[pos] = 0;
+      currentByPositionArchetype[pos] = {};
+      atRiskByPositionArchetype[pos] = {};
+    });
+
+    allPlayers.forEach(player => {
+      if (!playersByPosition[player.position]) return;
+      playersByPosition[player.position].push(player);
+      const archetype = player.archetype || '__UNSPECIFIED__';
+      currentByPositionArchetype[player.position][archetype] = (currentByPositionArchetype[player.position][archetype] || 0) + 1;
+    });
+
+    atRiskPlayers.forEach(player => {
+      if (!(player.position in atRiskByPosition)) return;
+      atRiskByPosition[player.position] = (atRiskByPosition[player.position] || 0) + 1;
+      const archetype = player.archetype || '__UNSPECIFIED__';
+      atRiskByPositionArchetype[player.position][archetype] = (atRiskByPositionArchetype[player.position][archetype] || 0) + 1;
+    });
+
+    const targetByPosition = {};
+    const needByPosition = {};
+    const archetypeAnalysis = {};
+
+    Object.entries(demandSimulation.targetByBucket).forEach(([key, targetDepth]) => {
+      const needToRecruit = demandSimulation.shortageByBucket[key] || 0;
+      const { position, archetype } = parseBucketKey(key);
+
+      targetByPosition[position] = (targetByPosition[position] || 0) + targetDepth;
+      needByPosition[position] = (needByPosition[position] || 0) + needToRecruit;
+
+      const currentCount = archetype
+        ? (currentByPositionArchetype[position]?.[archetype] || 0)
+        : (playersByPosition[position]?.length || 0);
+      const committedCount = archetype
+        ? (committedByPositionArchetype[position]?.[archetype] || 0)
+        : (committedByPosition[position] || 0);
+      const atRiskCount = archetype
+        ? (atRiskByPositionArchetype[position]?.[archetype] || 0)
+        : (atRiskByPosition[position] || 0);
+      const projectedCount = Math.max(0, currentCount + committedCount - atRiskCount);
+
+      archetypeAnalysis[bucketKey(position, archetype)] = {
+        position,
+        archetype,
+        currentCount,
+        committedCount,
+        effectiveCount: currentCount + committedCount,
+        atRiskCount,
+        projectedCount,
+        targetDepth,
+        needToRecruit,
+        status: determineStatus(needToRecruit, atRiskCount, projectedCount, targetDepth),
+      };
+    });
+
     const positionAnalysis = {};
     ROSTER_POSITIONS.forEach(position => {
       const players = playersByPosition[position] || [];
       const risks = getPositionAttritionRisk(players);
       const committedCount = committedByPosition[position] || 0;
-      const recommendations = calculateRecruitingNeed(position, players.length, risks.total, customDepthMap, committedCount);
+      const projectedCount = Math.max(0, players.length + committedCount - risks.total);
+      const targetDepth = targetByPosition[position] || 0;
+      const needToRecruit = needByPosition[position] || 0;
 
       positionAnalysis[position] = {
         position,
-        ...recommendations,
+        currentCount: players.length,
+        committedCount,
+        effectiveCount: players.length + committedCount,
+        atRiskCount: risks.total,
+        projectedCount,
+        targetDepth,
+        needToRecruit,
+        status: determineStatus(needToRecruit, risks.total, projectedCount, targetDepth),
         risks: {
           dealbreakersCount: risks.dealbreakers.length,
           transferIntentCount: risks.transferIntent.length,
@@ -294,7 +370,6 @@ async function analyzeRosterAttritionRisks(dynastyId) {
       };
     });
 
-    // Calculate overall statistics
     const overallStats = {
       totalPlayers: allPlayers.length,
       totalAtRisk: 0,
@@ -316,11 +391,12 @@ async function analyzeRosterAttritionRisks(dynastyId) {
       if (pos.status === 'WARNING') overallStats.warningPositions++;
     });
 
-    // Get dealbreaker breakdown
     const dealbreakerBreakdown = getDealbreakerBreakdown(allPlayers);
 
     return {
+      mappingConfig,
       positionAnalysis,
+      archetypeAnalysis,
       overallStats,
       dealbreakerBreakdown
     };
@@ -335,7 +411,7 @@ async function analyzeRosterAttritionRisks(dynastyId) {
  */
 function getDealbreakerBreakdown(players) {
   const breakdown = {};
-  
+
   players.forEach(player => {
     if (player.dealbreakers && player.dealbreakers.length > 0) {
       player.dealbreakers.forEach(dealbreaker => {
@@ -358,18 +434,20 @@ function getDealbreakerBreakdown(players) {
     }
   });
 
-  // Convert to array and sort by count
   return Object.values(breakdown).sort((a, b) => b.count - a.count);
 }
 
 module.exports = {
-  DEFAULT_MIN_DEPTH,
   analyzeRosterAttritionRisks,
   getConfig,
   saveConfig,
-  calculateRecruitingNeed,
+  resetConfig,
   isDraftRisk,
   isGraduating,
   hasDealbreakers,
-  hasTransferIntent
+  hasTransferIntent,
+  isPlayerAtRisk,
+  simulateDemandFromMapping,
+  determineStatus,
+  bucketKey,
 };

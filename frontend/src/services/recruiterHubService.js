@@ -10,8 +10,13 @@ const getConfig = async (dynastyId) => {
   return response.data;
 };
 
-const saveConfig = async (dynastyId, positionTargets) => {
-  const response = await api.put(`/dynasties/${dynastyId}/recruiter-hub/config`, { positionTargets });
+const saveConfig = async (dynastyId, depthChartMapping) => {
+  const response = await api.put(`/dynasties/${dynastyId}/recruiter-hub/config`, { depthChartMapping });
+  return response.data;
+};
+
+const resetConfig = async (dynastyId) => {
+  const response = await api.delete(`/dynasties/${dynastyId}/recruiter-hub/config`);
   return response.data;
 };
 
@@ -24,6 +29,7 @@ const recruiterHubService = {
   getRecruiterHubAnalysis,
   getConfig,
   saveConfig,
+  resetConfig,
   getRecruitingBoard,
 };
 

@@ -51,7 +51,7 @@ Dynasty Chaos Tracker helps you manage your College Football dynasty by:
   - Draft risk (upperclassmen with OVR >= 87)
   - Graduation tracking (seniors and grad students)
   - Transfer risk (players with dealbreaker flags)
-- **Position Needs**: Recommends which positions need recruits
+- **Depth Chart Mapping Demand**: Recommends position and archetype recruiting demand from configurable in-game depth chart slot mappings
 - **Drilldown Views**: See specific players in each risk category
 
 ### Recruiting Management
@@ -260,4 +260,3 @@ Some features are still in development or planned for future releases. Check the
 ## Support
 
 For bugs or feature requests, please [open an issue](https://github.com/rgwhitaker/dynasty-chaos-tracker/issues) on GitHub.
-

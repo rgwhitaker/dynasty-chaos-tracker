@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Recruiter Hub is a comprehensive dashboard that analyzes roster retention risks and provides recruiting recommendations. It helps dynasty managers identify which players are likely to leave the team and suggests how many recruits to target at each position.
+The Recruiter Hub is a comprehensive dashboard that analyzes roster retention risks and provides recruiting recommendations. It helps dynasty managers identify which players are likely to leave the team and suggests how many recruits to target at each position and archetype.
 
 ## Features
 
@@ -14,7 +14,18 @@ The Recruiter Hub analyzes three types of player departure risks:
 - **Draft Risk**: High-rated upperclassmen likely to declare for the NFL/CFL Draft (OVR >= 87 and class of JR, SR, RS SR, or GRAD)
 - **Graduation Risk**: Players who will graduate (SR, RS SR, GRAD)
 
-### 2. Position-by-Position Analysis
+### 2. Depth Chart Mapping-Driven Demand
+
+Recruiting demand is generated from configurable in-game depth chart slot mappings:
+
+- Each game slot has a fixed slot count (e.g., QB=3, WR=6, KR=5).
+- Each slot has ordered matching rules using website positions and optional archetypes.
+- Rules are evaluated top-to-bottom for deterministic priority-fill demand allocation.
+- Position+archetype rules feed specific archetype demand buckets.
+- Position-only rules feed generic position demand buckets.
+- Current roster + committed recruits are applied after translation, and at-risk players are subtracted.
+
+### 3. Position-by-Position Analysis
 
 The dashboard displays a comprehensive table showing:
 
@@ -25,7 +36,7 @@ The dashboard displays a comprehensive table showing:
 - **Need to Recruit**: How many players should be recruited to maintain depth
 - **Status**: Visual indicator (CRITICAL, WARNING, or OK)
 
-### 3. Dealbreaker Risk Breakdown
+### 4. Dealbreaker Risk Breakdown
 
 A dedicated section shows:
 
@@ -33,7 +44,7 @@ A dedicated section shows:
 - Player names and details for each dealbreaker category
 - Quick identification of systemic program issues
 
-### 4. Drilldown View
+### 5. Drilldown View
 
 Click any position in the table to see:
 
@@ -42,7 +53,7 @@ Click any position in the table to see:
 - Player details (name, year, overall rating, specific dealbreakers)
 - Recruiting recommendations specific to that position
 
-### 5. Overview Cards
+### 6. Overview Cards
 
 Quick stats displayed at the top:
 
@@ -138,22 +149,12 @@ You can access the Recruiter Hub in two ways:
 **Dealbreaker Risk**:
 - Player has non-empty dealbreakers array
 
-### Target Depth by Position
+### Mapping Configuration Notes
 
-The recommended minimum depth varies by position:
-
-| Position | Target Depth |
-|----------|-------------|
-| QB       | 3           |
-| HB       | 4           |
-| WR       | 6           |
-| TE       | 3           |
-| OL (each)| 2           |
-| DL (each)| 3-4         |
-| LB (each)| 2           |
-| CB       | 5           |
-| FS/SS    | 2           |
-| K/P      | 2           |
+- Use `GET /api/dynasties/:dynastyId/recruiter-hub/config` to retrieve active mapping + defaults.
+- Use `PUT /api/dynasties/:dynastyId/recruiter-hub/config` to save rule overrides.
+- Use `DELETE /api/dynasties/:dynastyId/recruiter-hub/config` to reset to defaults.
+- Rule precedence is strictly ordered; first matching rule wins during priority-fill simulation.
 
 ## Future Enhancements
 
