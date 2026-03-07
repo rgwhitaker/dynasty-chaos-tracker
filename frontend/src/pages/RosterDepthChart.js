@@ -130,6 +130,7 @@ const RosterDepthChart = () => {
     abilities: {},
     attributes: {},
     stat_caps: {},
+    redshirted: false,
   });
   const [addPlayerError, setAddPlayerError] = useState(null);
   const [addPlayerLoading, setAddPlayerLoading] = useState(false);
@@ -190,6 +191,8 @@ const RosterDepthChart = () => {
         dealbreakers: selectedPlayer.dealbreakers || [],
         stat_caps: selectedPlayer.stat_caps || {},
         transfer_intent: selectedPlayer.transfer_intent || false,
+        redshirted: selectedPlayer.redshirted || false,
+        redshirt_used: selectedPlayer.redshirt_used || false,
       });
       setEditDialogOpen(true);
       setEditError(null);
@@ -252,6 +255,7 @@ const RosterDepthChart = () => {
       abilities: {},
       attributes: {},
       stat_caps: {},
+      redshirted: false,
     });
     setAddPlayerError(null);
     setAddPlayerDialogOpen(true);
@@ -273,6 +277,7 @@ const RosterDepthChart = () => {
       abilities: {},
       attributes: {},
       stat_caps: {},
+      redshirted: false,
     });
     setAddPlayerError(null);
   };
@@ -342,6 +347,7 @@ const RosterDepthChart = () => {
         attributes: Object.keys(filteredAttributes).length > 0 ? filteredAttributes : undefined,
         abilities: Object.keys(addPlayerFormData.abilities || {}).length > 0 ? addPlayerFormData.abilities : undefined,
         stat_caps: addPlayerFormData.position && Object.keys(addPlayerFormData.stat_caps).length > 0 ? addPlayerFormData.stat_caps : undefined,
+        redshirted: addPlayerFormData.redshirted || false,
       };
 
       await playerService.createPlayer(dynastyId, playerData);
@@ -427,6 +433,7 @@ const RosterDepthChart = () => {
         dealbreakers: editFormData.dealbreakers.length > 0 ? editFormData.dealbreakers : undefined,
         stat_caps: editFormData.position && Object.keys(editFormData.stat_caps).length > 0 ? editFormData.stat_caps : undefined,
         transfer_intent: editFormData.transfer_intent || false,
+        redshirted: editFormData.redshirted || false,
       };
 
       await dispatch(updatePlayer({ 
@@ -456,9 +463,10 @@ const RosterDepthChart = () => {
   const groupedPlayers = React.useMemo(() => {
     const groups = POSITION_GROUPS[unit];
     const result = {};
+    const activePlayers = (players || []).filter((p) => p.year !== 'GRAD');
 
     Object.entries(groups).forEach(([groupKey, groupInfo]) => {
-      const groupPlayers = (players || []).filter(p => 
+      const groupPlayers = activePlayers.filter(p =>
         groupInfo.positions.includes(p.position)
       );
       
@@ -654,7 +662,8 @@ const RosterDepthChart = () => {
     );
   }
 
-  const hasPlayers = players && players.length > 0;
+  const activePlayers = (players || []).filter((player) => player.year !== 'GRAD');
+  const hasPlayers = activePlayers.length > 0;
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -676,6 +685,13 @@ const RosterDepthChart = () => {
             onClick={() => navigate(`/dynasties/${dynastyId}/recruiter-hub`)}
           >
             Recruiter Hub
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => navigate(`/dynasties/${dynastyId}/graduates`)}
+          >
+            Graduates
           </Button>
         </Box>
       </Box>
@@ -731,7 +747,7 @@ const RosterDepthChart = () => {
               <Autocomplete
                 value={selectedPlayer}
                 onChange={handlePlayerChange}
-                options={players || []}
+                options={activePlayers}
                 loading={isLoading}
                 disabled={isLoading}
                 getOptionLabel={(player) => 
@@ -762,6 +778,12 @@ const RosterDepthChart = () => {
                 <Chip label={`#${selectedPlayer.jersey_number}`} size="small" />
                 <Chip label={selectedPlayer.position} size="small" color="primary" />
                 <Chip label={selectedPlayer.year} size="small" />
+                {selectedPlayer.redshirted && (
+                  <Chip label="Redshirted" size="small" color="warning" variant="outlined" />
+                )}
+                {selectedPlayer.redshirt_used && !selectedPlayer.redshirted && (
+                  <Chip label="Redshirt Used" size="small" color="default" variant="outlined" />
+                )}
                 {selectedPlayer.dev_trait && (
                   <Chip 
                     label={selectedPlayer.dev_trait} 
@@ -1165,6 +1187,25 @@ const RosterDepthChart = () => {
                   ))}
                 </TextField>
               </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={addPlayerFormData.redshirted || false}
+                      onChange={(e) => {
+                        setAddPlayerFormData({
+                          ...addPlayerFormData,
+                          redshirted: e.target.checked,
+                        });
+                        if (addPlayerError) setAddPlayerError(null);
+                      }}
+                      name="redshirted"
+                      color="warning"
+                    />
+                  }
+                  label="Redshirt this player for the current season"
+                />
+              </Grid>
               {addPlayerFormData.position && POSITION_ARCHETYPES[addPlayerFormData.position] && (
                 <Grid item xs={12} sm={4}>
                   <TextField
@@ -1467,6 +1508,30 @@ const RosterDepthChart = () => {
                     />
                   }
                   label="Transfer Intent (dealbreaker not being met)"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={editFormData.redshirted || false}
+                      onChange={(e) => {
+                        setEditFormData({
+                          ...editFormData,
+                          redshirted: e.target.checked,
+                        });
+                        if (editError) setEditError(null);
+                      }}
+                      name="redshirted"
+                      color="warning"
+                      disabled={Boolean(editFormData.redshirt_used)}
+                    />
+                  }
+                  label={
+                    editFormData.redshirt_used
+                      ? 'Redshirt already used for this player'
+                      : 'Redshirt this player for the current season'
+                  }
                 />
               </Grid>
               

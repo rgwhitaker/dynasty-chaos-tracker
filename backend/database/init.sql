@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS players (
     abilities JSONB, -- Player ability levels (e.g., {"Resistance": "Gold", "Winning Time": "Platinum"})
     dealbreakers TEXT[], -- Array of dealbreaker flags
     transfer_intent BOOLEAN DEFAULT FALSE, -- Player intends to transfer (dealbreaker not met)
+    redshirted BOOLEAN DEFAULT FALSE, -- Player is redshirted for the current season
+    redshirt_used BOOLEAN DEFAULT FALSE, -- Player has already used a redshirt season
     departure_risk DECIMAL(5,2), -- Predicted probability of leaving
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

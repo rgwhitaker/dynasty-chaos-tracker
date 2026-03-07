@@ -36,6 +36,7 @@ import {
 } from '@mui/icons-material';
 import recruitingService from '../services/recruitingService';
 import recruiterHubService from '../services/recruiterHubService';
+import playerService from '../services/playerService';
 import { ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
@@ -91,6 +92,7 @@ const Recruiting = () => {
   const [editingRecruit, setEditingRecruit] = useState(null);
   const [newRecruit, setNewRecruit] = useState({ ...EMPTY_RECRUIT });
   const [saving, setSaving] = useState(false);
+  const [advancingSeason, setAdvancingSeason] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
   const addFormStudScoreAttrs = useStudScoreAttributes(dynastyId, newRecruit.position, newRecruit.archetype);
   const editFormStudScoreAttrs = useStudScoreAttributes(dynastyId, editingRecruit?.position, editingRecruit?.archetype);
@@ -218,6 +220,31 @@ const Recruiting = () => {
     }
   };
 
+  const handleAdvanceSeason = async () => {
+    const confirmed = window.confirm(
+      'Advance to the next season? This will move committed recruits to the roster, progress player years, process redshirts, and move graduates off the depth chart.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setAdvancingSeason(true);
+      const result = await playerService.advanceSeason(dynastyId);
+      const summary = result?.summary || {};
+      setSnackbar({
+        open: true,
+        message: `Season advanced: ${summary.recruitsMoved || 0} recruits moved, ${summary.graduatesMoved || 0} graduates, ${summary.redshirtsProcessed || 0} redshirts processed.`,
+        severity: 'success',
+      });
+      await loadData();
+    } catch (err) {
+      console.error('Failed to advance season:', err);
+      setSnackbar({ open: true, message: 'Failed to advance season.', severity: 'error' });
+    } finally {
+      setAdvancingSeason(false);
+    }
+  };
+
   const getPositionNeedChip = (position) => {
     if (!positionAnalysis || !positionAnalysis[position]) return null;
     const analysis = positionAnalysis[position];
@@ -294,14 +321,24 @@ const Recruiting = () => {
             Recruiting Board
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={() => setAddDialogOpen(true)}
-        >
-          Add Recruit
-        </Button>
+        <Box display="flex" gap={1}>
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={handleAdvanceSeason}
+            disabled={advancingSeason}
+          >
+            {advancingSeason ? 'Advancing...' : 'Advance Season'}
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => setAddDialogOpen(true)}
+          >
+            Add Recruit
+          </Button>
+        </Box>
       </Box>
 
       {/* Position Needs Summary */}
