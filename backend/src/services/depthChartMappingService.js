@@ -89,7 +89,7 @@ function validateAndMergeConfig(overrideConfig) {
 
 async function getConfig(dynastyId) {
   const result = await db.query(
-    'SELECT slot, rules_json FROM recruiter_hub_depth_chart_mapping WHERE dynasty_id = $1',
+    'SELECT slot, rules_json FROM depth_chart_mapping WHERE dynasty_id = $1',
     [dynastyId]
   );
 
@@ -107,12 +107,12 @@ async function saveConfig(dynastyId, config) {
 
   try {
     await client.query('BEGIN');
-    await client.query('DELETE FROM recruiter_hub_depth_chart_mapping WHERE dynasty_id = $1', [dynastyId]);
+    await client.query('DELETE FROM depth_chart_mapping WHERE dynasty_id = $1', [dynastyId]);
 
     for (const slot of DEPTH_CHART_SLOTS) {
       const slotConfig = validated.slots[slot];
       await client.query(
-        `INSERT INTO recruiter_hub_depth_chart_mapping (dynasty_id, slot, rules_json)
+        `INSERT INTO depth_chart_mapping (dynasty_id, slot, rules_json)
          VALUES ($1, $2, $3::jsonb)`,
         [dynastyId, slot, JSON.stringify(slotConfig.rules)]
       );
@@ -130,7 +130,7 @@ async function saveConfig(dynastyId, config) {
 }
 
 async function resetConfig(dynastyId) {
-  await db.query('DELETE FROM recruiter_hub_depth_chart_mapping WHERE dynasty_id = $1', [dynastyId]);
+  await db.query('DELETE FROM depth_chart_mapping WHERE dynasty_id = $1', [dynastyId]);
   return buildDefaultConfig();
 }
 

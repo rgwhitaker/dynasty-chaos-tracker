@@ -193,18 +193,6 @@ function getPositionAttritionRisk(players) {
   return risks;
 }
 
-async function getConfig(dynastyId) {
-  return depthChartMappingService.getConfig(dynastyId);
-}
-
-async function saveConfig(dynastyId, depthChartMapping) {
-  return depthChartMappingService.saveConfig(dynastyId, depthChartMapping);
-}
-
-async function resetConfig(dynastyId) {
-  return depthChartMappingService.resetConfig(dynastyId);
-}
-
 /**
  * Analyze all roster attrition risks by position
  */
@@ -439,9 +427,6 @@ function getDealbreakerBreakdown(players) {
 
 module.exports = {
   analyzeRosterAttritionRisks,
-  getConfig,
-  saveConfig,
-  resetConfig,
   isDraftRisk,
   isGraduating,
   hasDealbreakers,

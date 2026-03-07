@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const depthChartService = require('../services/depthChartService');
+const depthChartMappingService = require('../services/depthChartMappingService');
 
 const getDepthChart = async (req, res) => {
   try {
@@ -104,8 +105,89 @@ const updateDepthChart = async (req, res) => {
   }
 };
 
+/**
+ * Get depth chart mapping configuration for a dynasty
+ */
+const getMappingConfig = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const config = await depthChartMappingService.getConfig(dynastyId);
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
+  } catch (error) {
+    console.error('Get depth chart mapping config error:', error);
+    res.status(500).json({ error: 'Failed to get depth chart mapping configuration' });
+  }
+};
+
+/**
+ * Save depth chart mapping configuration for a dynasty
+ */
+const saveMappingConfig = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+    const { depthChartMapping } = req.body;
+
+    if (!depthChartMapping || typeof depthChartMapping !== 'object') {
+      return res.status(400).json({ error: 'depthChartMapping object is required' });
+    }
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    await depthChartMappingService.saveConfig(dynastyId, depthChartMapping);
+    const config = await depthChartMappingService.getConfig(dynastyId);
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
+  } catch (error) {
+    console.error('Save depth chart mapping config error:', error);
+    res.status(400).json({ error: error.message || 'Failed to save depth chart mapping configuration' });
+  }
+};
+
+/**
+ * Reset depth chart mapping configuration to defaults
+ */
+const resetMappingConfig = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const config = await depthChartMappingService.resetConfig(dynastyId);
+    res.json({ depthChartMapping: config, defaults: depthChartMappingService.buildDefaultConfig() });
+  } catch (error) {
+    console.error('Reset depth chart mapping config error:', error);
+    res.status(500).json({ error: 'Failed to reset depth chart mapping configuration' });
+  }
+};
+
 module.exports = {
   getDepthChart,
   generateAutoDepthChart,
   updateDepthChart,
+  getMappingConfig,
+  saveMappingConfig,
+  resetMappingConfig,
 };

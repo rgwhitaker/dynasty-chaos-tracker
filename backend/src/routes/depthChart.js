@@ -1,13 +1,26 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
+const rateLimit = require('express-rate-limit');
 const authMiddleware = require('../middleware/auth');
 const depthChartController = require('../controllers/depthChartController');
 const exportService = require('../services/exportService');
 const db = require('../config/database');
 
+const depthChartConfigRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+
 router.get('/', authMiddleware, depthChartController.getDepthChart);
 router.post('/generate', authMiddleware, depthChartController.generateAutoDepthChart);
 router.put('/', authMiddleware, depthChartController.updateDepthChart);
+
+// Depth chart mapping configuration routes
+router.get('/config', depthChartConfigRateLimit, authMiddleware, depthChartController.getMappingConfig);
+router.put('/config', depthChartConfigRateLimit, authMiddleware, depthChartController.saveMappingConfig);
+router.delete('/config', depthChartConfigRateLimit, authMiddleware, depthChartController.resetMappingConfig);
 
 // Export routes
 router.get('/export/pdf', authMiddleware, async (req, res) => {

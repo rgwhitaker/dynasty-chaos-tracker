@@ -14,9 +14,6 @@ const recruiterHubRateLimit = rateLimit({
 router.use(recruiterHubRateLimit);
 
 router.get('/', authMiddleware, recruiterHubController.getRecruiterHubAnalysis);
-router.get('/config', authMiddleware, recruiterHubController.getConfig);
-router.put('/config', authMiddleware, recruiterHubController.saveConfig);
-router.delete('/config', authMiddleware, recruiterHubController.resetConfig);
 router.get('/board', authMiddleware, recruiterHubController.getRecruitingBoard);
 
 module.exports = router;
