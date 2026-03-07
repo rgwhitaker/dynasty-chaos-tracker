@@ -266,15 +266,15 @@ async function analyzeRosterAttritionRisks(dynastyId) {
     allPlayers.forEach(player => {
       if (!playersByPosition[player.position]) return;
       playersByPosition[player.position].push(player);
-      const arch = player.archetype || '__UNSPECIFIED__';
-      currentByPositionArchetype[player.position][arch] = (currentByPositionArchetype[player.position][arch] || 0) + 1;
+      const archetype = player.archetype || '__UNSPECIFIED__';
+      currentByPositionArchetype[player.position][archetype] = (currentByPositionArchetype[player.position][archetype] || 0) + 1;
     });
 
     atRiskPlayers.forEach(player => {
-      if (!atRiskByPosition[player.position] && atRiskByPosition[player.position] !== 0) return;
+      if (!(player.position in atRiskByPosition)) return;
       atRiskByPosition[player.position] = (atRiskByPosition[player.position] || 0) + 1;
-      const arch = player.archetype || '__UNSPECIFIED__';
-      atRiskByPositionArchetype[player.position][arch] = (atRiskByPositionArchetype[player.position][arch] || 0) + 1;
+      const archetype = player.archetype || '__UNSPECIFIED__';
+      atRiskByPositionArchetype[player.position][archetype] = (atRiskByPositionArchetype[player.position][archetype] || 0) + 1;
     });
 
     const targetByPosition = {};

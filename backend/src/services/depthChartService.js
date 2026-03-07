@@ -1,12 +1,15 @@
 const db = require('../config/database');
 const studScoreService = require('./studScoreService');
 const depthChartMappingService = require('./depthChartMappingService');
+const { DEPTH_CHART_SLOT_COUNTS } = require('../constants/depthChartMapping');
 
 /**
  * Generate depth chart for a dynasty based on Stud Scores
  */
 async function generateDepthChart(dynastyId, userId) {
   try {
+    const mappingConfig = await depthChartMappingService.getConfig(dynastyId);
+
     // Get all players for the dynasty
     const playersResult = await db.query(
       'SELECT * FROM players WHERE dynasty_id = $1',
@@ -14,8 +17,6 @@ async function generateDepthChart(dynastyId, userId) {
     );
 
     const players = playersResult.rows;
-
-    const mappingConfig = await depthChartMappingService.getConfig(dynastyId);
 
     // Pre-calculate stud scores once per player for deterministic sorting
     const playersWithScores = await Promise.all(
@@ -38,7 +39,7 @@ async function generateDepthChart(dynastyId, userId) {
     );
 
     // Generate depth chart for each slot using configured ordered rules
-    for (const slotConfig of Object.values(mappingConfig.slots)) {
+    for (const [slot, slotConfig] of Object.entries(mappingConfig.slots)) {
       const selectedPlayers = [];
       const selectedIds = new Set();
 
@@ -67,7 +68,7 @@ async function generateDepthChart(dynastyId, userId) {
            VALUES ($1, $2, $3, $4, FALSE)
            ON CONFLICT (dynasty_id, position, depth_order)
            DO UPDATE SET player_id = $4 WHERE depth_charts.is_manual_override = FALSE`,
-          [dynastyId, slotConfig.slot, i + 1, selectedPlayers[i].id]
+          [dynastyId, slot, i + 1, selectedPlayers[i].id]
         );
       }
     }
@@ -85,47 +86,47 @@ async function generateDepthChart(dynastyId, userId) {
 function getDepthChartPositions() {
   return {
     offense: {
-      QB: { name: 'Quarterback', depth: 3 },
-      HB: { name: 'Halfback', depth: 4 },
-      FB: { name: 'Fullback', depth: 3 },
-      WR: { name: 'Wide Receiver', depth: 6 },
-      TE: { name: 'Tight End', depth: 3 },
-      LT: { name: 'Left Tackle', depth: 3 },
-      LG: { name: 'Left Guard', depth: 3 },
-      C: { name: 'Center', depth: 3 },
-      RG: { name: 'Right Guard', depth: 3 },
-      RT: { name: 'Right Tackle', depth: 3 }
+      QB: { name: 'Quarterback', depth: DEPTH_CHART_SLOT_COUNTS.QB },
+      HB: { name: 'Halfback', depth: DEPTH_CHART_SLOT_COUNTS.HB },
+      FB: { name: 'Fullback', depth: DEPTH_CHART_SLOT_COUNTS.FB },
+      WR: { name: 'Wide Receiver', depth: DEPTH_CHART_SLOT_COUNTS.WR },
+      TE: { name: 'Tight End', depth: DEPTH_CHART_SLOT_COUNTS.TE },
+      LT: { name: 'Left Tackle', depth: DEPTH_CHART_SLOT_COUNTS.LT },
+      LG: { name: 'Left Guard', depth: DEPTH_CHART_SLOT_COUNTS.LG },
+      C: { name: 'Center', depth: DEPTH_CHART_SLOT_COUNTS.C },
+      RG: { name: 'Right Guard', depth: DEPTH_CHART_SLOT_COUNTS.RG },
+      RT: { name: 'Right Tackle', depth: DEPTH_CHART_SLOT_COUNTS.RT }
     },
     defense: {
-      LEDG: { name: 'Left Edge', depth: 3 },
-      DT: { name: 'Defensive Tackle', depth: 5 },
-      REDG: { name: 'Right Edge', depth: 3 },
-      SAM: { name: 'SAM Linebacker', depth: 3 },
-      MIKE: { name: 'MIKE Linebacker', depth: 4 },
-      WILL: { name: 'WILL Linebacker', depth: 3 },
-      CB: { name: 'Cornerback', depth: 5 },
-      FS: { name: 'Free Safety', depth: 3 },
-      SS: { name: 'Strong Safety', depth: 3 }
+      LEDG: { name: 'Left Edge', depth: DEPTH_CHART_SLOT_COUNTS.LEDG },
+      DT: { name: 'Defensive Tackle', depth: DEPTH_CHART_SLOT_COUNTS.DT },
+      REDG: { name: 'Right Edge', depth: DEPTH_CHART_SLOT_COUNTS.REDG },
+      SAM: { name: 'SAM Linebacker', depth: DEPTH_CHART_SLOT_COUNTS.SAM },
+      MIKE: { name: 'MIKE Linebacker', depth: DEPTH_CHART_SLOT_COUNTS.MIKE },
+      WILL: { name: 'WILL Linebacker', depth: DEPTH_CHART_SLOT_COUNTS.WILL },
+      CB: { name: 'Cornerback', depth: DEPTH_CHART_SLOT_COUNTS.CB },
+      FS: { name: 'Free Safety', depth: DEPTH_CHART_SLOT_COUNTS.FS },
+      SS: { name: 'Strong Safety', depth: DEPTH_CHART_SLOT_COUNTS.SS }
     },
     special: {
-      K: { name: 'Kicker', depth: 3 },
-      P: { name: 'Punter', depth: 3 },
-      KR: { name: 'Kick Returner', depth: 5 },
-      PR: { name: 'Punt Returner', depth: 5 },
-      KOS: { name: 'Kickoff Specialist', depth: 3 },
-      LS: { name: 'Long Snapper', depth: 3 }
+      K: { name: 'Kicker', depth: DEPTH_CHART_SLOT_COUNTS.K },
+      P: { name: 'Punter', depth: DEPTH_CHART_SLOT_COUNTS.P },
+      KR: { name: 'Kick Returner', depth: DEPTH_CHART_SLOT_COUNTS.KR },
+      PR: { name: 'Punt Returner', depth: DEPTH_CHART_SLOT_COUNTS.PR },
+      KOS: { name: 'Kickoff Specialist', depth: DEPTH_CHART_SLOT_COUNTS.KOS },
+      LS: { name: 'Long Snapper', depth: DEPTH_CHART_SLOT_COUNTS.LS }
     },
     situational: {
-      '3DRB': { name: '3rd Down RB', depth: 3 },
-      PWHB: { name: 'Power HB', depth: 3 },
-      SLWR: { name: 'Slot WR', depth: 3 },
-      RLE: { name: 'Rush Left End', depth: 3 },
-      RRE: { name: 'Rush Right End', depth: 3 },
-      RDT: { name: 'Rush DT', depth: 3 },
-      SUBLB: { name: 'Sub LB', depth: 3 },
-      SLCB: { name: 'Slot CB', depth: 3 },
-      NT: { name: 'Nose Tackle', depth: 3 },
-      GAD: { name: 'Goal Line/Adaptive', depth: 3 }
+      '3DRB': { name: '3rd Down RB', depth: DEPTH_CHART_SLOT_COUNTS['3DRB'] },
+      PWHB: { name: 'Power HB', depth: DEPTH_CHART_SLOT_COUNTS.PWHB },
+      SLWR: { name: 'Slot WR', depth: DEPTH_CHART_SLOT_COUNTS.SLWR },
+      RLE: { name: 'Rush Left End', depth: DEPTH_CHART_SLOT_COUNTS.RLE },
+      RRE: { name: 'Rush Right End', depth: DEPTH_CHART_SLOT_COUNTS.RRE },
+      RDT: { name: 'Rush DT', depth: DEPTH_CHART_SLOT_COUNTS.RDT },
+      SUBLB: { name: 'Sub LB', depth: DEPTH_CHART_SLOT_COUNTS.SUBLB },
+      SLCB: { name: 'Slot CB', depth: DEPTH_CHART_SLOT_COUNTS.SLCB },
+      NT: { name: 'Nose Tackle', depth: DEPTH_CHART_SLOT_COUNTS.NT },
+      GAD: { name: 'Goal Line/Adaptive', depth: DEPTH_CHART_SLOT_COUNTS.GAD }
     }
   };
 }

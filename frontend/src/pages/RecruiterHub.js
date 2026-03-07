@@ -56,6 +56,8 @@ const RecruiterHub = () => {
   const [configSaving, setConfigSaving] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
+  const getErrorMessage = (err, fallbackMessage) => err?.response?.data?.error || fallbackMessage;
+
   useEffect(() => {
     loadAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,10 +179,23 @@ const RecruiterHub = () => {
       await loadAnalysis();
     } catch (err) {
       console.error('Failed to save config:', err);
-      const errorMessage = err?.response?.data?.error || 'Failed to save configuration.';
+      const errorMessage = getErrorMessage(err, 'Failed to save configuration.');
       setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     } finally {
       setConfigSaving(false);
+    }
+  };
+
+  const handleResetToDefaults = async () => {
+    try {
+      await recruiterHubService.resetConfig(dynastyId);
+      handleResetDefaults();
+      setSnackbar({ open: true, message: 'Defaults restored.', severity: 'success' });
+      await loadAnalysis();
+    } catch (err) {
+      console.error('Failed to reset config:', err);
+      const errorMessage = getErrorMessage(err, 'Failed to reset configuration.');
+      setSnackbar({ open: true, message: errorMessage, severity: 'error' });
     }
   };
 
@@ -215,6 +230,7 @@ const RecruiterHub = () => {
   }
 
   const { positionAnalysis, archetypeAnalysis = {}, overallStats, dealbreakerBreakdown } = analysis;
+  const activeArchetypeDemand = Object.values(archetypeAnalysis).filter(item => item.targetDepth > 0);
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
@@ -312,7 +328,7 @@ const RecruiterHub = () => {
         </Grid>
       </Grid>
 
-      {Object.values(archetypeAnalysis).filter(item => item.targetDepth > 0).length > 0 && (
+      {activeArchetypeDemand.length > 0 && (
         <Paper sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
             Archetype Demand (From Depth Chart Mapping)
@@ -330,8 +346,7 @@ const RecruiterHub = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {Object.values(archetypeAnalysis)
-                  .filter(item => item.targetDepth > 0)
+                {activeArchetypeDemand
                   .sort((a, b) => {
                     if (b.needToRecruit !== a.needToRecruit) return b.needToRecruit - a.needToRecruit;
                     if (a.position !== b.position) return a.position.localeCompare(b.position);
@@ -639,11 +654,7 @@ const RecruiterHub = () => {
           </TableContainer>
         </DialogContent>
         <DialogActions>
-          <Button onClick={async () => {
-            await recruiterHubService.resetConfig(dynastyId);
-            handleResetDefaults();
-            setSnackbar({ open: true, message: 'Defaults restored.', severity: 'success' });
-          }}>Reset to Defaults</Button>
+          <Button onClick={handleResetToDefaults}>Reset to Defaults</Button>
           <Button onClick={() => setConfigOpen(false)}>Cancel</Button>
           <Button onClick={handleSaveConfig} variant="contained" disabled={configSaving}>
             {configSaving ? 'Saving...' : 'Save'}
