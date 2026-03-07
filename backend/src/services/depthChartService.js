@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const studScoreService = require('./studScoreService');
+const depthChartMappingService = require('./depthChartMappingService');
 
 /**
  * Generate depth chart for a dynasty based on Stud Scores
@@ -14,14 +15,21 @@ async function generateDepthChart(dynastyId, userId) {
 
     const players = playersResult.rows;
 
-    // Group players by position
+    const mappingConfig = await depthChartMappingService.getConfig(dynastyId);
+
+    // Pre-calculate stud scores once per player for deterministic sorting
+    const playersWithScores = await Promise.all(
+      players.map(async (player) => {
+        const studScoreResult = await studScoreService.calculateStudScore(userId, player);
+        return { ...player, studScore: studScoreResult.studScore };
+      })
+    );
+
     const playersByPosition = {};
-    for (const player of players) {
-      if (!playersByPosition[player.position]) {
-        playersByPosition[player.position] = [];
-      }
+    playersWithScores.forEach(player => {
+      if (!playersByPosition[player.position]) playersByPosition[player.position] = [];
       playersByPosition[player.position].push(player);
-    }
+    });
 
     // Clear existing auto-generated depth chart (keep manual overrides)
     await db.query(
@@ -29,27 +37,37 @@ async function generateDepthChart(dynastyId, userId) {
       [dynastyId]
     );
 
-    // Generate depth chart for each position
-    for (const [position, positionPlayers] of Object.entries(playersByPosition)) {
-      // Calculate stud scores for each player
-      const playersWithScores = await Promise.all(
-        positionPlayers.map(async (player) => {
-          const studScoreResult = await studScoreService.calculateStudScore(userId, player);
-          return { ...player, studScore: studScoreResult.studScore };
-        })
-      );
+    // Generate depth chart for each slot using configured ordered rules
+    for (const slotConfig of Object.values(mappingConfig.slots)) {
+      const selectedPlayers = [];
+      const selectedIds = new Set();
 
-      // Sort by stud score (descending)
-      playersWithScores.sort((a, b) => b.studScore - a.studScore);
+      for (const rule of slotConfig.rules) {
+        const candidates = (playersByPosition[rule.position] || [])
+          .filter(player => !rule.archetype || player.archetype === rule.archetype)
+          .sort((a, b) => {
+            if (b.studScore !== a.studScore) return b.studScore - a.studScore;
+            if (b.overall_rating !== a.overall_rating) return b.overall_rating - a.overall_rating;
+            return a.id - b.id;
+          });
 
-      // Insert into depth chart
-      for (let i = 0; i < playersWithScores.length; i++) {
+        for (const candidate of candidates) {
+          if (selectedIds.has(candidate.id)) continue;
+          selectedPlayers.push(candidate);
+          selectedIds.add(candidate.id);
+          if (selectedPlayers.length >= slotConfig.count) break;
+        }
+
+        if (selectedPlayers.length >= slotConfig.count) break;
+      }
+
+      for (let i = 0; i < selectedPlayers.length; i++) {
         await db.query(
           `INSERT INTO depth_charts (dynasty_id, position, depth_order, player_id, is_manual_override)
            VALUES ($1, $2, $3, $4, FALSE)
            ON CONFLICT (dynasty_id, position, depth_order)
            DO UPDATE SET player_id = $4 WHERE depth_charts.is_manual_override = FALSE`,
-          [dynastyId, position, i + 1, playersWithScores[i].id]
+          [dynastyId, slotConfig.slot, i + 1, selectedPlayers[i].id]
         );
       }
     }
@@ -69,45 +87,45 @@ function getDepthChartPositions() {
     offense: {
       QB: { name: 'Quarterback', depth: 3 },
       HB: { name: 'Halfback', depth: 4 },
-      FB: { name: 'Fullback', depth: 2 },
+      FB: { name: 'Fullback', depth: 3 },
       WR: { name: 'Wide Receiver', depth: 6 },
       TE: { name: 'Tight End', depth: 3 },
-      LT: { name: 'Left Tackle', depth: 2 },
-      LG: { name: 'Left Guard', depth: 2 },
-      C: { name: 'Center', depth: 2 },
-      RG: { name: 'Right Guard', depth: 2 },
-      RT: { name: 'Right Tackle', depth: 2 }
+      LT: { name: 'Left Tackle', depth: 3 },
+      LG: { name: 'Left Guard', depth: 3 },
+      C: { name: 'Center', depth: 3 },
+      RG: { name: 'Right Guard', depth: 3 },
+      RT: { name: 'Right Tackle', depth: 3 }
     },
     defense: {
       LEDG: { name: 'Left Edge', depth: 3 },
-      DT: { name: 'Defensive Tackle', depth: 4 },
+      DT: { name: 'Defensive Tackle', depth: 5 },
       REDG: { name: 'Right Edge', depth: 3 },
-      SAM: { name: 'SAM Linebacker', depth: 2 },
-      MIKE: { name: 'MIKE Linebacker', depth: 2 },
-      WILL: { name: 'WILL Linebacker', depth: 2 },
+      SAM: { name: 'SAM Linebacker', depth: 3 },
+      MIKE: { name: 'MIKE Linebacker', depth: 4 },
+      WILL: { name: 'WILL Linebacker', depth: 3 },
       CB: { name: 'Cornerback', depth: 5 },
       FS: { name: 'Free Safety', depth: 3 },
       SS: { name: 'Strong Safety', depth: 3 }
     },
     special: {
-      K: { name: 'Kicker', depth: 2 },
-      P: { name: 'Punter', depth: 2 },
-      KR: { name: 'Kick Returner', depth: 3 },
-      PR: { name: 'Punt Returner', depth: 3 },
-      KOS: { name: 'Kickoff Specialist', depth: 1 },
-      LS: { name: 'Long Snapper', depth: 2 }
+      K: { name: 'Kicker', depth: 3 },
+      P: { name: 'Punter', depth: 3 },
+      KR: { name: 'Kick Returner', depth: 5 },
+      PR: { name: 'Punt Returner', depth: 5 },
+      KOS: { name: 'Kickoff Specialist', depth: 3 },
+      LS: { name: 'Long Snapper', depth: 3 }
     },
     situational: {
-      '3DRB': { name: '3rd Down RB', depth: 2 },
-      PWHB: { name: 'Power HB', depth: 2 },
+      '3DRB': { name: '3rd Down RB', depth: 3 },
+      PWHB: { name: 'Power HB', depth: 3 },
       SLWR: { name: 'Slot WR', depth: 3 },
-      RLE: { name: 'Rush Left End', depth: 2 },
-      RRE: { name: 'Rush Right End', depth: 2 },
-      RDT: { name: 'Rush DT', depth: 2 },
-      SUBLB: { name: 'Sub LB', depth: 2 },
+      RLE: { name: 'Rush Left End', depth: 3 },
+      RRE: { name: 'Rush Right End', depth: 3 },
+      RDT: { name: 'Rush DT', depth: 3 },
+      SUBLB: { name: 'Sub LB', depth: 3 },
       SLCB: { name: 'Slot CB', depth: 3 },
-      NT: { name: 'Nose Tackle', depth: 2 },
-      GAD: { name: 'Goal Line/Adaptive', depth: 2 }
+      NT: { name: 'Nose Tackle', depth: 3 },
+      GAD: { name: 'Goal Line/Adaptive', depth: 3 }
     }
   };
 }
