@@ -511,6 +511,7 @@ const RosterDepthChart = () => {
   // Render a compact player card
   const renderPlayerCard = (player) => {
     if (!player) return null;
+    const devTraitColor = getDevTraitColor(player.dev_trait);
 
     return (
       <Card 
@@ -520,6 +521,8 @@ const RosterDepthChart = () => {
           cursor: 'pointer',
           minWidth: 140,
           maxWidth: 180,
+          border: '2px solid',
+          borderColor: devTraitColor === 'default' ? 'divider' : `${devTraitColor}.main`,
           '&:hover': { 
             boxShadow: 4,
             transform: 'translateY(-2px)',
