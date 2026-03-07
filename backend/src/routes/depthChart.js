@@ -9,6 +9,11 @@ router.get('/', authMiddleware, depthChartController.getDepthChart);
 router.post('/generate', authMiddleware, depthChartController.generateAutoDepthChart);
 router.put('/', authMiddleware, depthChartController.updateDepthChart);
 
+// Depth chart mapping configuration routes
+router.get('/config', authMiddleware, depthChartController.getMappingConfig);
+router.put('/config', authMiddleware, depthChartController.saveMappingConfig);
+router.delete('/config', authMiddleware, depthChartController.resetMappingConfig);
+
 // Export routes
 router.get('/export/pdf', authMiddleware, async (req, res) => {
   try {

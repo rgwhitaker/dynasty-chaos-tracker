@@ -42,6 +42,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import recruiterHubService from '../services/recruiterHubService';
+import depthChartService from '../services/depthChartService';
 
 const RecruiterHub = () => {
   const { id: dynastyId } = useParams();
@@ -113,7 +114,7 @@ const RecruiterHub = () => {
 
   const handleOpenConfig = async () => {
     try {
-      const data = await recruiterHubService.getConfig(dynastyId);
+      const data = await depthChartService.getMappingConfig(dynastyId);
       const defaults = data.defaults || {};
       const activeConfig = data.depthChartMapping || defaults;
       setConfigDefaults(defaults);
@@ -173,7 +174,7 @@ const RecruiterHub = () => {
         parsedSlots[slot] = { rules };
       });
 
-      await recruiterHubService.saveConfig(dynastyId, { slots: parsedSlots });
+      await depthChartService.saveMappingConfig(dynastyId, { slots: parsedSlots });
       setConfigOpen(false);
       setSnackbar({ open: true, message: 'Configuration saved. Refreshing analysis...', severity: 'success' });
       await loadAnalysis();
@@ -188,7 +189,7 @@ const RecruiterHub = () => {
 
   const handleResetToDefaults = async () => {
     try {
-      await recruiterHubService.resetConfig(dynastyId);
+      await depthChartService.resetMappingConfig(dynastyId);
       handleResetDefaults();
       setSnackbar({ open: true, message: 'Defaults restored.', severity: 'success' });
       await loadAnalysis();
