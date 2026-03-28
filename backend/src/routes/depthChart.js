@@ -22,6 +22,11 @@ router.get('/config', depthChartConfigRateLimit, authMiddleware, depthChartContr
 router.put('/config', depthChartConfigRateLimit, authMiddleware, depthChartController.saveMappingConfig);
 router.delete('/config', depthChartConfigRateLimit, authMiddleware, depthChartController.resetMappingConfig);
 
+// Archetype group configuration routes
+router.get('/archetype-groups', depthChartConfigRateLimit, authMiddleware, depthChartController.getArchetypeGroups);
+router.put('/archetype-groups', depthChartConfigRateLimit, authMiddleware, depthChartController.saveArchetypeGroups);
+router.delete('/archetype-groups', depthChartConfigRateLimit, authMiddleware, depthChartController.resetArchetypeGroups);
+
 // Export routes
 router.get('/export/pdf', authMiddleware, async (req, res) => {
   try {
