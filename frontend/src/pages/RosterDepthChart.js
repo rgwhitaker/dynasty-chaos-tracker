@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -28,6 +28,7 @@ import {
   Autocomplete,
   FormControlLabel,
   Checkbox,
+  Snackbar,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -37,12 +38,15 @@ import {
   Add as AddIcon,
   ExpandMore as ExpandMoreIcon,
   SwapHoriz as TransferIcon,
+  ViewModule as ViewModuleIcon,
+  Category as CategoryIcon,
 } from '@mui/icons-material';
 import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
-import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS, POSITION_ARCHETYPES } from '../constants/playerAttributes';
+import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS, POSITION_ARCHETYPES, ROSTER_POSITIONS } from '../constants/playerAttributes';
 import { getStatCapSummary } from '../constants/statCaps';
 import StatCapEditor from '../components/StatCapEditor';
 import playerService from '../services/playerService';
+import depthChartService from '../services/depthChartService';
 import HeightInput from '../components/HeightInput';
 import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
@@ -114,6 +118,18 @@ const RosterDepthChart = () => {
   const [deleteError, setDeleteError] = useState(null);
   const [unit, setUnit] = useState('offense');
 
+  // View mode: 'position' or 'archetype'
+  const [viewMode, setViewMode] = useState('position');
+
+  // Archetype group config state
+  const [archetypeGroups, setArchetypeGroups] = useState(null);
+  const [archetypeDefaults, setArchetypeDefaults] = useState(null);
+  const [archetypeConfigOpen, setArchetypeConfigOpen] = useState(false);
+  const [archetypeConfigValues, setArchetypeConfigValues] = useState([]);
+  const [archetypeConfigSaving, setArchetypeConfigSaving] = useState(false);
+  const [archetypeConfigUnit, setArchetypeConfigUnit] = useState('offense');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+
   // Add player dialog state
   const [addPlayerDialogOpen, setAddPlayerDialogOpen] = useState(false);
   const [addPlayerFormData, setAddPlayerFormData] = useState({
@@ -149,6 +165,27 @@ const RosterDepthChart = () => {
   useEffect(() => {
     dispatch(getPlayers(dynastyId));
   }, [dispatch, dynastyId]);
+
+  // Load archetype group configuration
+  const loadArchetypeGroups = useCallback(async () => {
+    try {
+      const data = await depthChartService.getArchetypeGroups(dynastyId);
+      setArchetypeGroups(data.archetypeGroups);
+      setArchetypeDefaults(data.defaults);
+    } catch (err) {
+      console.error('Failed to load archetype groups:', err);
+    }
+  }, [dynastyId]);
+
+  useEffect(() => {
+    loadArchetypeGroups();
+  }, [loadArchetypeGroups]);
+
+  const handleViewModeChange = (event, newMode) => {
+    if (newMode !== null) {
+      setViewMode(newMode);
+    }
+  };
 
   const handleUnitChange = (event, newUnit) => {
     if (newUnit !== null) {
@@ -486,6 +523,132 @@ const RosterDepthChart = () => {
     return result;
   }, [players, unit]);
 
+  // Group players by archetype groups for the current unit
+  const archetypeGroupedPlayers = React.useMemo(() => {
+    const activeGroups = archetypeGroups?.[unit] || archetypeDefaults?.[unit] || [];
+    const activePlayers = (players || []).filter((p) => p.year !== 'GRAD');
+    
+    return activeGroups.map((group, index) => {
+      const groupPlayers = activePlayers.filter(p => {
+        // Player must match one of the group's positions
+        if (!group.positions.includes(p.position)) return false;
+        // If archetypes is empty, match all players at those positions
+        if (!group.archetypes || group.archetypes.length === 0) return true;
+        // Otherwise player archetype must match
+        return group.archetypes.includes(p.archetype);
+      });
+
+      // Sort by stud_score or overall_rating
+      groupPlayers.sort((a, b) => {
+        const scoreA = a.stud_score ?? a.overall_rating ?? 0;
+        const scoreB = b.stud_score ?? b.overall_rating ?? 0;
+        return scoreB - scoreA;
+      });
+
+      return {
+        key: `archetype-${index}`,
+        label: group.group_name,
+        positions: group.positions,
+        players: groupPlayers,
+        order: group.display_order ?? index + 1,
+      };
+    });
+  }, [players, unit, archetypeGroups, archetypeDefaults]);
+
+  // Archetype config dialog handlers
+  const handleOpenArchetypeConfig = () => {
+    const currentGroups = archetypeGroups || archetypeDefaults || {};
+    setArchetypeConfigUnit('offense');
+    setArchetypeConfigValues(
+      JSON.parse(JSON.stringify(currentGroups.offense || []))
+    );
+    setArchetypeConfigOpen(true);
+  };
+
+  const handleArchetypeConfigUnitChange = (newUnit) => {
+    // Save current unit values before switching
+    const currentGroups = archetypeGroups || archetypeDefaults || {};
+    const allValues = { ...currentGroups };
+    allValues[archetypeConfigUnit] = archetypeConfigValues;
+    
+    setArchetypeConfigUnit(newUnit);
+    setArchetypeConfigValues(
+      JSON.parse(JSON.stringify(allValues[newUnit] || []))
+    );
+  };
+
+  const handleAddArchetypeGroup = () => {
+    setArchetypeConfigValues(prev => [
+      ...prev,
+      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1 }
+    ]);
+  };
+
+  const handleRemoveArchetypeGroup = (index) => {
+    setArchetypeConfigValues(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleArchetypeGroupFieldChange = (index, field, value) => {
+    setArchetypeConfigValues(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      // If positions changed, filter out archetypes that are no longer valid
+      if (field === 'positions') {
+        const validArchetypes = new Set();
+        (value || []).forEach(pos => {
+          (POSITION_ARCHETYPES[pos] || []).forEach(arch => validArchetypes.add(arch));
+        });
+        updated[index].archetypes = (updated[index].archetypes || []).filter(a => validArchetypes.has(a));
+      }
+      return updated;
+    });
+  };
+
+  const handleSaveArchetypeConfig = async () => {
+    try {
+      setArchetypeConfigSaving(true);
+      const currentGroups = archetypeGroups || archetypeDefaults || {};
+      const configToSave = { ...currentGroups };
+      // Apply current tab values
+      configToSave[archetypeConfigUnit] = archetypeConfigValues.map((g, i) => ({
+        ...g,
+        display_order: i + 1,
+      }));
+
+      await depthChartService.saveArchetypeGroups(dynastyId, configToSave);
+      await loadArchetypeGroups();
+      setArchetypeConfigOpen(false);
+      setSnackbar({ open: true, message: 'Archetype groups saved.', severity: 'success' });
+    } catch (err) {
+      console.error('Failed to save archetype groups:', err);
+      const msg = err?.response?.data?.error || 'Failed to save archetype groups.';
+      setSnackbar({ open: true, message: msg, severity: 'error' });
+    } finally {
+      setArchetypeConfigSaving(false);
+    }
+  };
+
+  const handleResetArchetypeConfig = async () => {
+    try {
+      await depthChartService.resetArchetypeGroups(dynastyId);
+      await loadArchetypeGroups();
+      setArchetypeConfigOpen(false);
+      setSnackbar({ open: true, message: 'Archetype groups reset to defaults.', severity: 'success' });
+    } catch (err) {
+      console.error('Failed to reset archetype groups:', err);
+      setSnackbar({ open: true, message: 'Failed to reset archetype groups.', severity: 'error' });
+    }
+  };
+
+  // Get available archetypes for a set of positions
+  const getAvailableArchetypes = (positions) => {
+    const archetypes = new Set();
+    (positions || []).forEach(pos => {
+      (POSITION_ARCHETYPES[pos] || []).forEach(arch => archetypes.add(arch));
+    });
+    return Array.from(archetypes).sort();
+  };
+
   // Helper function to get potential percentage display value
   const getPotentialDisplay = (player) => {
     // If stat_caps doesn't exist or is empty, return "Unknown"
@@ -657,6 +820,47 @@ const RosterDepthChart = () => {
     );
   };
 
+  // Render archetype group section
+  const renderArchetypeGroup = (groupData) => {
+    const { key, label, players: groupPlayers, positions } = groupData;
+
+    return (
+      <Box key={key} sx={{ mb: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2, gap: 2 }}>
+          <Typography variant="h6" sx={{ 
+            borderBottom: 2, 
+            borderColor: 'secondary.main',
+            pb: 0.5,
+          }}>
+            {label}
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={() => handleOpenAddPlayer(positions[0])}
+          >
+            Add Player
+          </Button>
+        </Box>
+        {groupPlayers.length > 0 ? (
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1.5, 
+            flexWrap: 'wrap',
+            alignItems: 'flex-start'
+          }}>
+            {groupPlayers.map(player => renderPlayerCard(player))}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', ml: 2 }}>
+            No players in this group
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
   if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -700,7 +904,7 @@ const RosterDepthChart = () => {
       </Box>
 
       {hasPlayers && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
           <ToggleButtonGroup
             value={unit}
             exclusive
@@ -718,6 +922,35 @@ const RosterDepthChart = () => {
               Special Teams
             </ToggleButton>
           </ToggleButtonGroup>
+
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label="view mode"
+            color="secondary"
+            size="small"
+          >
+            <ToggleButton value="position">
+              <ViewModuleIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+              Position
+            </ToggleButton>
+            <ToggleButton value="archetype">
+              <CategoryIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+              Archetype
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          {viewMode === 'archetype' && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<SettingsIcon />}
+              onClick={handleOpenArchetypeConfig}
+            >
+              Configure Groups
+            </Button>
+          )}
         </Box>
       )}
 
@@ -729,11 +962,23 @@ const RosterDepthChart = () => {
             </Typography>
           </CardContent>
         </Card>
-      ) : (
+      ) : viewMode === 'position' ? (
         <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.default' }}>
           {Object.entries(groupedPlayers)
             .sort(([, a], [, b]) => a.order - b.order)
             .map(([groupKey, groupData]) => renderPositionGroup(groupKey, groupData))}
+        </Paper>
+      ) : (
+        <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.default' }}>
+          {archetypeGroupedPlayers.length > 0 ? (
+            archetypeGroupedPlayers
+              .sort((a, b) => a.order - b.order)
+              .map(groupData => renderArchetypeGroup(groupData))
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', textAlign: 'center' }}>
+              No archetype groups configured for this unit. Click &quot;Configure Groups&quot; to set up groups.
+            </Typography>
+          )}
         </Paper>
       )}
 
@@ -1618,6 +1863,103 @@ const RosterDepthChart = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Archetype Group Configuration Dialog */}
+      <Dialog open={archetypeConfigOpen} onClose={() => setArchetypeConfigOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Configure Archetype Groups</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+            Define custom groups that organize players by archetype instead of position.
+            Each group has a custom name, source positions, and optional archetype filters.
+            Leave archetypes empty to include all players at the selected positions.
+          </Typography>
+
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+            <ToggleButtonGroup
+              value={archetypeConfigUnit}
+              exclusive
+              onChange={(e, val) => val && handleArchetypeConfigUnitChange(val)}
+              size="small"
+              color="primary"
+            >
+              <ToggleButton value="offense">Offense</ToggleButton>
+              <ToggleButton value="defense">Defense</ToggleButton>
+              <ToggleButton value="specialTeams">Special Teams</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {archetypeConfigValues.map((group, index) => (
+            <Paper key={index} elevation={1} sx={{ p: 2, mb: 2, position: 'relative' }}>
+              <IconButton
+                size="small"
+                onClick={() => handleRemoveArchetypeGroup(index)}
+                sx={{ position: 'absolute', top: 4, right: 4 }}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    label="Group Name"
+                    size="small"
+                    fullWidth
+                    value={group.group_name || ''}
+                    onChange={(e) => handleArchetypeGroupFieldChange(index, 'group_name', e.target.value)}
+                    placeholder="e.g. Run Stoppers"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={ROSTER_POSITIONS}
+                    value={group.positions || []}
+                    onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'positions', val)}
+                    renderInput={(params) => <TextField {...params} label="Positions" placeholder="Select positions" />}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={getAvailableArchetypes(group.positions)}
+                    value={group.archetypes || []}
+                    onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'archetypes', val)}
+                    renderInput={(params) => <TextField {...params} label="Archetypes (empty = all)" placeholder="Select archetypes" />}
+                    disabled={!group.positions || group.positions.length === 0}
+                  />
+                </Grid>
+              </Grid>
+            </Paper>
+          ))}
+
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleAddArchetypeGroup}
+            sx={{ mt: 1 }}
+          >
+            Add Group
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleResetArchetypeConfig}>Reset to Defaults</Button>
+          <Button onClick={() => setArchetypeConfigOpen(false)}>Cancel</Button>
+          <Button onClick={handleSaveArchetypeConfig} variant="contained" disabled={archetypeConfigSaving}>
+            {archetypeConfigSaving ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        message={snackbar.message}
+      />
     </Container>
   );
 };

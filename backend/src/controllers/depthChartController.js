@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const depthChartService = require('../services/depthChartService');
 const depthChartMappingService = require('../services/depthChartMappingService');
+const archetypeGroupService = require('../services/archetypeGroupService');
 
 const getDepthChart = async (req, res) => {
   try {
@@ -183,6 +184,84 @@ const resetMappingConfig = async (req, res) => {
   }
 };
 
+/**
+ * Get archetype group configuration for a dynasty
+ */
+const getArchetypeGroups = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const groups = await archetypeGroupService.getGroups(dynastyId);
+    res.json({ archetypeGroups: groups, defaults: archetypeGroupService.buildDefaultGroups() });
+  } catch (error) {
+    console.error('Get archetype groups error:', error);
+    res.status(500).json({ error: 'Failed to get archetype group configuration' });
+  }
+};
+
+/**
+ * Save archetype group configuration for a dynasty
+ */
+const saveArchetypeGroups = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+    const { archetypeGroups } = req.body;
+
+    if (!archetypeGroups || typeof archetypeGroups !== 'object') {
+      return res.status(400).json({ error: 'archetypeGroups object is required' });
+    }
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    await archetypeGroupService.saveGroups(dynastyId, archetypeGroups);
+    const groups = await archetypeGroupService.getGroups(dynastyId);
+    res.json({ archetypeGroups: groups, defaults: archetypeGroupService.buildDefaultGroups() });
+  } catch (error) {
+    console.error('Save archetype groups error:', error);
+    res.status(400).json({ error: error.message || 'Failed to save archetype group configuration' });
+  }
+};
+
+/**
+ * Reset archetype group configuration to defaults
+ */
+const resetArchetypeGroups = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    const groups = await archetypeGroupService.resetGroups(dynastyId);
+    res.json({ archetypeGroups: groups, defaults: archetypeGroupService.buildDefaultGroups() });
+  } catch (error) {
+    console.error('Reset archetype groups error:', error);
+    res.status(500).json({ error: 'Failed to reset archetype group configuration' });
+  }
+};
+
 module.exports = {
   getDepthChart,
   generateAutoDepthChart,
@@ -190,4 +269,7 @@ module.exports = {
   getMappingConfig,
   saveMappingConfig,
   resetMappingConfig,
+  getArchetypeGroups,
+  saveArchetypeGroups,
+  resetArchetypeGroups,
 };
