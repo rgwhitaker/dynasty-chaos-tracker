@@ -834,14 +834,16 @@ const RosterDepthChart = () => {
           }}>
             {label}
           </Typography>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenAddPlayer(positions[0])}
-          >
-            Add Player
-          </Button>
+          {positions.length > 0 && (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenAddPlayer(positions[0])}
+            >
+              Add Player
+            </Button>
+          )}
         </Box>
         {groupPlayers.length > 0 ? (
           <Box sx={{ 
