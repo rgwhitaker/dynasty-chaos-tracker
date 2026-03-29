@@ -127,7 +127,7 @@ const SortableGroupCard = ({ id, children }) => {
 
   return (
     <Paper ref={setNodeRef} style={style} elevation={1} sx={{ p: 2, mb: 2, position: 'relative' }}>
-      <Box sx={{ position: 'absolute', top: 8, left: 4, cursor: 'grab', color: 'text.secondary' }} {...attributes} {...listeners}>
+      <Box sx={{ position: 'absolute', top: 8, left: 4, cursor: isDragging ? 'grabbing' : 'grab', color: 'text.secondary' }} aria-label="Drag to reorder" {...attributes} {...listeners}>
         <DragIndicatorIcon fontSize="small" />
       </Box>
       <Box sx={{ ml: 3 }}>
@@ -590,7 +590,12 @@ const RosterDepthChart = () => {
   }, [players, unit, archetypeGroups, archetypeDefaults]);
 
   // Archetype config dialog handlers
-  const assignGroupIds = (groups) => groups.map(g => ({ ...g, _id: `grp-${++archetypeGroupIdRef.current}` }));
+  const assignGroupIds = (groups) => {
+    return groups.map(g => {
+      archetypeGroupIdRef.current += 1;
+      return { ...g, _id: `grp-${archetypeGroupIdRef.current}` };
+    });
+  };
 
   const handleOpenArchetypeConfig = () => {
     const currentGroups = archetypeGroups || archetypeDefaults || {};
@@ -614,9 +619,10 @@ const RosterDepthChart = () => {
   };
 
   const handleAddArchetypeGroup = () => {
+    archetypeGroupIdRef.current += 1;
     setArchetypeConfigValues(prev => [
       ...prev,
-      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1, _id: `grp-${++archetypeGroupIdRef.current}` }
+      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1, _id: `grp-${archetypeGroupIdRef.current}` }
     ]);
   };
 
