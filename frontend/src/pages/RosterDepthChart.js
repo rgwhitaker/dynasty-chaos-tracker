@@ -564,8 +564,9 @@ const RosterDepthChart = () => {
     
     // Process groups in order to track starters for unique starter enforcement
     const starterIds = new Set();
-    
-    return activeGroups
+    const groupedPlayerIds = new Set();
+
+    const groups = activeGroups
       .slice()
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       .map((group, index) => {
@@ -596,6 +597,8 @@ const RosterDepthChart = () => {
         starterIds.add(groupPlayers[0].id);
       }
 
+      groupPlayers.forEach(p => groupedPlayerIds.add(p.id));
+
       return {
         key: `archetype-${index}`,
         label: group.group_name,
@@ -604,6 +607,27 @@ const RosterDepthChart = () => {
         order: group.display_order ?? index + 1,
       };
     });
+
+    // Collect players not matched by any group
+    const ungroupedPlayers = activePlayers.filter(p => !groupedPlayerIds.has(p.id));
+    ungroupedPlayers.sort((a, b) => {
+      const scoreA = a.stud_score ?? a.overall_rating ?? 0;
+      const scoreB = b.stud_score ?? b.overall_rating ?? 0;
+      return scoreB - scoreA;
+    });
+
+    if (ungroupedPlayers.length > 0) {
+      const maxOrder = groups.reduce((max, g) => Math.max(max, g.order), 0);
+      groups.push({
+        key: 'archetype-ungrouped',
+        label: 'Ungrouped',
+        positions: [],
+        players: ungroupedPlayers,
+        order: maxOrder + 1,
+      });
+    }
+
+    return groups;
   }, [players, unit, archetypeGroups, archetypeDefaults]);
 
   // Archetype config dialog handlers
