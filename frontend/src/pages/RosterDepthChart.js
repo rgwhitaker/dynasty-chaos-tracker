@@ -562,10 +562,15 @@ const RosterDepthChart = () => {
     const activeGroups = archetypeGroups?.[unit] || archetypeDefaults?.[unit] || [];
     const activePlayers = (players || []).filter((p) => p.year !== 'GRAD');
     
+    // Process groups in order to track starters for unique starter enforcement
+    const starterIds = new Set();
     const groupedPlayerIds = new Set();
 
-    const groups = activeGroups.map((group, index) => {
-      const groupPlayers = activePlayers.filter(p => {
+    const groups = activeGroups
+      .slice()
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map((group, index) => {
+      let groupPlayers = activePlayers.filter(p => {
         // Player must match one of the group's positions
         if (!group.positions.includes(p.position)) return false;
         // If archetypes is empty, match all players at those positions
@@ -574,12 +579,23 @@ const RosterDepthChart = () => {
         return group.archetypes.includes(p.archetype);
       });
 
+      // If this group requires a unique starter, exclude players who
+      // were the starter (first position) in a previous group
+      if (group.require_unique_starter) {
+        groupPlayers = groupPlayers.filter(p => !starterIds.has(p.id));
+      }
+
       // Sort by stud_score or overall_rating
       groupPlayers.sort((a, b) => {
         const scoreA = a.stud_score ?? a.overall_rating ?? 0;
         const scoreB = b.stud_score ?? b.overall_rating ?? 0;
         return scoreB - scoreA;
       });
+
+      // Track the starter (first player) of this group
+      if (groupPlayers.length > 0) {
+        starterIds.add(groupPlayers[0].id);
+      }
 
       groupPlayers.forEach(p => groupedPlayerIds.add(p.id));
 
@@ -647,7 +663,7 @@ const RosterDepthChart = () => {
     archetypeGroupIdRef.current += 1;
     setArchetypeConfigValues(prev => [
       ...prev,
-      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1, _id: `grp-${archetypeGroupIdRef.current}` }
+      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1, require_unique_starter: false, _id: `grp-${archetypeGroupIdRef.current}` }
     ]);
   };
 
@@ -2015,6 +2031,18 @@ const RosterDepthChart = () => {
                         onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'archetypes', val)}
                         renderInput={(params) => <TextField {...params} label="Archetypes (empty = all)" placeholder="Select archetypes" />}
                         disabled={!group.positions || group.positions.length === 0}
+                      />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={group.require_unique_starter || false}
+                            onChange={(e) => handleArchetypeGroupFieldChange(index, 'require_unique_starter', e.target.checked)}
+                          />
+                        }
+                        label="Require unique starter (exclude players who are the top player in an earlier group)"
                       />
                     </Grid>
                   </Grid>

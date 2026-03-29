@@ -9,34 +9,34 @@ const { ROSTER_POSITIONS, POSITION_ARCHETYPES } = require('../constants/playerAt
  */
 const DEFAULT_ARCHETYPE_GROUPS = {
   offense: [
-    { group_name: 'Pocket Passer', positions: ['QB'], archetypes: ['Pocket Passer'], display_order: 1 },
-    { group_name: 'Dual Threat QB', positions: ['QB'], archetypes: ['Dual Threat', 'Backfield Creator', 'Pure Runner'], display_order: 2 },
-    { group_name: 'Power Backs', positions: ['HB'], archetypes: ['Contact Seeker', 'Elusive Bruiser'], display_order: 3 },
-    { group_name: 'Receiving Backs', positions: ['HB'], archetypes: ['Backfield Threat', 'North/South Receiver', 'East/West Playmaker'], display_order: 4 },
-    { group_name: 'Fullback', positions: ['FB'], archetypes: [], display_order: 5 },
-    { group_name: 'Speed Receivers', positions: ['WR'], archetypes: ['Speedster', 'Elusive Route Runner', 'Route Artist'], display_order: 6 },
-    { group_name: 'Possession Receivers', positions: ['WR'], archetypes: ['Contested Specialist', 'Gritty Possession', 'Physical Route Runner', 'Gadget'], display_order: 7 },
-    { group_name: 'Receiving TE', positions: ['TE'], archetypes: ['Gritty Possession', 'Physical Route Runner', 'Pure Possession', 'Vertical Threat'], display_order: 8 },
-    { group_name: 'Blocking TE', positions: ['TE'], archetypes: ['Pure Blocker'], display_order: 9 },
-    { group_name: 'Pass Protectors', positions: ['LT', 'LG', 'C', 'RG', 'RT'], archetypes: ['Pass Protector', 'Agile'], display_order: 10 },
-    { group_name: 'Road Graders', positions: ['LT', 'LG', 'C', 'RG', 'RT'], archetypes: ['Raw Strength', 'Well Rounded'], display_order: 11 },
+    { group_name: 'Pocket Passer', positions: ['QB'], archetypes: ['Pocket Passer'], display_order: 1, require_unique_starter: false },
+    { group_name: 'Dual Threat QB', positions: ['QB'], archetypes: ['Dual Threat', 'Backfield Creator', 'Pure Runner'], display_order: 2, require_unique_starter: false },
+    { group_name: 'Power Backs', positions: ['HB'], archetypes: ['Contact Seeker', 'Elusive Bruiser'], display_order: 3, require_unique_starter: false },
+    { group_name: 'Receiving Backs', positions: ['HB'], archetypes: ['Backfield Threat', 'North/South Receiver', 'East/West Playmaker'], display_order: 4, require_unique_starter: false },
+    { group_name: 'Fullback', positions: ['FB'], archetypes: [], display_order: 5, require_unique_starter: false },
+    { group_name: 'Speed Receivers', positions: ['WR'], archetypes: ['Speedster', 'Elusive Route Runner', 'Route Artist'], display_order: 6, require_unique_starter: false },
+    { group_name: 'Possession Receivers', positions: ['WR'], archetypes: ['Contested Specialist', 'Gritty Possession', 'Physical Route Runner', 'Gadget'], display_order: 7, require_unique_starter: false },
+    { group_name: 'Receiving TE', positions: ['TE'], archetypes: ['Gritty Possession', 'Physical Route Runner', 'Pure Possession', 'Vertical Threat'], display_order: 8, require_unique_starter: false },
+    { group_name: 'Blocking TE', positions: ['TE'], archetypes: ['Pure Blocker'], display_order: 9, require_unique_starter: false },
+    { group_name: 'Pass Protectors', positions: ['LT', 'LG', 'C', 'RG', 'RT'], archetypes: ['Pass Protector', 'Agile'], display_order: 10, require_unique_starter: false },
+    { group_name: 'Road Graders', positions: ['LT', 'LG', 'C', 'RG', 'RT'], archetypes: ['Raw Strength', 'Well Rounded'], display_order: 11, require_unique_starter: false },
   ],
   defense: [
-    { group_name: 'Speed Rushers', positions: ['LEDG', 'REDG'], archetypes: ['Speed Rusher'], display_order: 1 },
-    { group_name: 'Power Rushers', positions: ['LEDG', 'REDG'], archetypes: ['Power Rusher', 'Pure Power'], display_order: 2 },
-    { group_name: 'Edge Setters', positions: ['LEDG', 'REDG'], archetypes: ['Edge Setter'], display_order: 3 },
-    { group_name: 'Run Stoppers', positions: ['DT'], archetypes: ['Gap Specialist', 'Pure Power'], display_order: 4 },
-    { group_name: 'Pass Rush DT', positions: ['DT'], archetypes: ['Power Rusher', 'Speed Rusher'], display_order: 5 },
-    { group_name: 'Lurkers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Lurker'], display_order: 6 },
-    { group_name: 'Signal Callers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Signal Caller'], display_order: 7 },
-    { group_name: 'Thumpers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Thumper'], display_order: 8 },
-    { group_name: 'Man Coverage CB', positions: ['CB'], archetypes: ['Bump and Run'], display_order: 9 },
-    { group_name: 'Zone Coverage CB', positions: ['CB'], archetypes: ['Zone', 'Boundary', 'Field'], display_order: 10 },
-    { group_name: 'Safeties', positions: ['FS', 'SS'], archetypes: [], display_order: 11 },
+    { group_name: 'Speed Rushers', positions: ['LEDG', 'REDG'], archetypes: ['Speed Rusher'], display_order: 1, require_unique_starter: false },
+    { group_name: 'Power Rushers', positions: ['LEDG', 'REDG'], archetypes: ['Power Rusher', 'Pure Power'], display_order: 2, require_unique_starter: false },
+    { group_name: 'Edge Setters', positions: ['LEDG', 'REDG'], archetypes: ['Edge Setter'], display_order: 3, require_unique_starter: false },
+    { group_name: 'Run Stoppers', positions: ['DT'], archetypes: ['Gap Specialist', 'Pure Power'], display_order: 4, require_unique_starter: false },
+    { group_name: 'Pass Rush DT', positions: ['DT'], archetypes: ['Power Rusher', 'Speed Rusher'], display_order: 5, require_unique_starter: false },
+    { group_name: 'Lurkers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Lurker'], display_order: 6, require_unique_starter: false },
+    { group_name: 'Signal Callers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Signal Caller'], display_order: 7, require_unique_starter: false },
+    { group_name: 'Thumpers', positions: ['SAM', 'MIKE', 'WILL'], archetypes: ['Thumper'], display_order: 8, require_unique_starter: false },
+    { group_name: 'Man Coverage CB', positions: ['CB'], archetypes: ['Bump and Run'], display_order: 9, require_unique_starter: false },
+    { group_name: 'Zone Coverage CB', positions: ['CB'], archetypes: ['Zone', 'Boundary', 'Field'], display_order: 10, require_unique_starter: false },
+    { group_name: 'Safeties', positions: ['FS', 'SS'], archetypes: [], display_order: 11, require_unique_starter: false },
   ],
   specialTeams: [
-    { group_name: 'Kicker', positions: ['K'], archetypes: [], display_order: 1 },
-    { group_name: 'Punter', positions: ['P'], archetypes: [], display_order: 2 },
+    { group_name: 'Kicker', positions: ['K'], archetypes: [], display_order: 1, require_unique_starter: false },
+    { group_name: 'Punter', positions: ['P'], archetypes: [], display_order: 2, require_unique_starter: false },
   ],
 };
 
@@ -106,7 +106,7 @@ function validateConfig(config) {
 
 async function getGroups(dynastyId) {
   const result = await db.query(
-    'SELECT unit, group_name, positions, archetypes, display_order FROM roster_archetype_groups WHERE dynasty_id = $1 ORDER BY unit, display_order',
+    'SELECT unit, group_name, positions, archetypes, display_order, require_unique_starter FROM roster_archetype_groups WHERE dynasty_id = $1 ORDER BY unit, display_order',
     [dynastyId]
   );
 
@@ -124,6 +124,7 @@ async function getGroups(dynastyId) {
       positions: row.positions,
       archetypes: row.archetypes,
       display_order: row.display_order,
+      require_unique_starter: row.require_unique_starter ?? false,
     });
   });
 
@@ -144,9 +145,9 @@ async function saveGroups(dynastyId, config) {
       for (let i = 0; i < groups.length; i++) {
         const group = groups[i];
         await client.query(
-          `INSERT INTO roster_archetype_groups (dynasty_id, unit, group_name, positions, archetypes, display_order)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [dynastyId, unit, group.group_name.trim(), group.positions, group.archetypes, group.display_order ?? i + 1]
+          `INSERT INTO roster_archetype_groups (dynasty_id, unit, group_name, positions, archetypes, display_order, require_unique_starter)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [dynastyId, unit, group.group_name.trim(), group.positions, group.archetypes, group.display_order ?? i + 1, group.require_unique_starter ?? false]
         );
       }
     }
