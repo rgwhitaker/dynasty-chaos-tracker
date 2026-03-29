@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -40,7 +40,11 @@ import {
   SwapHoriz as TransferIcon,
   ViewModule as ViewModuleIcon,
   Category as CategoryIcon,
+  DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
 import { ATTRIBUTE_DISPLAY_NAMES, DEV_TRAIT_COLORS, POSITIONS, YEARS, DEV_TRAITS, POSITION_ARCHETYPES, ROSTER_POSITIONS } from '../constants/playerAttributes';
 import { getStatCapSummary } from '../constants/statCaps';
@@ -104,6 +108,35 @@ const POSITION_GROUPS = {
   },
 };
 
+// Sortable wrapper for archetype group cards
+const SortableGroupCard = ({ id, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Paper ref={setNodeRef} style={style} elevation={1} sx={{ p: 2, mb: 2, position: 'relative' }}>
+      <Box sx={{ position: 'absolute', top: 8, left: 4, cursor: 'grab', color: 'text.secondary' }} {...attributes} {...listeners}>
+        <DragIndicatorIcon fontSize="small" />
+      </Box>
+      <Box sx={{ ml: 3 }}>
+        {children}
+      </Box>
+    </Paper>
+  );
+};
+
 const RosterDepthChart = () => {
   const { id: dynastyId } = useParams();
   const navigate = useNavigate();
@@ -128,6 +161,7 @@ const RosterDepthChart = () => {
   const [archetypeConfigValues, setArchetypeConfigValues] = useState([]);
   const [archetypeConfigSaving, setArchetypeConfigSaving] = useState(false);
   const [archetypeConfigUnit, setArchetypeConfigUnit] = useState('offense');
+  const archetypeGroupIdRef = useRef(0);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
   // Add player dialog state
@@ -556,11 +590,13 @@ const RosterDepthChart = () => {
   }, [players, unit, archetypeGroups, archetypeDefaults]);
 
   // Archetype config dialog handlers
+  const assignGroupIds = (groups) => groups.map(g => ({ ...g, _id: `grp-${++archetypeGroupIdRef.current}` }));
+
   const handleOpenArchetypeConfig = () => {
     const currentGroups = archetypeGroups || archetypeDefaults || {};
     setArchetypeConfigUnit('offense');
     setArchetypeConfigValues(
-      JSON.parse(JSON.stringify(currentGroups.offense || []))
+      assignGroupIds(JSON.parse(JSON.stringify(currentGroups.offense || [])))
     );
     setArchetypeConfigOpen(true);
   };
@@ -573,20 +609,36 @@ const RosterDepthChart = () => {
     
     setArchetypeConfigUnit(newUnit);
     setArchetypeConfigValues(
-      JSON.parse(JSON.stringify(allValues[newUnit] || []))
+      assignGroupIds(JSON.parse(JSON.stringify(allValues[newUnit] || [])))
     );
   };
 
   const handleAddArchetypeGroup = () => {
     setArchetypeConfigValues(prev => [
       ...prev,
-      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1 }
+      { group_name: '', positions: [], archetypes: [], display_order: prev.length + 1, _id: `grp-${++archetypeGroupIdRef.current}` }
     ]);
   };
 
   const handleRemoveArchetypeGroup = (index) => {
     setArchetypeConfigValues(prev => prev.filter((_, i) => i !== index));
   };
+
+  const handleDragEndArchetypeGroup = (event) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setArchetypeConfigValues(prev => {
+        const oldIndex = prev.findIndex(g => g._id === active.id);
+        const newIndex = prev.findIndex(g => g._id === over.id);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const handleArchetypeGroupFieldChange = (index, field, value) => {
     setArchetypeConfigValues(prev => {
@@ -610,10 +662,10 @@ const RosterDepthChart = () => {
       const currentGroups = archetypeGroups || archetypeDefaults || {};
       const configToSave = { ...currentGroups };
       // Apply current tab values
-      configToSave[archetypeConfigUnit] = archetypeConfigValues.map((g, i) => ({
-        ...g,
-        display_order: i + 1,
-      }));
+      configToSave[archetypeConfigUnit] = archetypeConfigValues.map((g, i) => {
+        const { _id, ...rest } = g;
+        return { ...rest, display_order: i + 1 };
+      });
 
       await depthChartService.saveArchetypeGroups(dynastyId, configToSave);
       await loadArchetypeGroups();
@@ -1890,51 +1942,55 @@ const RosterDepthChart = () => {
             </ToggleButtonGroup>
           </Box>
 
-          {archetypeConfigValues.map((group, index) => (
-            <Paper key={index} elevation={1} sx={{ p: 2, mb: 2, position: 'relative' }}>
-              <IconButton
-                size="small"
-                onClick={() => handleRemoveArchetypeGroup(index)}
-                sx={{ position: 'absolute', top: 4, right: 4 }}
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
+          <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEndArchetypeGroup}>
+            <SortableContext items={archetypeConfigValues.map(g => g._id)} strategy={verticalListSortingStrategy}>
+              {archetypeConfigValues.map((group, index) => (
+                <SortableGroupCard key={group._id} id={group._id}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleRemoveArchetypeGroup(index)}
+                    sx={{ position: 'absolute', top: 4, right: 4 }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Group Name"
-                    size="small"
-                    fullWidth
-                    value={group.group_name || ''}
-                    onChange={(e) => handleArchetypeGroupFieldChange(index, 'group_name', e.target.value)}
-                    placeholder="e.g. Run Stoppers"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Autocomplete
-                    multiple
-                    size="small"
-                    options={ROSTER_POSITIONS}
-                    value={group.positions || []}
-                    onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'positions', val)}
-                    renderInput={(params) => <TextField {...params} label="Positions" placeholder="Select positions" />}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Autocomplete
-                    multiple
-                    size="small"
-                    options={getAvailableArchetypes(group.positions)}
-                    value={group.archetypes || []}
-                    onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'archetypes', val)}
-                    renderInput={(params) => <TextField {...params} label="Archetypes (empty = all)" placeholder="Select archetypes" />}
-                    disabled={!group.positions || group.positions.length === 0}
-                  />
-                </Grid>
-              </Grid>
-            </Paper>
-          ))}
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Group Name"
+                        size="small"
+                        fullWidth
+                        value={group.group_name || ''}
+                        onChange={(e) => handleArchetypeGroupFieldChange(index, 'group_name', e.target.value)}
+                        placeholder="e.g. Run Stoppers"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Autocomplete
+                        multiple
+                        size="small"
+                        options={ROSTER_POSITIONS}
+                        value={group.positions || []}
+                        onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'positions', val)}
+                        renderInput={(params) => <TextField {...params} label="Positions" placeholder="Select positions" />}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <Autocomplete
+                        multiple
+                        size="small"
+                        options={getAvailableArchetypes(group.positions)}
+                        value={group.archetypes || []}
+                        onChange={(e, val) => handleArchetypeGroupFieldChange(index, 'archetypes', val)}
+                        renderInput={(params) => <TextField {...params} label="Archetypes (empty = all)" placeholder="Select archetypes" />}
+                        disabled={!group.positions || group.positions.length === 0}
+                      />
+                    </Grid>
+                  </Grid>
+                </SortableGroupCard>
+              ))}
+            </SortableContext>
+          </DndContext>
 
           <Button
             variant="outlined"
