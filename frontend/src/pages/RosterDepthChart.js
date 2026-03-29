@@ -2018,7 +2018,7 @@ const RosterDepthChart = () => {
                             onChange={(e) => handleArchetypeGroupFieldChange(index, 'require_unique_starter', e.target.checked)}
                           />
                         }
-                        label="Require unique starter (exclude players who are the top player in a previous group)"
+                        label="Require unique starter (exclude players who are the top player in an earlier group)"
                       />
                     </Grid>
                   </Grid>
