@@ -64,7 +64,7 @@ const STEPS = {
   DONE: 'done',
 };
 
-const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
+const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated, resumeUploadId }) => {
   const { isMobile } = useMobileDetect();
   const [step, setStep] = useState(STEPS.UPLOAD);
   const [videoFile, setVideoFile] = useState(null);
@@ -76,29 +76,77 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
   const [checkedUpdates, setCheckedUpdates] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('');
   const pollTimerRef = useRef(null);
+  const elapsedTimerRef = useRef(null);
 
   // Reset state when dialog opens/closes
   useEffect(() => {
     if (open) {
-      setStep(STEPS.UPLOAD);
-      setVideoFile(null);
-      setUploadId(null);
-      setError(null);
-      setProgress({ totalFrames: null, framesAnalyzed: 0 });
-      setResults(null);
-      setCheckedNew({});
-      setCheckedUpdates({});
-      setSaving(false);
-      setSaveResult(null);
+      // If resuming a specific upload, start polling directly
+      if (resumeUploadId) {
+        setStep(STEPS.PROCESSING);
+        setUploadId(resumeUploadId);
+        setError(null);
+        setProgress({ totalFrames: null, framesAnalyzed: 0 });
+        setResults(null);
+        setCheckedNew({});
+        setCheckedUpdates({});
+        setSaving(false);
+        setSaveResult(null);
+        setElapsedSeconds(0);
+        setStatusMessage('Reconnecting to video processing...');
+        startPolling(dynastyId, resumeUploadId);
+        startElapsedTimer();
+      } else {
+        setStep(STEPS.UPLOAD);
+        setVideoFile(null);
+        setUploadId(null);
+        setError(null);
+        setProgress({ totalFrames: null, framesAnalyzed: 0 });
+        setResults(null);
+        setCheckedNew({});
+        setCheckedUpdates({});
+        setSaving(false);
+        setSaveResult(null);
+        setElapsedSeconds(0);
+        setStatusMessage('');
+      }
     }
     return () => {
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current);
         pollTimerRef.current = null;
       }
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
     };
-  }, [open]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, resumeUploadId]);
+
+  const formatElapsed = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
+
+  const startElapsedTimer = useCallback(() => {
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    setElapsedSeconds(0);
+    elapsedTimerRef.current = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+  }, []);
+
+  const stopElapsedTimer = useCallback(() => {
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+  }, []);
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -116,11 +164,26 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
     maxSize: 200 * 1024 * 1024, // 200MB
   });
 
+  // Compute status message based on progress
+  useEffect(() => {
+    if (step !== STEPS.PROCESSING) return;
+    if (progress.totalFrames === null || progress.totalFrames === undefined) {
+      setStatusMessage('Uploading video and extracting frames...');
+    } else if (progress.framesAnalyzed === 0) {
+      setStatusMessage(`Found ${progress.totalFrames} frames. Starting analysis...`);
+    } else if (progress.framesAnalyzed < progress.totalFrames) {
+      setStatusMessage(`Analyzing frame ${progress.framesAnalyzed} of ${progress.totalFrames}...`);
+    } else {
+      setStatusMessage('Comparing results with your current roster...');
+    }
+  }, [step, progress]);
+
   // Start polling for results
   const startPolling = useCallback((dynId, upId) => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
 
-    pollTimerRef.current = setInterval(async () => {
+    // Do an immediate first poll
+    const doPoll = async () => {
       try {
         const data = await playerService.getVideoResults(dynId, upId);
 
@@ -132,6 +195,7 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
         } else if (data.status === 'pending_review') {
           clearInterval(pollTimerRef.current);
           pollTimerRef.current = null;
+          stopElapsedTimer();
           setResults(data);
           // Initialize all checkboxes to checked
           const newChecks = {};
@@ -144,6 +208,7 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
         } else if (data.status === 'failed') {
           clearInterval(pollTimerRef.current);
           pollTimerRef.current = null;
+          stopElapsedTimer();
           const errMsg = Array.isArray(data.errors) && data.errors.length > 0
             ? data.errors[0].message || 'Processing failed'
             : 'Video processing failed. Please try again.';
@@ -154,8 +219,12 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
         console.error('Polling error:', err);
         // Don't stop polling on transient errors
       }
-    }, 3000);
-  }, []);
+    };
+
+    // Initial immediate poll
+    doPoll();
+    pollTimerRef.current = setInterval(doPoll, 3000);
+  }, [stopElapsedTimer]);
 
   const handleUpload = async () => {
     if (!videoFile) {
@@ -165,12 +234,16 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
 
     setError(null);
     setStep(STEPS.PROCESSING);
+    setStatusMessage('Uploading video...');
+    startElapsedTimer();
 
     try {
       const data = await playerService.uploadVideo(dynastyId, videoFile, 'tesseract');
       setUploadId(data.uploadId);
+      setStatusMessage('Video uploaded. Processing has started...');
       startPolling(dynastyId, data.uploadId);
     } catch (err) {
+      stopElapsedTimer();
       const msg = err.response?.data?.error || 'Failed to upload video. Please try again.';
       setError(msg);
       setStep(STEPS.UPLOAD);
@@ -304,20 +377,31 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
             <Typography variant="h6" gutterBottom>
               Processing Video...
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Extracting frames and analyzing each one for player data. This may take a few minutes.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              {statusMessage}
             </Typography>
-            {progress.totalFrames != null && (
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Elapsed: {formatElapsed(elapsedSeconds)}
+            </Typography>
+            {progress.totalFrames !== null && progress.totalFrames !== undefined ? (
               <Box sx={{ mt: 2, maxWidth: 400, mx: 'auto' }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
-                  Analyzing frame {progress.framesAnalyzed} of {progress.totalFrames}
+                  Frame {progress.framesAnalyzed} of {progress.totalFrames}
                 </Typography>
                 <LinearProgress
                   variant="determinate"
                   value={progress.totalFrames > 0 ? (progress.framesAnalyzed / progress.totalFrames) * 100 : 0}
                 />
               </Box>
+            ) : (
+              <Box sx={{ mt: 2, maxWidth: 400, mx: 'auto' }}>
+                <LinearProgress />
+              </Box>
             )}
+            <Alert severity="info" sx={{ mt: 3, textAlign: 'left', maxWidth: 500, mx: 'auto' }}>
+              You can close this dialog and the processing will continue in the background. 
+              A banner will appear on this page when results are ready for review.
+            </Alert>
           </Box>
         )}
 
@@ -524,15 +608,15 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
         )}
 
         {step === STEPS.PROCESSING && (
-          <Button onClick={onClose} color="inherit">
-            Cancel (processing continues in background)
+          <Button onClick={onClose} variant="outlined">
+            Continue in Background
           </Button>
         )}
 
         {step === STEPS.REVIEW && (
           <>
             <Button onClick={onClose} color="inherit">
-              Cancel
+              Discard
             </Button>
             <Button
               variant="contained"

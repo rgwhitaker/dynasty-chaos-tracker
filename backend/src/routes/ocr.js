@@ -66,9 +66,19 @@ const videoUploadRateLimit = rateLimit({
   message: { error: 'Too many video uploads. Please wait a few minutes before trying again.' },
 });
 
+// Rate limit for video upload status polling
+const videoStatusRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 60, // max 60 requests per minute (polling every 3-5 seconds)
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again shortly.' },
+});
+
 // Video upload routes
 router.post('/upload-video', videoUploadRateLimit, authMiddleware, videoUpload.single('video'), ocrController.uploadVideo);
-router.get('/video-results/:uploadId', authMiddleware, ocrController.getVideoResults);
+router.get('/video-results/:uploadId', videoStatusRateLimit, authMiddleware, ocrController.getVideoResults);
 router.post('/video-approve/:uploadId', authMiddleware, ocrController.approveVideoResults);
+router.get('/video-uploads', videoStatusRateLimit, authMiddleware, ocrController.getVideoUploads);
 
 module.exports = router;

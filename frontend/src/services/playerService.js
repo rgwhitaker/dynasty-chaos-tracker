@@ -97,6 +97,26 @@ const getUploadStatus = async (dynastyId, uploadId) => {
   return response.data;
 };
 
+const getVideoUploads = async (dynastyId) => {
+  const response = await api.get(`/dynasties/${dynastyId}/ocr/video-uploads`);
+  return response.data;
+};
+
+const getNotifications = async () => {
+  const response = await api.get('/notifications');
+  return response.data;
+};
+
+const markNotificationRead = async (notificationId) => {
+  const response = await api.patch(`/notifications/${notificationId}/read`);
+  return response.data;
+};
+
+const markAllNotificationsRead = async () => {
+  const response = await api.patch('/notifications/read-all');
+  return response.data;
+};
+
 const playerService = {
   getPlayers,
   createPlayer,
@@ -109,6 +129,10 @@ const playerService = {
   getVideoResults,
   approveVideoResults,
   getUploadStatus,
+  getVideoUploads,
+  getNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
 };
 
 export default playerService;

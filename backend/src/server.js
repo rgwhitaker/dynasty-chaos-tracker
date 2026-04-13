@@ -47,6 +47,7 @@ app.use('/api/dynasties/:dynastyId/depth-chart', require('./routes/depthChart'))
 app.use('/api/dynasties/:dynastyId/recruiting', require('./routes/recruiting'));
 app.use('/api/dynasties/:dynastyId/recruiter-hub', require('./routes/recruiterHub'));
 app.use('/api/stud-score', require('./routes/studScore'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Health check
 app.get('/health', (req, res) => {

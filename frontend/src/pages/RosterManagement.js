@@ -54,6 +54,7 @@ import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
 import AbilitySelector from '../components/AbilitySelector';
 import VideoUploadReview from '../components/VideoUploadReview';
+import VideoProcessingBanner from '../components/VideoProcessingBanner';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 // Attribute categories for organized display
@@ -84,6 +85,7 @@ const RosterManagement = () => {
   
   const [showManualForm, setShowManualForm] = useState(false);
   const [showVideoDialog, setShowVideoDialog] = useState(false);
+  const [resumeUploadId, setResumeUploadId] = useState(null);
   const [manualFormData, setManualFormData] = useState({
     first_name: '',
     last_name: '',
@@ -604,6 +606,15 @@ const RosterManagement = () => {
           )}
         </Paper>
 
+        {/* Video Processing Banner - shows active/completed background jobs */}
+        <VideoProcessingBanner
+          dynastyId={dynastyId}
+          onOpenReview={(uploadId) => {
+            setResumeUploadId(uploadId);
+            setShowVideoDialog(true);
+          }}
+        />
+
         {/* Video Upload Section */}
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" gutterBottom>
@@ -616,7 +627,10 @@ const RosterManagement = () => {
           <Button
             variant="outlined"
             startIcon={<VideocamIcon />}
-            onClick={() => setShowVideoDialog(true)}
+            onClick={() => {
+              setResumeUploadId(null);
+              setShowVideoDialog(true);
+            }}
           >
             Upload Roster Video
           </Button>
@@ -624,9 +638,13 @@ const RosterManagement = () => {
 
         <VideoUploadReview
           open={showVideoDialog}
-          onClose={() => setShowVideoDialog(false)}
+          onClose={() => {
+            setShowVideoDialog(false);
+            setResumeUploadId(null);
+          }}
           dynastyId={dynastyId}
           onPlayersUpdated={() => dispatch(getPlayers(dynastyId))}
+          resumeUploadId={resumeUploadId}
         />
 
         {/* Manual Entry Section */}
