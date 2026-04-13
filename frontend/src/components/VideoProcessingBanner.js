@@ -107,7 +107,7 @@ const VideoProcessingBanner = ({ dynastyId, onOpenReview }) => {
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                     Video processing in progress...
                   </Typography>
-                  {upload.total_frames != null ? (
+                  {upload.total_frames !== null && upload.total_frames !== undefined ? (
                     <>
                       <Typography variant="caption" color="text.secondary">
                         Analyzing frame {upload.frames_analyzed || 0} of {upload.total_frames}

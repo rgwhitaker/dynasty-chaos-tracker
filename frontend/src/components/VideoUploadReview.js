@@ -383,7 +383,7 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated, resumeU
             <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
               Elapsed: {formatElapsed(elapsedSeconds)}
             </Typography>
-            {progress.totalFrames != null ? (
+            {progress.totalFrames !== null && progress.totalFrames !== undefined ? (
               <Box sx={{ mt: 2, maxWidth: 400, mx: 'auto' }}>
                 <Typography variant="body2" sx={{ mb: 1 }}>
                   Frame {progress.framesAnalyzed} of {progress.totalFrames}
