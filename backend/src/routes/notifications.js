@@ -1,13 +1,22 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const authMiddleware = require('../middleware/auth');
 const db = require('../config/database');
 
+const notificationRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  limit: 60, // max 60 requests per minute
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests. Please try again shortly.' },
+});
+
 // Get unread notifications for the current user
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', notificationRateLimit, authMiddleware, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT * FROM notifications
+      `SELECT id, user_id, dynasty_id, notification_type, message, is_read, created_at FROM notifications
        WHERE user_id = $1 AND is_read = false
        ORDER BY created_at DESC
        LIMIT 20`,
@@ -21,7 +30,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Mark a notification as read
-router.patch('/:notificationId/read', authMiddleware, async (req, res) => {
+router.patch('/:notificationId/read', notificationRateLimit, authMiddleware, async (req, res) => {
   try {
     const { notificationId } = req.params;
     await db.query(
@@ -36,7 +45,7 @@ router.patch('/:notificationId/read', authMiddleware, async (req, res) => {
 });
 
 // Mark all notifications as read
-router.patch('/read-all', authMiddleware, async (req, res) => {
+router.patch('/read-all', notificationRateLimit, authMiddleware, async (req, res) => {
   try {
     await db.query(
       'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',

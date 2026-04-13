@@ -167,7 +167,7 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated, resumeU
   // Compute status message based on progress
   useEffect(() => {
     if (step !== STEPS.PROCESSING) return;
-    if (progress.totalFrames == null) {
+    if (progress.totalFrames === null || progress.totalFrames === undefined) {
       setStatusMessage('Uploading video and extracting frames...');
     } else if (progress.framesAnalyzed === 0) {
       setStatusMessage(`Found ${progress.totalFrames} frames. Starting analysis...`);
