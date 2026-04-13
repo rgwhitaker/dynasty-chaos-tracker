@@ -42,6 +42,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   Edit as EditIcon,
   ArrowBack as ArrowBackIcon,
+  Videocam as VideocamIcon,
 } from '@mui/icons-material';
 import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSlice';
 import playerService from '../services/playerService';
@@ -51,6 +52,7 @@ import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
 import AbilitySelector from '../components/AbilitySelector';
+import VideoUploadReview from '../components/VideoUploadReview';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
 
 // Attribute categories for organized display
@@ -79,6 +81,7 @@ const RosterManagement = () => {
   const [uploadSuccess, setUploadSuccess] = useState(null);
   
   const [showManualForm, setShowManualForm] = useState(false);
+  const [showVideoDialog, setShowVideoDialog] = useState(false);
   const [manualFormData, setManualFormData] = useState({
     first_name: '',
     last_name: '',
@@ -598,6 +601,31 @@ const RosterManagement = () => {
             </Box>
           )}
         </Paper>
+
+        {/* Video Upload Section */}
+        <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Upload Video for OCR Import
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Upload a video of you scrolling through the in-game roster. The system will extract frames,
+            detect players, and let you review changes before saving.
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<VideocamIcon />}
+            onClick={() => setShowVideoDialog(true)}
+          >
+            Upload Roster Video
+          </Button>
+        </Paper>
+
+        <VideoUploadReview
+          open={showVideoDialog}
+          onClose={() => setShowVideoDialog(false)}
+          dynastyId={dynastyId}
+          onPlayersUpdated={() => dispatch(getPlayers(dynastyId))}
+        />
 
         {/* Manual Entry Section */}
         <Paper elevation={3} sx={{ p: 3, mb: 3 }}>

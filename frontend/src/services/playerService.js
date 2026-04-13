@@ -64,6 +64,39 @@ const uploadStatGroupScreenshot = async (dynastyId, playerId, file, position, ar
   return response.data;
 };
 
+const uploadVideo = async (dynastyId, file, ocrMethod = 'tesseract') => {
+  const formData = new FormData();
+  formData.append('video', file);
+  formData.append('ocrMethod', ocrMethod);
+
+  const response = await api.post(
+    `/dynasties/${dynastyId}/ocr/upload-video`,
+    formData,
+    {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }
+  );
+  return response.data;
+};
+
+const getVideoResults = async (dynastyId, uploadId) => {
+  const response = await api.get(`/dynasties/${dynastyId}/ocr/video-results/${uploadId}`);
+  return response.data;
+};
+
+const approveVideoResults = async (dynastyId, uploadId, approvedNewPlayerIds, approvedUpdatePlayerIds) => {
+  const response = await api.post(
+    `/dynasties/${dynastyId}/ocr/video-approve/${uploadId}`,
+    { approvedNewPlayerIds, approvedUpdatePlayerIds }
+  );
+  return response.data;
+};
+
+const getUploadStatus = async (dynastyId, uploadId) => {
+  const response = await api.get(`/dynasties/${dynastyId}/ocr/status/${uploadId}`);
+  return response.data;
+};
+
 const playerService = {
   getPlayers,
   createPlayer,
@@ -72,6 +105,10 @@ const playerService = {
   advanceSeason,
   uploadScreenshots,
   uploadStatGroupScreenshot,
+  uploadVideo,
+  getVideoResults,
+  approveVideoResults,
+  getUploadStatus,
 };
 
 export default playerService;
