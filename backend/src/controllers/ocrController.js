@@ -1,5 +1,6 @@
 const ocrService = require('../services/ocrService');
 const statGroupOcrService = require('../services/statGroupOcrService');
+const videoOcrService = require('../services/videoOcrService');
 const db = require('../config/database');
 
 const uploadScreenshot = async (req, res) => {
@@ -136,8 +137,166 @@ const uploadStatGroupScreenshot = async (req, res) => {
   }
 };
 
+const uploadVideo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    const { dynastyId } = req.params;
+    const { ocrMethod } = req.body;
+
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    // Create OCR upload record with video type
+    const uploadResult = await db.query(
+      'INSERT INTO ocr_uploads (user_id, dynasty_id, file_paths, processing_status, ocr_method, upload_type) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [req.user.id, dynastyId, [req.file.path], 'processing', ocrMethod || 'tesseract', 'video']
+    );
+
+    const uploadRecord = uploadResult.rows[0];
+
+    // Process video in background
+    videoOcrService.processVideoUpload(req.file.path, dynastyId, uploadRecord.id, ocrMethod)
+      .then(result => {
+        console.log('Video OCR processing completed:', result);
+      })
+      .catch(err => {
+        console.error('Video OCR processing error:', err);
+        console.error('Error stack:', err.stack);
+      });
+
+    res.json({
+      message: 'Video uploaded successfully. Processing has started.',
+      uploadId: uploadRecord.id,
+      status: 'processing',
+    });
+  } catch (error) {
+    console.error('Video upload error:', error);
+    res.status(500).json({ error: 'Failed to upload video' });
+  }
+};
+
+const getVideoResults = async (req, res) => {
+  try {
+    const { dynastyId, uploadId } = req.params;
+
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    // Check upload status first
+    const uploadStatus = await db.query(
+      'SELECT processing_status, total_frames, frames_analyzed, upload_type FROM ocr_uploads WHERE id = $1 AND user_id = $2',
+      [uploadId, req.user.id]
+    );
+
+    if (uploadStatus.rows.length === 0) {
+      return res.status(404).json({ error: 'Upload not found' });
+    }
+
+    const upload = uploadStatus.rows[0];
+
+    // If still processing, return status with progress
+    if (upload.processing_status === 'processing') {
+      return res.json({
+        status: 'processing',
+        totalFrames: upload.total_frames,
+        framesAnalyzed: upload.frames_analyzed,
+      });
+    }
+
+    // If failed, return the failure info
+    if (upload.processing_status === 'failed') {
+      const fullUpload = await db.query(
+        'SELECT * FROM ocr_uploads WHERE id = $1',
+        [uploadId]
+      );
+      return res.json({
+        status: 'failed',
+        errors: fullUpload.rows[0]?.validation_errors || [],
+      });
+    }
+
+    // Get pending results
+    const results = await videoOcrService.getVideoResults(uploadId, dynastyId);
+
+    if (!results) {
+      return res.status(404).json({ error: 'No pending results found. They may have expired or already been approved.' });
+    }
+
+    res.json({
+      status: 'pending_review',
+      ...results.pendingData,
+      expiresAt: results.expiresAt,
+    });
+  } catch (error) {
+    console.error('Get video results error:', error);
+    res.status(500).json({ error: 'Failed to get video results' });
+  }
+};
+
+const approveVideoResults = async (req, res) => {
+  try {
+    const { dynastyId, uploadId } = req.params;
+    const { approvedNewPlayerIds = [], approvedUpdatePlayerIds = [] } = req.body;
+
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    // Verify upload belongs to user
+    const uploadCheck = await db.query(
+      'SELECT * FROM ocr_uploads WHERE id = $1 AND user_id = $2',
+      [uploadId, req.user.id]
+    );
+
+    if (uploadCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Upload not found' });
+    }
+
+    const result = await videoOcrService.approveVideoResults(
+      parseInt(uploadId),
+      parseInt(dynastyId),
+      approvedNewPlayerIds,
+      approvedUpdatePlayerIds
+    );
+
+    res.json({
+      message: `Successfully saved ${result.importedCount} new player(s) and ${result.updatedCount} update(s).`,
+      ...result,
+    });
+  } catch (error) {
+    console.error('Approve video results error:', error);
+    res.status(500).json({ error: error.message || 'Failed to approve video results' });
+  }
+};
+
 module.exports = {
   uploadScreenshot,
   getUploadStatus,
   uploadStatGroupScreenshot,
+  uploadVideo,
+  getVideoResults,
+  approveVideoResults,
 };
