@@ -1,6 +1,7 @@
 const path = require('path');
 const os = require('os');
 const db = require('../config/database');
+const { createNotification } = require('./notificationService');
 const { extractFrames, getVideoDuration, deduplicateFrames, cleanupFrames } = require('./videoProcessingService');
 const {
   preprocessImage,
@@ -142,6 +143,20 @@ async function processVideoUpload(videoPath, dynastyId, uploadId, ocrMethod = 't
       ['pending_review', newPlayers.length + updatedPlayers.length, uploadId]
     );
 
+    // Create notification for the user
+    try {
+      const uploadRow = await db.query('SELECT user_id FROM ocr_uploads WHERE id = $1', [uploadId]);
+      if (uploadRow.rows.length > 0) {
+        const totalChanges = newPlayers.length + updatedPlayers.length;
+        const message = totalChanges > 0
+          ? `Video processing complete: ${newPlayers.length} new player(s) and ${updatedPlayers.length} update(s) found. Review and approve the changes.`
+          : `Video processing complete but no roster changes were detected.`;
+        await createNotification(uploadRow.rows[0].user_id, dynastyId, 'video_ocr_complete', message);
+      }
+    } catch (notifErr) {
+      console.error('Failed to create completion notification:', notifErr);
+    }
+
     console.log(`Video OCR complete: ${newPlayers.length} new, ${updatedPlayers.length} updates, ${unchangedCount} unchanged`);
 
     return { status: 'pending_review', newPlayers, updatedPlayers, unchangedCount };
@@ -152,6 +167,22 @@ async function processVideoUpload(videoPath, dynastyId, uploadId, ocrMethod = 't
       'UPDATE ocr_uploads SET processing_status = $1, validation_errors = $2 WHERE id = $3',
       ['failed', JSON.stringify([{ message: error.message }]), uploadId]
     );
+
+    // Create failure notification
+    try {
+      const uploadRow = await db.query('SELECT user_id FROM ocr_uploads WHERE id = $1', [uploadId]);
+      if (uploadRow.rows.length > 0) {
+        await createNotification(
+          uploadRow.rows[0].user_id,
+          dynastyId,
+          'video_ocr_failed',
+          `Video processing failed: ${error.message}. Please try uploading again.`
+        );
+      }
+    } catch (notifErr) {
+      console.error('Failed to create failure notification:', notifErr);
+    }
+
     throw error;
   } finally {
     // Always clean up frames

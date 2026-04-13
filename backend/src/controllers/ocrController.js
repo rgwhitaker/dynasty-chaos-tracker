@@ -250,6 +250,38 @@ const getVideoResults = async (req, res) => {
   }
 };
 
+const getVideoUploads = async (req, res) => {
+  try {
+    const { dynastyId } = req.params;
+
+    // Verify dynasty belongs to user
+    const dynastyCheck = await db.query(
+      'SELECT * FROM dynasties WHERE id = $1 AND user_id = $2',
+      [dynastyId, req.user.id]
+    );
+
+    if (dynastyCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Dynasty not found' });
+    }
+
+    // Get all video uploads for this dynasty that are processing or pending review
+    const result = await db.query(
+      `SELECT id, processing_status, total_frames, frames_analyzed, upload_type, created_at
+       FROM ocr_uploads
+       WHERE user_id = $1 AND dynasty_id = $2 AND upload_type = 'video'
+         AND processing_status IN ('processing', 'pending_review', 'failed')
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [req.user.id, dynastyId]
+    );
+
+    res.json({ uploads: result.rows });
+  } catch (error) {
+    console.error('Get video uploads error:', error);
+    res.status(500).json({ error: 'Failed to get video uploads' });
+  }
+};
+
 const approveVideoResults = async (req, res) => {
   try {
     const { dynastyId, uploadId } = req.params;
@@ -298,5 +330,6 @@ module.exports = {
   uploadStatGroupScreenshot,
   uploadVideo,
   getVideoResults,
+  getVideoUploads,
   approveVideoResults,
 };

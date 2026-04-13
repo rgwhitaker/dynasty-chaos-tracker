@@ -70,5 +70,6 @@ const videoUploadRateLimit = rateLimit({
 router.post('/upload-video', videoUploadRateLimit, authMiddleware, videoUpload.single('video'), ocrController.uploadVideo);
 router.get('/video-results/:uploadId', authMiddleware, ocrController.getVideoResults);
 router.post('/video-approve/:uploadId', authMiddleware, ocrController.approveVideoResults);
+router.get('/video-uploads', authMiddleware, ocrController.getVideoUploads);
 
 module.exports = router;
