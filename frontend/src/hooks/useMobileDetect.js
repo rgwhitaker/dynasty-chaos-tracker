@@ -4,8 +4,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 /**
  * Hook to detect mobile and tablet breakpoints.
  * - isMobile: true when viewport < sm (600px)
- * - isTablet: true when viewport < md (900px) but >= sm
- * - isSmallScreen: true when viewport < md (900px)
+ * - isSmallScreen: true when viewport < md (900px), covers both mobile and small tablets
  */
 const useMobileDetect = () => {
   const theme = useTheme();
