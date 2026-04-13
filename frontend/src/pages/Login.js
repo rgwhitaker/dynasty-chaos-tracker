@@ -42,10 +42,11 @@ const Login = () => {
     <Container component="main" maxWidth="xs">
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 4, sm: 8 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
+          px: { xs: 1, sm: 0 },
         }}
       >
         <Paper elevation={3} sx={{ p: 4, width: '100%' }}>

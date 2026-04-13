@@ -42,7 +42,7 @@ import {
   Category as CategoryIcon,
   DragIndicator as DragIndicatorIcon,
 } from '@mui/icons-material';
-import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { getPlayers, deletePlayer, updatePlayer } from '../store/slices/playerSlice';
@@ -54,6 +54,7 @@ import depthChartService from '../services/depthChartService';
 import HeightInput from '../components/HeightInput';
 import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 // Common chip container styles
 const CHIP_CONTAINER_STYLES = {
@@ -142,6 +143,7 @@ const RosterDepthChart = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { players, isLoading } = useSelector((state) => state.player);
+  const { isMobile } = useMobileDetect();
 
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -684,6 +686,7 @@ const RosterDepthChart = () => {
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -781,8 +784,8 @@ const RosterDepthChart = () => {
         onClick={() => handlePlayerClick(player)}
         sx={{ 
           cursor: 'pointer',
-          minWidth: 140,
-          maxWidth: 180,
+          minWidth: { xs: 'calc(50% - 12px)', sm: 140 },
+          maxWidth: { xs: '100%', sm: 180 },
           border: '2px solid',
           borderColor: devTraitColor === 'default' ? 'divider' : `${devTraitColor}.main`,
           '&:hover': { 
@@ -975,15 +978,16 @@ const RosterDepthChart = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <Typography variant="h4" component="h1">
           Roster Depth Chart
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button
             variant="outlined"
             startIcon={<SettingsIcon />}
             onClick={() => navigate(`/dynasties/${dynastyId}/roster/manage`)}
+            fullWidth={isMobile}
           >
             Manage Roster
           </Button>
@@ -991,6 +995,7 @@ const RosterDepthChart = () => {
             variant="outlined"
             color="primary"
             onClick={() => navigate(`/dynasties/${dynastyId}/recruiter-hub`)}
+            fullWidth={isMobile}
           >
             Recruiter Hub
           </Button>
@@ -998,6 +1003,7 @@ const RosterDepthChart = () => {
             variant="outlined"
             color="secondary"
             onClick={() => navigate(`/dynasties/${dynastyId}/graduates`)}
+            fullWidth={isMobile}
           >
             Graduates
           </Button>
@@ -1005,13 +1011,15 @@ const RosterDepthChart = () => {
       </Box>
 
       {hasPlayers && (
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: { xs: 1, sm: 3 }, flexWrap: 'wrap', flexDirection: { xs: 'column', sm: 'row' } }}>
           <ToggleButtonGroup
             value={unit}
             exclusive
             onChange={handleUnitChange}
             aria-label="unit selection"
             color="primary"
+            size={isMobile ? 'small' : 'medium'}
+            fullWidth={isMobile}
           >
             <ToggleButton value="offense">
               Offense
@@ -1064,13 +1072,13 @@ const RosterDepthChart = () => {
           </CardContent>
         </Card>
       ) : viewMode === 'position' ? (
-        <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.default' }}>
+        <Paper elevation={2} sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: 'background.default' }}>
           {Object.entries(groupedPlayers)
             .sort(([, a], [, b]) => a.order - b.order)
             .map(([groupKey, groupData]) => renderPositionGroup(groupKey, groupData))}
         </Paper>
       ) : (
-        <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.default' }}>
+        <Paper elevation={2} sx={{ p: { xs: 1.5, sm: 3 }, bgcolor: 'background.default' }}>
           {archetypeGroupedPlayers.length > 0 ? (
             archetypeGroupedPlayers
               .sort((a, b) => a.order - b.order)
@@ -1089,6 +1097,7 @@ const RosterDepthChart = () => {
         onClose={handleCloseDetail}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
@@ -1111,7 +1120,7 @@ const RosterDepthChart = () => {
                     label="Select Player"
                   />
                 )}
-                sx={{ minWidth: 300 }}
+                sx={{ minWidth: { xs: '100%', sm: 300 } }}
               />
             </Box>
             <IconButton onClick={handleCloseDetail}>
@@ -1399,6 +1408,7 @@ const RosterDepthChart = () => {
         onClose={handleCloseAddPlayer}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1676,6 +1686,7 @@ const RosterDepthChart = () => {
         onClose={() => setEditDialogOpen(false)}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>Edit Player</DialogTitle>
         <DialogContent>
@@ -1966,7 +1977,7 @@ const RosterDepthChart = () => {
       </Dialog>
 
       {/* Archetype Group Configuration Dialog */}
-      <Dialog open={archetypeConfigOpen} onClose={() => setArchetypeConfigOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={archetypeConfigOpen} onClose={() => setArchetypeConfigOpen(false)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle>Configure Archetype Groups</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>

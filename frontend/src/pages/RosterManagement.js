@@ -48,6 +48,7 @@ import { getPlayers, updatePlayer, deletePlayer } from '../store/slices/playerSl
 import playerService from '../services/playerService';
 import dynastyService from '../services/dynastyService';
 import studScoreService from '../services/studScoreService';
+import useMobileDetect from '../hooks/useMobileDetect';
 import { POSITIONS, YEARS, DEV_TRAITS, DEV_TRAIT_COLORS, ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import StatCapEditor from '../components/StatCapEditor';
 import HeightInput from '../components/HeightInput';
@@ -74,6 +75,7 @@ const RosterManagement = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { players, isLoading } = useSelector((state) => state.player);
+  const { isMobile } = useMobileDetect();
 
   const [uploadFiles, setUploadFiles] = useState([]);
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -477,12 +479,12 @@ const RosterManagement = () => {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
           <Typography variant="h4" component="h1">
             Roster Management
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-            <FormControl sx={{ minWidth: 200 }} size="small">
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
+            <FormControl sx={{ minWidth: { xs: '100%', sm: 200 } }} size="small">
               <InputLabel id="preset-select-label">Stud Score Preset</InputLabel>
               <Select
                 labelId="preset-select-label"
@@ -564,7 +566,7 @@ const RosterManagement = () => {
               {isDragActive ? 'Drop the files here' : 'Drag & drop screenshots here'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              or click to select files • Press Ctrl+V (Cmd+V) to paste from clipboard
+              or click to select files
             </Typography>
           </Box>
 
@@ -1036,6 +1038,7 @@ const RosterManagement = () => {
           onClose={() => setEditDialogOpen(false)}
           maxWidth="md"
           fullWidth
+          fullScreen={isMobile}
         >
           <DialogTitle>Edit Player</DialogTitle>
           <DialogContent>

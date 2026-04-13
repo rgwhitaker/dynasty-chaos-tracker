@@ -43,10 +43,12 @@ import {
 } from '@mui/icons-material';
 import recruiterHubService from '../services/recruiterHubService';
 import depthChartService from '../services/depthChartService';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 const RecruiterHub = () => {
   const { id: dynastyId } = useParams();
   const navigate = useNavigate();
+  const { isMobile } = useMobileDetect();
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -236,8 +238,8 @@ const RecruiterHub = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexDirection={{ xs: 'column', sm: 'row' }} gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
@@ -249,11 +251,12 @@ const RecruiterHub = () => {
             Recruiter Hub
           </Typography>
         </Box>
-        <Box display="flex" gap={1}>
+        <Box display="flex" gap={1} flexWrap="wrap" width={{ xs: '100%', sm: 'auto' }}>
           <Button
             variant="outlined"
             startIcon={<SettingsIcon />}
             onClick={handleOpenConfig}
+            fullWidth={isMobile}
           >
             Configure Targets
           </Button>
@@ -262,6 +265,7 @@ const RecruiterHub = () => {
             color="primary"
             startIcon={<PersonSearchIcon />}
             onClick={handleNavigateToRecruiting}
+            fullWidth={isMobile}
           >
             Go to Recruiting
           </Button>
@@ -334,13 +338,13 @@ const RecruiterHub = () => {
           <Typography variant="h6" gutterBottom>
             Archetype Demand (From Depth Chart Mapping)
           </Typography>
-          <TableContainer>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Position</TableCell>
                   <TableCell>Archetype</TableCell>
-                  <TableCell align="center">Projected</TableCell>
+                  <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>Projected</TableCell>
                   <TableCell align="center">Target</TableCell>
                   <TableCell align="center">Need</TableCell>
                   <TableCell align="center">Status</TableCell>
@@ -357,7 +361,7 @@ const RecruiterHub = () => {
                     <TableRow key={`${item.position}-${item.archetype || 'ANY'}`}>
                       <TableCell>{item.position}</TableCell>
                       <TableCell>{item.archetype || 'Any'}</TableCell>
-                      <TableCell align="center">{item.projectedCount}</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>{item.projectedCount}</TableCell>
                       <TableCell align="center">{item.targetDepth}</TableCell>
                       <TableCell align="center">
                         <strong>{item.needToRecruit}</strong>
@@ -380,16 +384,16 @@ const RecruiterHub = () => {
             <Typography variant="h6" gutterBottom>
               Position-by-Position Analysis
             </Typography>
-            <TableContainer>
+            <TableContainer sx={{ overflowX: 'auto' }}>
               <Table>
                 <TableHead>
                   <TableRow>
                     <TableCell>Position</TableCell>
                     <TableCell align="center">Current</TableCell>
-                    <TableCell align="center">At Risk</TableCell>
-                    <TableCell align="center">Projected</TableCell>
+                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>At Risk</TableCell>
+                    <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>Projected</TableCell>
                     <TableCell align="center">Target</TableCell>
-                    <TableCell align="center">Need to Recruit</TableCell>
+                    <TableCell align="center">Need</TableCell>
                     <TableCell align="center">Status</TableCell>
                   </TableRow>
                 </TableHead>
@@ -412,14 +416,14 @@ const RecruiterHub = () => {
                           <strong>{pos.position}</strong>
                         </TableCell>
                         <TableCell align="center">{pos.currentCount}</TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                           <Chip
                             label={pos.atRiskCount}
                             color={pos.atRiskCount > 0 ? 'error' : 'default'}
                             size="small"
                           />
                         </TableCell>
-                        <TableCell align="center">{pos.projectedCount}</TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>{pos.projectedCount}</TableCell>
                         <TableCell align="center">{pos.targetDepth}</TableCell>
                         <TableCell align="center">
                           <Chip
@@ -616,7 +620,7 @@ const RecruiterHub = () => {
       </Grid>
 
       {/* Configuration Dialog */}
-      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle>Configure Depth Chart Slot Mapping</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
