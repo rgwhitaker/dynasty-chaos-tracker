@@ -23,10 +23,12 @@ import {
   ArrowBack as ArrowBackIcon,
 } from '@mui/icons-material';
 import depthChartService from '../services/depthChartService';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 const DepthChart = () => {
   const { id: dynastyId } = useParams();
   const navigate = useNavigate();
+  const { isMobile } = useMobileDetect();
   const [configOpen, setConfigOpen] = useState(false);
   const [configValues, setConfigValues] = useState({});
   const [configDefaults, setConfigDefaults] = useState({});
@@ -123,8 +125,8 @@ const DepthChart = () => {
 
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexDirection={{ xs: 'column', sm: 'row' }} gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
@@ -138,6 +140,7 @@ const DepthChart = () => {
           variant="outlined"
           startIcon={<SettingsIcon />}
           onClick={handleOpenConfig}
+          fullWidth={isMobile}
         >
           Configure Slot Mapping
         </Button>
@@ -146,7 +149,7 @@ const DepthChart = () => {
       <Typography>View and manage your depth chart.</Typography>
 
       {/* Configuration Dialog */}
-      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={configOpen} onClose={() => setConfigOpen(false)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle>Configure Depth Chart Slot Mapping</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>

@@ -35,6 +35,7 @@ import {
 } from '@mui/icons-material';
 import studScoreService from '../services/studScoreService';
 import { POSITION_ARCHETYPES, ATTRIBUTE_DISPLAY_NAMES, PLAYER_RATINGS } from '../constants/playerAttributes';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 // Weight range constants
 const MIN_WEIGHT = 0;
@@ -53,6 +54,7 @@ const POSITION_GROUPS = {
 
 const StudScoreConfig = () => {
   // State
+  const { isMobile } = useMobileDetect();
   const [presets, setPresets] = useState([]);
   const [selectedPreset, setSelectedPreset] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState('QB');
@@ -898,7 +900,7 @@ const StudScoreConfig = () => {
       )}
 
       {/* Create Preset Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Create New Preset</DialogTitle>
         <DialogContent>
           <TextField
@@ -931,7 +933,7 @@ const StudScoreConfig = () => {
       </Dialog>
 
       {/* Copy From Dialog */}
-      <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={copyDialogOpen} onClose={() => setCopyDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Copy Weights From Another Position/Archetype</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>

@@ -33,7 +33,7 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
         <Typography variant="h4" component="h1">
           My Dynasties
         </Typography>

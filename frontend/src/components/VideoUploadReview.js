@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import playerService from '../services/playerService';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 // Attribute display names for diffs
 const ATTR_DISPLAY = {
@@ -64,6 +65,7 @@ const STEPS = {
 };
 
 const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
+  const { isMobile } = useMobileDetect();
   const [step, setStep] = useState(STEPS.UPLOAD);
   const [videoFile, setVideoFile] = useState(null);
   const [uploadId, setUploadId] = useState(null);
@@ -234,7 +236,7 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
   const checkedUpdateCount = Object.values(checkedUpdates).filter(Boolean).length;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <VideocamIcon color="primary" />
         Upload Roster Video

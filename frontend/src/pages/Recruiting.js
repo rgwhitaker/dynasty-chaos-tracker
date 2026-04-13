@@ -40,6 +40,7 @@ import playerService from '../services/playerService';
 import { ATTRIBUTE_DISPLAY_NAMES, POSITION_ARCHETYPES } from '../constants/playerAttributes';
 import AbilitySelector from '../components/AbilitySelector';
 import { useStudScoreAttributes } from '../hooks/useStudScoreAttributes';
+import useMobileDetect from '../hooks/useMobileDetect';
 
 const POSITIONS = [
   'QB', 'HB', 'FB', 'WR', 'TE',
@@ -83,6 +84,7 @@ const EMPTY_RECRUIT = {
 const Recruiting = () => {
   const { id: dynastyId } = useParams();
   const navigate = useNavigate();
+  const { isMobile } = useMobileDetect();
   const [recruits, setRecruits] = useState([]);
   const [positionAnalysis, setPositionAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -308,8 +310,8 @@ const Recruiting = () => {
   return (
     <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box display="flex" alignItems="center" gap={2}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexDirection={{ xs: 'column', sm: 'row' }} gap={2}>
+        <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
           <Button
             variant="outlined"
             startIcon={<ArrowBackIcon />}
@@ -321,12 +323,13 @@ const Recruiting = () => {
             Recruiting Board
           </Typography>
         </Box>
-        <Box display="flex" gap={1}>
+        <Box display="flex" gap={1} flexWrap="wrap" width={{ xs: '100%', sm: 'auto' }}>
           <Button
             variant="outlined"
             color="warning"
             onClick={handleAdvanceSeason}
             disabled={advancingSeason}
+            fullWidth={isMobile}
           >
             {advancingSeason ? 'Advancing...' : 'Advance Season'}
           </Button>
@@ -335,6 +338,7 @@ const Recruiting = () => {
             color="primary"
             startIcon={<AddIcon />}
             onClick={() => setAddDialogOpen(true)}
+            fullWidth={isMobile}
           >
             Add Recruit
           </Button>
@@ -382,20 +386,20 @@ const Recruiting = () => {
                 No recruits on your board yet. Click &quot;Add Recruit&quot; to get started.
               </Alert>
             ) : (
-              <TableContainer>
+              <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>Name</TableCell>
                       <TableCell>Position</TableCell>
-                      <TableCell align="center">Stars</TableCell>
-                      <TableCell align="center">Class</TableCell>
-                      <TableCell align="center">Archetype</TableCell>
-                      <TableCell align="center">Gem/Bust</TableCell>
-                      <TableCell align="center">Dev Trait</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Stars</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>Class</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>Archetype</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Gem/Bust</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Dev Trait</TableCell>
                       <TableCell align="center">Status</TableCell>
-                      <TableCell align="center">Priority</TableCell>
-                      <TableCell align="center">Position Need</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Priority</TableCell>
+                      <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Position Need</TableCell>
                       <TableCell align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
@@ -406,13 +410,13 @@ const Recruiting = () => {
                           <strong>{recruit.first_name} {recruit.last_name}</strong>
                         </TableCell>
                         <TableCell>{recruit.position}</TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                           {recruit.stars ? '★'.repeat(recruit.stars) : '-'}
                         </TableCell>
-                        <TableCell align="center">{recruit.recruit_class || '-'}</TableCell>
-                        <TableCell align="center">{recruit.archetype || '-'}</TableCell>
-                        <TableCell align="center">{recruit.gem_status || '-'}</TableCell>
-                        <TableCell align="center">{recruit.dev_trait || 'Unknown'}</TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>{recruit.recruit_class || '-'}</TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', md: 'table-cell' } }}>{recruit.archetype || '-'}</TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>{recruit.gem_status || '-'}</TableCell>
+                        <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{recruit.dev_trait || 'Unknown'}</TableCell>
                         <TableCell align="center">
                           {recruit.commitment_status ? (
                             <Chip
@@ -425,18 +429,19 @@ const Recruiting = () => {
                             />
                           ) : '-'}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                           {recruit.priority_score != null ? Math.round(recruit.priority_score) : '-'}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                           {getPositionNeedChip(recruit.position)}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
                           <IconButton
                             size="small"
                             color="primary"
                             onClick={() => handleOpenEditRecruit(recruit)}
                             aria-label="edit recruit"
+                            sx={{ minWidth: 44, minHeight: 44 }}
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
@@ -445,6 +450,7 @@ const Recruiting = () => {
                             color="error"
                             onClick={() => handleDeleteRecruit(recruit.id)}
                             aria-label="delete recruit"
+                            sx={{ minWidth: 44, minHeight: 44 }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -500,7 +506,7 @@ const Recruiting = () => {
       </Grid>
 
       {/* Add Recruit Dialog */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle>Add Recruit</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 0.5 }}>
@@ -663,7 +669,7 @@ const Recruiting = () => {
       </Dialog>
 
       {/* Edit Recruit Dialog */}
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth fullScreen={isMobile}>
         <DialogTitle>Edit Recruit</DialogTitle>
         <DialogContent>
           {editingRecruit && (

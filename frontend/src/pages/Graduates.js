@@ -71,8 +71,8 @@ const Graduates = () => {
       {!error && graduates.length === 0 ? (
         <Alert severity="info">No graduated players yet.</Alert>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 400 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
