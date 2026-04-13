@@ -166,10 +166,8 @@ async function processVideoUpload(videoPath, dynastyId, uploadId, ocrMethod = 't
  * @returns {Promise<object[]>} Array of parsed players
  */
 async function processFrame(framePath, ocrMethod) {
-  const { preprocessImage: preprocess } = require('./ocrService');
-
   // Preprocess the frame
-  const { normalPath } = await preprocess(framePath);
+  const { normalPath } = await preprocessImage(framePath);
 
   // Extract text using the selected OCR method
   let ocrText;

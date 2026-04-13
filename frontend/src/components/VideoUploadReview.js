@@ -452,8 +452,10 @@ const VideoUploadReview = ({ open, onClose, dynastyId, onPlayersUpdated }) => {
                                     }
                                     variant="outlined"
                                     color={
-                                      diff.newValue > diff.oldValue ? 'success' :
-                                      diff.newValue < diff.oldValue ? 'error' : 'default'
+                                      typeof diff.newValue === 'number' && typeof diff.oldValue === 'number'
+                                        ? (diff.newValue > diff.oldValue ? 'success' :
+                                           diff.newValue < diff.oldValue ? 'error' : 'default')
+                                        : 'default'
                                     }
                                   />
                                 ))}
