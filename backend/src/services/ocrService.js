@@ -406,7 +406,7 @@ function parseRosterData(ocrText) {
          line.includes('AGI') || line.includes('COD') ||
          (line.includes('OVR') && line.includes('POS'))) &&
         // Require at least 3 attribute-like tokens to reduce false positives
-        (line.split(/\s+/).filter(t => /^[A-Z~]{2,4}$/i.test(t.replace(/[^A-Za-z]/g, ''))).length >= 3)) {
+        (line.split(/\s+/).filter(t => /^[A-Z]{2,4}$/i.test(t.replace(/[^A-Za-z]/g, ''))).length >= 3)) {
       // Parse header to extract attribute column names
       const headerParts = cleanedLines[hi].split(/\s+/);
       headerAttributes = [];
