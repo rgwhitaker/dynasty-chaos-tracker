@@ -152,6 +152,30 @@ function correctPosition(position) {
     'DI': 'DT',   // I confused with T
     'HG': 'HB',   // G confused with B
     'W8': 'WR',   // 8 confused with R
+    // LEDG misreads
+    'L0G': 'LEDG',  // 0 for E, D dropped
+    'LOG': 'LEDG',  // O for E, D dropped
+    'LEG': 'LEDG',  // D dropped
+    'LDG': 'LEDG',  // E dropped
+    'LEOG': 'LEDG', // O for D
+    'LE0G': 'LEDG', // 0 for D
+    'IEDG': 'LEDG', // I for L
+    '1EDG': 'LEDG', // 1 for L
+    'LFDG': 'LEDG', // F for E
+    // REDG misreads
+    'R0G': 'REDG',  // 0 for E, D dropped
+    'ROG': 'REDG',  // O for E, D dropped
+    'REG': 'REDG',  // D dropped
+    'RDG': 'REDG',  // E dropped
+    'REOG': 'REDG', // O for D
+    'RE0G': 'REDG', // 0 for D
+    'RFDG': 'REDG', // F for E
+    // MIKE misreads
+    'M1KE': 'MIKE', // 1 for I
+    'MIIKE': 'MIKE', // double I
+    // WILL misreads
+    'W1LL': 'WILL', // 1 for I
+    'WIIL': 'WILL', // I for L
   };
   
   // First check if it's in correction map
@@ -195,6 +219,7 @@ function cleanHighlightedRowArtifacts(line) {
   return line
     .replace(/[█▀▄▌▐░▒▓]/g, '') // Remove block characters
     .replace(/^[►>»▶➤➜]\s*/g, '') // Remove leading arrows/indicators
+    .replace(/^[a-z]\s+(?=[A-Z])/g, '') // Remove leading isolated lowercase char before uppercase (OCR noise from game UI)
     .replace(/\s+/g, ' ') // Normalize whitespace
     .trim();
 }
@@ -277,7 +302,7 @@ function parsePlayerDetailScreen(ocrText) {
   for (const line of cleanedLines) {
     const match = line.match(positionPattern);
     if (match) {
-      player.position = match[1].toUpperCase();
+      player.position = correctPosition(match[1].toUpperCase());
       player.jersey_number = parseInt(match[2]);
       break;
     }
@@ -369,34 +394,41 @@ function parseRosterData(ocrText) {
   // Clean the OCR text first, including highlighted row artifacts
   const cleanedLines = lines.map(line => cleanHighlightedRowArtifacts(cleanOcrText(line)));
 
-  // Check if first line is a header with attribute names
+  // Check for a header with attribute names (scan first several lines, not just first)
   let headerAttributes = null;
   let dataStartIndex = 0;
   
-  if (cleanedLines.length > 0) {
-    const firstLine = cleanedLines[0].toUpperCase();
+  const headerScanLimit = Math.min(cleanedLines.length, 15);
+  for (let hi = 0; hi < headerScanLimit; hi++) {
+    const line = cleanedLines[hi].toUpperCase();
     // Header detection: look for common attribute names
-    if (firstLine.includes('SPD') || firstLine.includes('ACC') || 
-        firstLine.includes('AGI') || firstLine.includes('COD') ||
-        (firstLine.includes('OVR') && firstLine.includes('POS'))) {
+    if ((line.includes('SPD') || line.includes('ACC') || 
+         line.includes('AGI') || line.includes('COD') ||
+         (line.includes('OVR') && line.includes('POS'))) &&
+        // Require at least 3 attribute-like tokens to reduce false positives
+        (line.split(/\s+/).filter(t => /^[A-Z~]{2,4}$/i.test(t.replace(/[^A-Za-z]/g, ''))).length >= 3)) {
       // Parse header to extract attribute column names
-      const headerParts = cleanedLines[0].split(/\s+/);
+      const headerParts = cleanedLines[hi].split(/\s+/);
       headerAttributes = [];
       for (const part of headerParts) {
         const cleaned = part.replace(/[^A-Za-z]/g, '').toUpperCase();
         // Map common variations
         if (cleaned === 'COD') {
           headerAttributes.push('COD');
+        } else if (cleaned.endsWith('OVR')) {
+          // Normalize OCR misreads of OVR (e.g., YOVR, VOVR) to OVR
+          headerAttributes.push('OVR');
         } else if (cleaned.length >= 2 && cleaned.length <= 4) {
           // Likely an attribute abbreviation
           headerAttributes.push(cleaned);
         }
       }
-      dataStartIndex = 1; // Skip header row
+      dataStartIndex = hi + 1; // Skip header row
       // Log only in development mode
       if (process.env.NODE_ENV !== 'production') {
         console.log('Detected header with attributes:', headerAttributes);
       }
+      break;
     }
   }
 
@@ -415,7 +447,8 @@ function parseRosterData(ocrText) {
   // Year (e.g., FR, SO, JR, SR) with optional (RS), Position, Overall
   // Also handles hyphenated names like Smith-Marsette and space-separated initials like "J Williams"
   // Handles suffixes like Jr., Sr., II, III, etc.
-  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?(?:\s+(?:Jr\.?|Sr\.?|II|III|IV|V))?)\s+(?:FR|SO|JR|SR)\s*(?:\([A-Z]{0,2}\))?\s+([A-Z0-9]{1,4})\s+(\d{2}[\+]?)/i;
+  // Handles OCR errors: S0 for SO (zero for O), slash before (RS) e.g. "S0/(RS)"
+  const pattern4 = /^([A-Z]\.?\s?[A-Za-z-]+(?:\s+[A-Z][A-Za-z-]+)?(?:\s+(?:Jr\.?|Sr\.?|II|III|IV|V))?)\s+(?:FR|S[O0]|JR|SR)\s*[/]?(?:\([A-Z]{0,2}\))?\s+([A-Z0-9]{1,4})\s+(\d{2}[\+]?)/i;
 
   for (let i = dataStartIndex; i < cleanedLines.length; i++) {
     const line = cleanedLines[i];
@@ -531,7 +564,8 @@ function parseRosterData(ocrText) {
             // Find attribute column indices from header
             let attrColumnStart = -1;
             for (let j = 0; j < headerAttributes.length; j++) {
-              if (headerAttributes[j] === 'OVR' || headerAttributes[j] === 'VOVR') {
+              // Match OVR and common OCR misreads: VOVR, YOVR, 0VR, etc.
+              if (headerAttributes[j] === 'OVR' || headerAttributes[j].endsWith('OVR')) {
                 attrColumnStart = j;
                 break;
               }

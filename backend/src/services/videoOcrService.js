@@ -197,32 +197,56 @@ async function processVideoUpload(videoPath, dynastyId, uploadId, ocrMethod = 't
  * @returns {Promise<object[]>} Array of parsed players
  */
 async function processFrame(framePath, ocrMethod) {
-  // Preprocess the frame
-  const { normalPath } = await preprocessImage(framePath);
+  // Preprocess the frame - returns both normal and inverted versions
+  const { normalPath, invertedPath } = await preprocessImage(framePath);
 
-  // Extract text using the selected OCR method
-  let ocrText;
-  switch (ocrMethod) {
-    case 'textract':
-      ocrText = await extractTextTextract(normalPath);
-      break;
-    case 'google_vision':
-      ocrText = await extractTextGoogleVision(normalPath);
-      break;
-    case 'tesseract':
-    default:
-      ocrText = await extractTextTesseract(normalPath);
-      break;
+  // Helper to extract text using the selected OCR method
+  async function extractText(imagePath) {
+    switch (ocrMethod) {
+      case 'textract':
+        return extractTextTextract(imagePath);
+      case 'google_vision':
+        return extractTextGoogleVision(imagePath);
+      case 'tesseract':
+      default:
+        return extractTextTesseract(imagePath);
+    }
   }
+
+  // Extract text from normal processed image
+  let ocrText = await extractText(normalPath);
 
   // Skip frames with very little text (likely transition/blur frames)
   if (!ocrText || ocrText.trim().length < 20) {
-    return [];
+    ocrText = null;
   }
 
-  // Parse roster data with AI fallback
+  // Parse roster data with AI fallback from normal image
   const useAI = process.env.USE_AI_OCR !== 'false';
-  const players = await parseRosterDataWithAI(ocrText, useAI);
+  let players = [];
+  if (ocrText) {
+    players = await parseRosterDataWithAI(ocrText, useAI);
+  }
+
+  // If inverted image was created, also run OCR on it and merge results
+  // This helps capture text from dark-background game screenshots
+  if (invertedPath) {
+    try {
+      const invertedOcrText = await extractText(invertedPath);
+      if (invertedOcrText && invertedOcrText.trim().length >= 20) {
+        const invertedPlayers = await parseRosterDataWithAI(invertedOcrText, useAI);
+        if (invertedPlayers.length > 0) {
+          if (players.length > 0) {
+            players = mergeParsedPlayers([players, invertedPlayers]);
+          } else {
+            players = invertedPlayers;
+          }
+        }
+      }
+    } catch (invertedError) {
+      console.error('Inverted frame OCR failed, continuing with normal results:', invertedError.message);
+    }
+  }
 
   return players;
 }
