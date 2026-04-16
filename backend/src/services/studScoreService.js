@@ -323,6 +323,16 @@ async function calculateStudScore(userId, player, dynastyId = null) {
             }
           }
         });
+
+        // Fallback to hardcoded defaults if no DB weights exist for this position
+        if (Object.keys(weights).length === 0) {
+          const positionGroup = getPositionGroup(player.position);
+          if (player.archetype && DEFAULT_ARCHETYPE_WEIGHTS[player.position] && DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype]) {
+            weights = DEFAULT_ARCHETYPE_WEIGHTS[player.position][player.archetype];
+          } else {
+            weights = DEFAULT_WEIGHTS[positionGroup] || {};
+          }
+        }
       } else {
         // Use default weights - prefer archetype-specific, then position group
         const positionGroup = getPositionGroup(player.position);
@@ -346,6 +356,14 @@ async function calculateStudScore(userId, player, dynastyId = null) {
       };
     }
 
+    // Ensure preset is defined (handles deleted/missing presets)
+    if (!preset) {
+      preset = {
+        dev_trait_weight: 0.15,
+        potential_weight: 0.15
+      };
+    }
+
     // Calculate weighted score
     let totalWeightedValue = 0;
     let totalWeight = 0;
@@ -364,10 +382,11 @@ async function calculateStudScore(userId, player, dynastyId = null) {
     const baseScore = totalWeight > 0 ? Math.round((totalWeightedValue / totalWeight) * 10) / 10 : 0;
 
     // Calculate adjusted score with dev trait and potential
-    const devTraitWeight = preset.dev_trait_weight || 0.15;
-    const potentialWeight = preset.potential_weight || 0.15;
+    // Use ?? instead of || so explicit 0 values are respected
+    const devTraitWeight = preset.dev_trait_weight ?? 0.15;
+    const potentialWeight = preset.potential_weight ?? 0.15;
     
-    // Dev trait bonus: Elite=15, Star=10, Impact=5, Normal=0
+    // Dev trait bonus: Elite=100, Star=85, Impact=70, Normal=55 (on 0-100 scale)
     const devTraitBonus = getDevTraitBonus(player.dev_trait);
     
     // Calculate potential score (0-100 based on stat caps)

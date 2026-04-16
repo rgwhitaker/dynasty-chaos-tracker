@@ -163,7 +163,7 @@ const createPlayer = async (req, res) => {
 
     const player = result.rows[0];
     const playerAttributes = ensureAttributesParsed(player);
-    const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player);
+    const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player, dynastyId);
     
     // Parse stat_caps
     let parsedStatCaps = player.stat_caps;
@@ -289,7 +289,7 @@ const updatePlayer = async (req, res) => {
 
     const player = result.rows[0];
     const playerAttributes = ensureAttributesParsed(player);
-    const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player);
+    const studScoreResult = await studScoreService.calculateStudScore(req.user.id, player, dynastyId);
     
     // Parse stat_caps
     let parsedStatCaps = player.stat_caps;

@@ -21,7 +21,7 @@ async function generateDepthChart(dynastyId, userId) {
     // Pre-calculate stud scores once per player for deterministic sorting
     const playersWithScores = await Promise.all(
       players.map(async (player) => {
-        const studScoreResult = await studScoreService.calculateStudScore(userId, player);
+        const studScoreResult = await studScoreService.calculateStudScore(userId, player, dynastyId);
         return { ...player, studScore: studScoreResult.studScore };
       })
     );
