@@ -26,6 +26,9 @@ if (missingEnvVars.length > 0) {
 
 const app = express();
 
+// Trust first proxy (required when running behind a reverse proxy/load balancer)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(helmet());
 app.use(compression());
